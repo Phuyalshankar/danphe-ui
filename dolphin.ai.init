@@ -1,0 +1,32 @@
+# 🐬 Dolphin Native V2: Clean Scraper-First Architecture Initialization Guide
+
+Welcome to **Dolphin Native V2** (`dolphin-native-2`)!
+
+## 1. Project Purpose & Architecture
+Dolphin Native V2 is a streamlined, high-performance hybrid mobile UI framework built on a **Scraper-First Clean Architecture**:
+
+1. **Scraper UI Engine (`src/engine/`)**: 
+   - Uses `DOMScraperEngine.js` (`window.getComputedStyle()`) to extract computed layout, colors, typography, borders, and margins directly from any rendered Web/CDN UI (Tailwind, Bootstrap, MUI, Ant Design).
+   - Translates computed styles into fixed-width **Titan Binary Opcodes** via `TitanBinaryEncoder.js`.
+2. **Titan Binary Protocol (Backbone)**:
+   - Compact binary protocol transmitted over TCP (Port 9091) to connected Android devices for microsecond UI hot-patching.
+3. **Native Android Runtime (`runtime/android/`)**:
+   - `ViewFactory.kt`: Native Android View rendering engine.
+   - `ViewFactoryLayouts.kt`: Container builders (`Row`, `Column`, `ListView`) featuring the **OnLayoutChangeListener Gap Lock**.
+   - `DolphinStateEngine.kt`: Reactive state handling.
+   - `plugin/`: Modular plugin registry (`DolphinPluginRegistry.kt`, `DolphinUIPlugin.kt`).
+
+## 2. Directory Structure
+- `/src/engine/`: Clean Scraper & Titan Binary Encoder (`DOMScraperEngine.js`, `TitanBinaryEncoder.js`).
+- `/runtime/android/`: Pure Kotlin Native Runtime engine.
+  - `ViewFactory.kt`: Main UI rendering dispatcher.
+  - `ViewFactoryLayouts.kt`: Layout container builders (Column, Row).
+  - `plugin/`: Plugin registration and modular components.
+- `package.json`: Project manifest.
+
+## 3. Mandatory Rules
+1. **Layout Gap Lock**: NEVER remove `addOnLayoutChangeListener` in `ViewFactoryLayouts.kt`.
+2. **Kotlin Update Rule**: Whenever modifying `.kt` files inside `runtime/android/`, rebuild the Android APK to update native logic.
+
+---
+*Dolphin Native V2 — Pure Native Speed, Zero CSS Engine Overhead.*

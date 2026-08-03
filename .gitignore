@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.dolphin-android/
+.gradle/
+build/
+*.log

@@ -1,0 +1,19 @@
+{
+  "name": "dolphin-native-2",
+  "version": "2.0.0",
+  "description": "Dolphin Native V2 — Scraper-First Clean Architecture Hybrid Framework",
+  "main": "src/engine/index.js",
+  "scripts": {
+    "dev": "node server.js",
+    "test": "node src/engine/test.js"
+  },
+  "keywords": [
+    "dolphin",
+    "native",
+    "android",
+    "titan-binary",
+    "dom-scraper"
+  ],
+  "author": "Phuyalshankar",
+  "license": "MIT"
+}
