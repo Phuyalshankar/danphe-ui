@@ -169,7 +169,7 @@ fun ViewFactory.createSimpleGrid(bin: ByteArray): View {
         
         // Add child to current row with equal weight
         val childParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
+            0,
             ViewGroup.LayoutParams.WRAP_CONTENT,
             1f
         ).apply {

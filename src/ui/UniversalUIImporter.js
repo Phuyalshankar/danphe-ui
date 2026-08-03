@@ -252,7 +252,18 @@ let compType = comp.props && comp.props.type ? comp.props.type
 
             // Byte 1: Type Code
             let typeCode = this.getComponentCode(props.type || compType);
-            const isGridClass = String(tw).includes('grid') || String(tw).includes('grid-cols-') || props.type === 'GridView' || props.type === 'Grid' || compType === 'GridView' || compType === 'Grid';
+
+            const isCardClass = String(tw).split(/\s+/).includes('card') || String(tw).includes('card-body') || props.type === 'Card' || compType === 'card' || compType === 'Card';
+            if (isCardClass && (typeCode === 0x12 || typeCode === 0x13 || typeCode === 0x14)) {
+                typeCode = 0x11; // Upgrade container to Card opcode (0x11)
+            }
+
+            const isBtnClass = String(tw).split(/\s+/).includes('btn') || String(tw).includes('button') || props.type === 'Button' || compType === 'button' || compType === 'Button';
+            if (isBtnClass && (typeCode === 0x12 || typeCode === 0x16)) {
+                typeCode = 0x10; // Upgrade container to Button opcode (0x10)
+            }
+
+            const isGridClass = String(tw).includes('grid') || String(tw).includes('grid-cols-') || String(tw).includes('grid-col-') || props.type === 'GridView' || props.type === 'Grid' || compType === 'GridView' || compType === 'Grid';
             if (isGridClass && (typeCode === 0x12 || typeCode === 0x13 || typeCode === 0x14)) {
                 typeCode = 0x22; // Upgrade container/column/row to GridView opcode (0x22)
             }

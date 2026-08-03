@@ -117,9 +117,11 @@ fun ViewFactory.createColumn(bin: ByteArray, isCard: Boolean = false): View {
     
     val layout = if (isCard) {
         MaterialCardView(ctx).apply {
-            radius = dp(10).toFloat()
-            cardElevation = dp(4).toFloat()
-            setCardBackgroundColor(ColorStateList.valueOf(Color.WHITE))
+            radius = dp(12).toFloat()
+            cardElevation = dp(6).toFloat()
+            val isDark = DolphinStateEngine.themeLevel > 128
+            val cardBgColor = if (isDark) Color.parseColor("#1e293b") else Color.WHITE
+            setCardBackgroundColor(ColorStateList.valueOf(cardBgColor))
             useCompatPadding = true
             preventCornerOverlap = true
 
@@ -144,6 +146,15 @@ fun ViewFactory.createColumn(bin: ByteArray, isCard: Boolean = false): View {
         applyGravity(l, bin)
         val lp = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         l.layoutParams = lp
+        val pt = bin[4].toInt() and 0xFF
+        val pr = bin[5].toInt() and 0xFF
+        val pb = bin[6].toInt() and 0xFF
+        val pl = bin[7].toInt() and 0xFF
+        val padT = if (pt > 0) dp(pt) else dp(12)
+        val padR = if (pr > 0) dp(pr) else dp(12)
+        val padB = if (pb > 0) dp(pb) else dp(12)
+        val padL = if (pl > 0) dp(pl) else dp(12)
+        l.setPadding(padL, padT, padR, padB)
         l.setBackgroundColor(Color.TRANSPARENT) 
         (layout as MaterialCardView).addView(l)
         l
