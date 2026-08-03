@@ -3,6 +3,7 @@
 const http  = require('http');
 const fs    = require('fs');
 const path  = require('path');
+const os    = require('os');
 const { EventEmitter } = require('events');
 const net = require('net');
 const dgram = require('dgram');
@@ -932,32 +933,20 @@ class DevServer extends EventEmitter {
     }
 
     _findLatestApk() {
-        const primaryDir = path.join(this.watchDir, 'dist');
-        if (fs.existsSync(primaryDir)) {
-            try {
-                const files = fs.readdirSync(primaryDir).filter(f => f.endsWith('.apk'));
-                if (files.length > 0) {
-                    const apks = files.map(file => {
-                        const fullPath = path.join(primaryDir, file);
-                        return { file, path: fullPath, stat: fs.statSync(fullPath) };
-                    }).sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
-                    return apks[0];
-                }
-            } catch(e) {}
-        }
-
         const candidateDirs = [
+            path.join(this.watchDir, 'dist'),
             path.join(process.cwd(), 'dist'),
-            path.resolve(this.watchDir, '..', 'test-apk', 'dist'),
-            path.resolve(process.cwd(), '..', 'test-apk', 'dist')
+            path.join(os.homedir(), 'Desktop', 'petrol-pump', 'mui-app', 'dist'),
+            path.resolve(this.watchDir, '..', 'test-apk', 'dist')
         ];
 
         try {
-            const parentDir = path.dirname(this.watchDir);
-            if (fs.existsSync(parentDir)) {
-                const subDirs = fs.readdirSync(parentDir);
+            const desktopPath = path.join(os.homedir(), 'Desktop');
+            if (fs.existsSync(desktopPath)) {
+                const subDirs = fs.readdirSync(desktopPath);
                 subDirs.forEach(sub => {
-                    candidateDirs.push(path.join(parentDir, sub, 'dist'));
+                    candidateDirs.push(path.join(desktopPath, sub, 'dist'));
+                    candidateDirs.push(path.join(desktopPath, sub, 'mui-app', 'dist'));
                 });
             }
         } catch(e) {}
