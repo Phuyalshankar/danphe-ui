@@ -1455,12 +1455,11 @@ class DevServer extends EventEmitter {
 
     _watchFiles() {
         let watchTimeout = null;
-        fs.watch(this.watchDir, { recursive: true }, (evt, file) => {
+        const watchHandler = (evt, file, dirPath) => {
             if (!file) return;
-            const normFile = file.replace(/\\/g, '/');
+            const fullRelPath = dirPath ? `${dirPath}/${file}` : file;
+            const normFile = fullRelPath.replace(/\\/g, '/');
             
-            // STRICT FILTERING: Only reload on source JS changes
-            // Ignore everything else (dist, node_modules, .git, data files, logs, etc.)
             if (normFile.includes('node_modules') || 
                 normFile.includes('dist') || 
                 normFile.includes('.dolphin') ||
@@ -1468,18 +1467,34 @@ class DevServer extends EventEmitter {
             
             if (!normFile.endsWith('.js') && !normFile.endsWith('.jsx')) return;
             
-            // Ignore files that are not app.js or server.js if they are in the root
-            // (Adjust this if you have a src folder for the app)
-            
             console.log(`🔍 Watcher detected change in: ${normFile}`);
             
-            // Debounce to prevent multiple reloads for one save
             if (watchTimeout) clearTimeout(watchTimeout);
             watchTimeout = setTimeout(() => {
                 console.log(`📝 Rebuilding due to change in: ${normFile}`);
                 this.emit('fileChanged', { file: normFile, evt });
             }, 100);
-        });
+        };
+
+        const addWatch = (targetDir, relPrefix = '') => {
+            try {
+                if (!fs.existsSync(targetDir)) return;
+                fs.watch(targetDir, { recursive: true }, (evt, file) => watchHandler(evt, file, relPrefix));
+            } catch (e) {
+                // Fallback for non-recursive Windows platforms
+                try {
+                    fs.readdirSync(targetDir, { withFileTypes: true }).forEach(dirent => {
+                        if (dirent.isDirectory()) {
+                            const sub = path.join(targetDir, dirent.name);
+                            const subRel = relPrefix ? `${relPrefix}/${dirent.name}` : dirent.name;
+                            addWatch(sub, subRel);
+                        }
+                    });
+                } catch (e2) {}
+            }
+        };
+
+        addWatch(this.watchDir);
     }
 
     _renderInspector() {

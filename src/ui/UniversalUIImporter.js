@@ -72,7 +72,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
                       : (comp.tw || comp.className || ''));
                       
             // Strip bracketed web-only classes [...] so Mobile Compiler ignores them completely
-            const tw = typeof rawTw === 'string' ? rawTw.replace(/\[.*?\]/g, '').trim() : rawTw;
+            let tw = typeof rawTw === 'string' ? rawTw.replace(/\[.*?\]/g, '').trim() : rawTw;
 
             // ── Auto-extract text color from className (e.g. text-red-100, text-white) ──
             const extractTextColorFromClass = (className) => {
@@ -140,9 +140,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
             if (compType === 'th' || compType === 'td') {
                 compType = 'Column';
                 props.type = 'Column';
-                if (!String(tw).includes('flex-')) {
-                    tw = (tw ? tw + ' ' : '') + 'flex-1';
-                }
+                props.flex = 1;
             }
             if (compType === 'ul' || compType === 'ol') {
                 compType = 'Column';
