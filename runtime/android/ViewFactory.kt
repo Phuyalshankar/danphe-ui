@@ -2051,7 +2051,10 @@ class ViewFactory(val ctx: Context) {
         val flex = (bin[0].toInt() shr 4) and 0x0F
         if (flex > 0 && lp is LinearLayout.LayoutParams) {
             lp.weight = flex.toFloat()
-            lp.width = ViewGroup.LayoutParams.WRAP_CONTENT
+            // Keep width as MATCH_PARENT for vertical layouts so children do not shrink during hotpatching
+            if (lp.width <= 0 && lp.width != ViewGroup.LayoutParams.MATCH_PARENT) {
+                lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+            }
         }
 
 
