@@ -1,0 +1,132 @@
+/**
+ * 🌊 DolphinJS — Hardware Binary Protocol
+ *
+ * Command codes, event codes, and the binary framing used to talk to the
+ * Android/iOS native runtime. None of these numbers or byte offsets may
+ * change without breaking the native side — see ai.md.
+ */
+export declare const HW_CMD: {
+    readonly CAMERA_OPEN: 32;
+    readonly CAMERA_CLOSE: 33;
+    readonly CAMERA_TAKE_PHOTO: 34;
+    readonly CAMERA_START_VIDEO: 35;
+    readonly CAMERA_STOP_VIDEO: 36;
+    readonly CAMERA_SWITCH: 37;
+    readonly GPS_GET: 48;
+    readonly GPS_WATCH: 49;
+    readonly GPS_STOP: 50;
+    readonly WEBRTC_CREATE_PEER: 64;
+    readonly WEBRTC_OFFER: 65;
+    readonly WEBRTC_ANSWER: 66;
+    readonly WEBRTC_ICE: 67;
+    readonly WEBRTC_HANGUP: 68;
+    readonly WEBRTC_LOCAL_STREAM: 69;
+    readonly MIC_START: 80;
+    readonly MIC_STOP: 81;
+    readonly SENSOR_ACCEL: 96;
+    readonly SENSOR_GYRO: 97;
+    readonly SENSOR_COMPASS: 98;
+    readonly SENSOR_BARO: 99;
+    readonly SENSOR_LIGHT: 100;
+    readonly SENSOR_PROX: 101;
+    readonly SENSOR_ROTATION: 102;
+    readonly SENSOR_GRAVITY: 103;
+    readonly SENSOR_LINEAR_ACCEL: 104;
+    readonly SENSOR_STEPS: 105;
+    readonly SENSOR_TEMPERATURE: 106;
+    readonly SENSOR_HUMIDITY: 107;
+    readonly SENSOR_HEARTRATE: 108;
+    readonly SENSOR_ORIENTATION: 109;
+    readonly SENSOR_LIST: 110;
+    readonly SENSOR_STOP: 111;
+    readonly BT_SCAN: 112;
+    readonly BT_CONNECT: 113;
+    readonly BT_SEND: 114;
+    readonly BT_DISCONNECT: 115;
+    readonly BT_STATUS: 116;
+    readonly NFC_READ: 128;
+    readonly NFC_WRITE: 129;
+    readonly NFC_STATUS: 130;
+    readonly VIBRATE: 144;
+    readonly HAPTIC: 145;
+    readonly TORCH_ON: 160;
+    readonly TORCH_OFF: 161;
+    readonly BATTERY_LEVEL: 176;
+    readonly DEVICE_INFO: 177;
+    readonly BATTERY_WATCH: 178;
+    readonly CLIPBOARD_WRITE: 192;
+    readonly CLIPBOARD_READ: 193;
+    readonly FILE_PICK: 208;
+    readonly FILE_SAVE: 209;
+    readonly FILE_READ: 210;
+    readonly FILE_WRITE: 211;
+    readonly FILE_DELETE: 212;
+    readonly FILE_LIST: 213;
+    readonly FILE_MKDIR: 214;
+    readonly FILE_DIRS: 215;
+    readonly GALLERY_IMAGES: 216;
+    readonly GALLERY_VIDEOS: 217;
+    readonly AUDIO_FILES: 218;
+    readonly PHONE_CALL: 224;
+    readonly PHONE_DIAL: 225;
+    readonly PHONE_CALL_LOGS: 226;
+    readonly PHONE_CARRIER: 227;
+    readonly PHONE_SIM_STATE: 228;
+    readonly PHONE_NUMBER: 229;
+    readonly SMS_SEND: 232;
+    readonly SMS_COMPOSE: 233;
+    readonly SMS_INBOX: 234;
+    readonly SMS_SENT: 235;
+    readonly CONTACTS_GET: 236;
+    readonly CONTACTS_SEARCH: 237;
+    readonly CONTACTS_ADD: 238;
+    readonly CONTACTS_UPDATE: 239;
+    readonly AUDIO_PLAY: 240;
+    readonly AUDIO_STOP: 241;
+    readonly AUDIO_PAUSE: 242;
+    readonly AUDIO_VOLUME: 243;
+    readonly VIDEO_OPEN_CAMERA: 244;
+    readonly VIDEO_RECORD: 245;
+    readonly VIDEO_STOP: 246;
+    readonly VIDEO_PLAY: 247;
+    readonly VIDEO_GALLERY: 248;
+    readonly FETCH_GET: 250;
+    readonly FETCH_POST: 251;
+    readonly FETCH_PUT: 252;
+    readonly FETCH_PATCH: 253;
+    readonly FETCH_DELETE: 254;
+};
+export type HWCmdName = keyof typeof HW_CMD;
+export type HWCmdValue = (typeof HW_CMD)[HWCmdName];
+export declare const HW_EVENT: {
+    readonly CAMERA_PHOTO_READY: 32;
+    readonly CAMERA_FRAME: 33;
+    readonly GPS_UPDATE: 48;
+    readonly GPS_ERROR: 49;
+    readonly WEBRTC_OFFER: 64;
+    readonly WEBRTC_ANSWER: 65;
+    readonly WEBRTC_ICE: 66;
+    readonly WEBRTC_CONNECTED: 67;
+    readonly WEBRTC_DISCONNECTED: 68;
+    readonly WEBRTC_FRAME: 69;
+    readonly MIC_DATA: 80;
+    readonly SENSOR_DATA: 96;
+    readonly BT_DEVICE: 112;
+    readonly BT_DATA: 114;
+    readonly NFC_TAG: 128;
+    readonly BATTERY_UPDATE: 176;
+    readonly PHONE_STATE: 224;
+    readonly SMS_RECEIVED: 232;
+    readonly FETCH_RESPONSE: 250;
+    readonly ERROR: 255;
+};
+export type HWEventName = keyof typeof HW_EVENT;
+export type HWEventValue = (typeof HW_EVENT)[HWEventName];
+export interface ParsedHWEvent {
+    outerCmd: number;
+    event: number;
+    data: Record<string, unknown>;
+}
+export declare function buildHWCall(cmd: number, params?: Record<string, unknown>): Buffer;
+export declare function parseHWEvent(buf: Buffer): ParsedHWEvent;
+//# sourceMappingURL=protocol.d.ts.map

@@ -2,6 +2,27 @@
 
 const path = require('path');
 const fs = require('fs');
+
+// Register Babel for on-the-fly JSX compilation
+try {
+    require('@babel/register')({
+        presets: [],
+        plugins: ['@babel/plugin-transform-react-jsx'],
+        extensions: ['.js', '.jsx'],
+    });
+    global.React = {
+        createElement(type, props, ...children) {
+            return {
+                $$typeof: Symbol.for('react.element'),
+                type,
+                props: { ...props, children },
+            };
+        },
+    };
+} catch (e) {
+    console.warn('⚠️ Failed to register @babel/register in dev-server.js:', e.message);
+}
+
 const { DevServer } = require('./src/runtime/DevServer');
 
 const HTTP_PORT = process.env.PORT || 7787;

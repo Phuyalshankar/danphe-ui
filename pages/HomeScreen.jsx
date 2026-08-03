@@ -7,7 +7,7 @@
  * Import: const { HomeScreen } = require('./pages');
  */
 
-const { Image } = require('../../src/framework/DolphinFramework');
+const { Image } = require('../src/framework/DolphinFramework');
 const { useProducts } = require('../hooks');
 const { formatPrice, truncate } = require('../utils');
 
