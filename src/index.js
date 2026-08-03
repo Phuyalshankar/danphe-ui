@@ -24,9 +24,6 @@ const { MAPPING } = require('./constants/mappings');
 const { MAGIC_BYTES, PLATFORM_CONFIG } = require('./constants/platforms');
 const { VERSION, DEFAULT_CONFIG } = require('./constants/defaults');
 
-// Framework components
-const components = require('./framework/components');
-
 module.exports = {
     // Core
     DolphinCSS,
