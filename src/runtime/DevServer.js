@@ -440,13 +440,17 @@ class DevServer extends EventEmitter {
                     });
                     res.end(htmlContent);
                     return;
+                } else if (url === '/' || url === '/dashboard' || url === '/admin') {
+                    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                    res.end(this._renderDashboard());
+                    return;
                 } else {
                     res.writeHead(404, { 'Content-Type': 'text/plain' });
                     res.end('Page not found');
                     return;
                 }
             } else if (url === '/dashboard' || url === '/admin') {
-                res.writeHead(200, { 'Content-Type': 'text/html' });
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(this._renderDashboard());
             } else if (url === '/api/dolphin/server') {
                 cors(res);
