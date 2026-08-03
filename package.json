@@ -1,11 +1,11 @@
 {
-  "name": "demo-app",
-  "version": "1.0.0",
-  "description": "Dolphin mobile demo app",
-  "main": "app.jsx",
+  "name": "dolphin-native",
+  "version": "4.0.0",
+  "description": "Dolphin Native V2 Framework",
+  "main": "src/index.js",
   "scripts": {
-    "dev": "node ../bin/dolphin-mobile.js dev",
-    "build": "node ../bin/dolphin-mobile.js build"
+    "dev": "node bin/dolphin-mobile.js dev",
+    "build": "node bin/dolphin-mobile.js build"
   },
   "dependencies": {
     "axios": "^1.16.0"

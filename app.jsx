@@ -1,7 +1,6 @@
 'use strict';
 
-const { DolphinFramework } = require('../src/framework/DolphinFramework');
-const ub = require('../src/framework/ub.js');
+const { DolphinFramework } = require('./src/framework/DolphinFramework');
 
 const app = DolphinFramework.createApp({
     name: 'Dolphin Hardware Lab',
@@ -414,27 +413,24 @@ const buildCommScreen = () => {
 };
 
 const buildUBTestScreen = () => {
-    // Get debug info
-    const dbg = ub.debugUB();
-    
     return (
         <div className="flex flex-col flex-1" gradient="gradient-vert-indigo-60-purple-200">
             {/* Header — glass AppBar */}
-            <div className="flex flex-col items-center justify-center px-4 pt-10 pb-5 w-full" className="glass-vert-indigo-80-blue-120-60-blur-20">
-                <span className="text-white font-black text-lg text-center">🧪 UB Test &amp; Diagnostics Lab</span>
-                <span className="text-white text-[10px] bg-white/20 px-3 py-0.5 rounded-full font-bold mt-1">v19.0.3 STABLE</span>
+            <div className="flex flex-col items-center justify-center px-4 pt-10 pb-5 w-full">
+                <span className="text-white font-black text-lg text-center">🧪 Dolphin Native V2 Diagnostics Lab</span>
+                <span className="text-white text-[10px] bg-white/20 px-3 py-0.5 rounded-full font-bold mt-1">V2 Scraper Engine STABLE</span>
             </div>
 
             {/* Scrollable list */}
             <div type="ListView" className="flex-1 p-0">
 
                 {/* 1. Debug stats — glass card */}
-                <div className="m-4 p-5 rounded-3xl flex flex-col gap-3" className="glass-vert-blue-80-indigo-120-50">
-                    <span className="text-white font-extrabold text-sm">📊 WebStyleEngine debugUB() stats</span>
-                    <div className="flex flex-col gap-1.5 rounded-2xl p-4" className="glass-indigo-200-blue-220-30-blur-8">
-                        <span className="text-white/60 font-black text-[9px] uppercase tracking-wider">Debug Output:</span>
+                <div className="m-4 p-5 rounded-3xl flex flex-col gap-3">
+                    <span className="text-white font-extrabold text-sm">📊 Dolphin Native V2 Status</span>
+                    <div className="flex flex-col gap-1.5 rounded-2xl p-4">
+                        <span className="text-white/60 font-black text-[9px] uppercase tracking-wider">Engine Status:</span>
                         <span className="text-emerald-300 font-mono text-xs whitespace-pre-wrap leading-relaxed">
-                            {`Version: ${dbg.version || 'v19.0.3'}\nCache Size: ${dbg.classCache || 0}\nStyle Count: ${dbg.styleCount || 0}\nRequests: ${dbg.totalRequests || 0}\nHits: ${dbg.cacheHits || 0}`}
+                            {`Engine: Scraper-First V2\nTitan Protocol: 16-byte fixed width\nNative Views: Pure Android Kotlin\nStatus: LIVE & READY`}
                         </span>
                     </div>
                 </div>

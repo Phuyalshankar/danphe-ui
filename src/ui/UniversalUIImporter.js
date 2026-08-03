@@ -1,6 +1,4 @@
-'use strict';
-
-const ub = require('../framework/ub');
+const ub = require('../utils/DolphinUIUtils');
 
 /**
  * 🌐 UniversalUIImporter - Titan 16-byte Protocol Mapper

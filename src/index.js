@@ -14,7 +14,7 @@ const DolphinError = require('./errors/DolphinError');
 const AlignmentUtils = require('./utils/AlignmentUtils');
 
 // Framework modules
-const DolphinFramework = require('./framework/DolphinFramework');
+const { DolphinFramework, DolphinApp } = require('./framework/DolphinFramework');
 const { DolphinRouter } = require('./router/DolphinRouter');
 const UniversalUIImporter = require('./ui/UniversalUIImporter');
 const Integration = require('./integration');
@@ -38,14 +38,13 @@ module.exports = {
     
     // Framework
     DolphinFramework,
+    DolphinApp,
+    createApp: (config) => DolphinFramework.createApp(config),
     DolphinRouter,
     UniversalUIImporter,
     Integration,
     get DolphinWebEngine() { return require('./web/DolphinWebEngine'); },
     get DolphinWebStore() { return require('./web/DolphinWebStore'); },
-    
-    // Components
-    ...components,
     
     // Constants
     MAPPING,
@@ -56,7 +55,7 @@ module.exports = {
     
     // Factory
     create: (config) => new DolphinCSS(config),
-    createApp: (config) => DolphinFramework.DolphinFramework.createApp(config),
+    createApp: (config) => DolphinFramework.createApp(config),
     createBinStore: (config) => new LightBinStore(config),
     createRouter: (config) => new DolphinRouter(config),
     defineStore,
@@ -145,3 +144,5 @@ module.exports.GestureRecognizer= _ui.GestureRecognizer;
 module.exports.Responsive       = _ui.Responsive;
 module.exports.ResponsiveContext = _ui.ResponsiveContext;
 module.exports.BREAKPOINTS      = _ui.BREAKPOINTS;
+module.exports.createApp        = (config) => DolphinFramework.createApp(config);
+
