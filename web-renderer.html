@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dolphin Web Renderer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            margin: 0;
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: -apple-system, system-ui, sans-serif;
+        }
+        
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: #1e293b;
+            border-radius: 50px;
+            padding: 12px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #f1f5f9;
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 30px;
+            background: #1e293b;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+        
+        #app-root {
+            position: absolute;
+            top: 30px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background: #f1f5f9;
+        }
+        
+        /* Component Styles */
+        .column {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .row {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .text {
+            color: #1e293b;
+            font-size: 14px;
+            margin: 2px 0;
+        }
+        
+        .text.white { color: white; }
+        .text.gray { color: #64748b; }
+        .text.red { color: #ef4444; }
+        .text.green { color: #10b981; }
+        .text.blue { color: #3b82f6; }
+        .text.indigo { color: #6366f1; }
+        .text.orange { color: #f97316; }
+        .text.cyan { color: #06b6d4; }
+        .text.teal { color: #14b8a6; }
+        .text.black { color: #0f172a; }
+        
+        .text.bold { font-weight: 700; }
+        .text.sm { font-size: 12px; }
+        .text.lg { font-size: 18px; }
+        .text.xl { font-size: 24px; }
+        .text.xxl { font-size: 32px; }
+        
+        .button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 14px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            flex: 1;
+            transition: all 0.2s;
+        }
+        
+        .button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .button:active { transform: translateY(0); }
+        
+        .button.green { background: #10b981; }
+        .button.gray { background: #64748b; }
+        .button.red { background: #ef4444; }
+        .button.indigo { background: #6366f1; }
+        .button.orange { background: #f97316; }
+        .button.blue { background: #3b82f6; }
+        
+        .appbar {
+            background: #1e40af;
+            color: white;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 700;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .appbar.blue { background: #3b82f6; }
+        .appbar.indigo { background: #6366f1; }
+        
+        .flex-1 { flex: 1; }
+        .p-4 { padding: 16px; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .mt-2 { margin-top: 8px; }
+        .mt-4 { margin-top: 16px; }
+        .mt-6 { margin-top: 24px; }
+        .mt-10 { margin-top: 40px; }
+        .mb-4 { margin-bottom: 16px; }
+        .gap-2 { gap: 8px; }
+        .gap-4 { gap: 16px; }
+        .gap-6 { gap: 24px; }
+        .gap-8 { gap: 32px; }
+        .rounded-4 { border-radius: 8px; }
+        .rounded-xl { border-radius: 12px; }
+        .shadow { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .shadow-lg { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .bg-light { background: #f1f5f9; }
+        .bg-white { background: white; }
+        .bg-indigo-600 { background: #6366f1; }
+        .bg-blue { background: #3b82f6; }
+        .bg-blue-140 { background: #3b82f6; }
+        .bg-red { background: #ef4444; }
+        .bg-green { background: #10b981; }
+        
+        .border { border: 1px solid #e2e8f0; }
+        
+        .drawer-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            display: none;
+        }
+        .drawer-overlay.active { display: block; }
+        
+        .drawer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 280px;
+            background: white;
+            z-index: 201;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+        }
+        .drawer.active { transform: translateX(0); }
+        
+        .drawer-item {
+            padding: 16px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .drawer-item:hover { background: #f1f5f9; }
+    </style>
+</head>
+<body>
+
+<div class="phone-frame">
+    <div class="screen">
+        <div class="notch"></div>
+        <div id="app-root"></div>
+    </div>
+</div>
+
+<script>
+// Helper functions to map colors
+const COLORS = {
+    blue: '#3b82f6',
+    indigo: '#6366f1',
+    red: '#ef4444',
+    orange: '#f97316',
+    green: '#10b981',
+    cyan: '#06b6d4',
+    teal: '#14b8a6',
+    gray: '#64748b',
+    black: '#0f172a',
+    white: '#ffffff'
+};
+
+const GRADIENTS = {
+    'orange-100-red-180': 'linear-gradient(135deg, #fed7aa, #dc2626)',
+    'cyan-110-blue-190': 'linear-gradient(135deg, #67e8f9, #1e3a8a)',
+    'indigo-160-black': 'linear-gradient(135deg, #4c1d95, #0f172a)',
+    'green-100-teal-170': 'linear-gradient(135deg, #bbf7d0, #0f766e)'
+};
+
+// Current screen
+let currentScreen = 'Home';
+let drawerOpen = false;
+
+// Screen definitions (matching app.jsx)
+const screens = {
+    Home: renderHomeScreen,
+    Hardware: renderHardwareScreen,
+    Colors: renderColorsScreen,
+    Framework: renderFrameworkScreen,
+    PhoneTest: renderPhoneTestScreen,
+    Animations: renderAnimationsScreen,
+    NestedTab: renderNestedTabScreen,
+    FetchTest: renderFetchTestScreen
+};
+
+function navigateTo(screenName) {
+    currentScreen = screenName;
+    drawerOpen = false;
+    render();
+}
+
+function toggleDrawer() {
+    drawerOpen = !drawerOpen;
+    render();
+}
+
+function renderHomeScreen() {
+    return `
+        <div class="column flex-1 bg-light">
+            <div class="appbar indigo" onclick="toggleDrawer()">
+                <span style="cursor:pointer">☰</span>
+                <span>🐬 DOLPHIN v4.1</span>
+            </div>
+            
+            <div class="column flex-1 p-4" style="overflow-y:auto">
+                <div class="card mt-4">
+                    <div class="text xl black">This is a Test Card</div>
+                    <div class="text sm gray mt-2">If you can see this, text extraction is working!</div>
+                    
+                    <div class="row mt-4 gap-4 items-center">
+                        <div class="button flex-1 blue rounded-4 shadow">NATIVE BUTTON</div>
+                        <div class="button flex-1 indigo rounded-4 shadow" onclick="navigateTo('PhoneTest')">PHONE TEST</div>
+                    </div>
+                </div>
+                
+                <div class="column mt-6 p-4 border rounded-4 bg-light">
+                    <div class="text lg red bold">🔴 HARDWARE TEST</div>
+                    <div class="row mt-4 gap-6 justify-center">
+                        <div class="text sm black">⚡ 60FPS</div>
+                        <div class="text sm black">🌈 GRADIENTS</div>
+                        <div class="text sm black">📱 HARDWARE</div>
+                    </div>
+                </div>
+                
+                <div style="height:100px"></div>
+            </div>
+            
+            ${renderTabBar()}
+        </div>
+    `;
+}
+
+function renderHardwareScreen() {
+    return `
+        <div class="column flex-1 bg-light">
+            <div class="appbar blue" onclick="navigateTo('Home')">
+                <span style="cursor:pointer">←</span>
+                <span>Hardware</span>
+            </div>
+            
+            <div class="column p-4 flex-1">
+                <div class="card bg-white p-4 rounded-4 shadow-lg mb-4">
+                    <div class="text lg bold">Tourch</div>
+                    <div class="row gap-8 mt-4">
+                        <div class="button flex-1 blue p-4 rounded-4 shadow">ON</div>
+                        <div class="button flex-1 red p-4 rounded-4 shadow">OFF</div>
+                    </div>
+                </div>
+                
+                <div class="button blue p-4 rounded-4 shadow-lg white">📸 OPEN CAMERA</div>
+            </div>
+            
+            ${renderTabBar()}
+        </div>
+    `;
+}
+
+function renderColorsScreen() {
+    return `
+        <div class="column flex-1 bg-light">
+            <div class="appbar blue" onclick="navigateTo('Home')">
+                <span style="cursor:pointer">←</span>
+                <span>Colors</span>
+            </div>
+            
+            <div class="column flex-1 p-4" style="overflow-y:auto">
+                ${renderGradientCard('Sunset Fire', 'orange-100-red-180')}
+                ${renderGradientCard('Ocean Deep', 'cyan-110-blue-190')}
+                ${renderGradientCard('Midnight Sky', 'indigo-160-black')}
+                ${renderGradientCard('Forest', 'green-100-teal-170')}
+            </div>
+            
+            ${renderTabBar()}
+        </div>
+    `;
+}
+
+function renderFrameworkScreen() {
+    return `
+        <div class="column flex-1 bg-light">
+            <div class="appbar blue" onclick="navigateTo('Home')">
+                <span style="cursor:pointer">←</span>
+                <span>Framework</span>
+            </div>
+            
+            <div class="column flex-1 p-4" style="overflow-y:auto">
+                <div class="card mb-4">
+                    <div class="text lg blue bold">1. HTML Style (JSX)</div>
+                    <div class="text sm gray mt-2">Supporting standard HTML tags directly in JSX.</div>
+                    <ul style="list-style:none; margin-top:8px">
+                        <li class="text"><span style="color:blue">✔</span> div, p, span support</li>
+                        <li class="text"><span style="color:green">✔</span> h1-h6 support</li>
+                    </ul>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="text lg indigo bold">2. Bootstrap Style</div>
+                    <div class="row gap-4 mb-4 mt-4">
+                        <div class="button green flex-1">PRIMARY</div>
+                        <div class="button red flex-1">DANGER</div>
+                    </div>
+                    <div class="row" style="padding:12px; background:#bbf7d0; border-radius:8px; color:#065f46">
+                        Success! Bootstrap classes mapped to Native.
+                    </div>
+                </div>
+                
+                <div class="card mb-4 items-center" style="text-align:center">
+                    <div style="width:64px; height:64px; background:#3b82f6; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; margin-bottom:16px">
+                        TW
+                    </div>
+                    <div class="text xl bold gray">Tailwind CSS</div>
+                    <div class="text sm gray mt-2">Pixel-perfect utility mapping for rapid development.</div>
+                    <div class="row mt-4 gap-2">
+                        <div class="text sm" style="padding:8px 16px; background:#e2e8f0; border-radius:9999px">UTILITY</div>
+                        <div class="text sm" style="padding:8px 16px; background:#e2e8f0; border-radius:9999px">NATIVE</div>
+                    </div>
+                </div>
+                
+                <div class="card" style="padding:16px; background:#c7d2fe; border-radius:8px">
+                    <div class="text lg" style="color:#4c1d95; font-weight:700">4. MUI / Flutter Style</div>
+                    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; margin-top:16px">
+                        <div class="card" style="margin:0; padding:16px"><div class="text">Grid Item 1</div></div>
+                        <div class="card" style="margin:0; padding:16px"><div class="text">Grid Item 2</div></div>
+                        <div class="card" style="margin:0; padding:16px"><div class="text">Grid Item 3</div></div>
+                        <div class="card" style="margin:0; padding:16px"><div class="text">Grid Item 4</div></div>
+                    </div>
+                </div>
+                
+                <div style="height:100px"></div>
+            </div>
+            
+            ${renderTabBar()}
+        </div>
+    `;
+}
+
+function renderPhoneTestScreen() {
+    return `
+        <div class="column flex-1 bg-white">
+            <div class="appbar indigo" onclick="navigateTo('Home')">
+                <span style="cursor:pointer">←</span>
+                <span>Phone & Intercom</span>
+            </div>
+            
+            <div class="column flex-1 p-4" style="overflow-y:auto">
+                <div class="card mb-4 bg-light rounded-xl">
+                    <div class="text lg bold">📞 Native Dialer</div>
+                    <div class="row gap-4 mt-4">
+                        <div class="button flex-1 blue rounded-4">DIAL 9841</div>
+                        <div class="button flex-1 green rounded-4">CALL NOW</div>
+                    </div>
+                </div>
+                
+                <div class="button gray p-4 rounded-xl mb-4 white">📇 OPEN CONTACTS</div>
+                
+                <div class="card p-4 mb-4" style="background:#eef2ff; border:1px solid #c7d2fe; border-radius:12px">
+                    <div class="text lg" style="color:#4c1d95; font-weight:700">🔔 Intercom Simulation</div>
+                    <div class="text sm gray mt-4">Trigger events from backend (simulated here)</div>
+                    <div class="column gap-4 mt-4">
+                        <div class="row gap-2">
+                            <div class="button indigo flex-1 rounded-4">PLAY RINGTONE</div>
+                            <div class="button red flex-1 rounded-4">STOP TONE</div>
+                        </div>
+                        <div class="button blue rounded-4">PLAY DIALTONE (1)</div>
+                        <div class="button orange rounded-4">SIMULATE CALL</div>
+                    </div>
+                </div>
+                
+                <div class="card p-4" style="background:#fef2f2; border:1px solid #fecaca; border-radius:12px">
+                    <div class="text lg" style="color:#dc2626; font-weight:700">🚨 Emergency Wakeup</div>
+                    <div class="text sm gray mt-4">Test push-to-call notification</div>
+                    <div class="button red mt-4 rounded-4">SEND STATUS LOG</div>
+                </div>
+                
+                <div style="height:100px"></div>
+            </div>
+            
+            ${renderTabBar()}
+        </div>
+    `;
+}
+
+function renderAnimationsScreen() {
+    return `
+        <div class="column flex-1 bg-light">
+            <div class="appbar blue" onclick="navigateTo('Home')">
+                <span style="cursor:pointer">←</span>
+                <span>Animations</span>
+            </div>
+            <div class="column flex-1 p-4 items-center justify-center">
+                <div class="text xl">✨ Animations</div>
+                <div class="text sm gray mt-4">Animations screen</div>
+            </div>
+            ${renderTabBar()}
+        </div>
+    `;
+}
+
+function renderNestedTabScreen() {
+    return `
+        <div class="column flex-1 bg-light">
+            <div class="appbar blue" onclick="navigateTo('Home')">
+                <span style="cursor:pointer">←</span>
+                <span>Nested Navigation</span>
+            </div>
+            <div class="column flex-1 p-4 items-center justify-center">
+                <div class="text xl">🔀 Nested Tabs</div>
+                <div class="text sm gray mt-4">This screen has its own bottom navigation bar separate from the global one.</div>
+            </div>
+            ${renderTabBar()}
+        </div>
+    `;
+}
+
+function renderFetchTestScreen() {
+    return `
+        <div class="column flex-1 bg-light">
+            <div class="appbar blue" onclick="navigateTo('Home')">
+                <span style="cursor:pointer">←</span>
+                <span>Fetch Data</span>
+            </div>
+            <div class="column flex-1 p-4">
+                <div class="card mb-4">
+                    <div class="text lg bold">Cloud Content</div>
+                    <div class="text sm gray">Simulated fetch from external API.</div>
+                    <div class="button blue mt-4 rounded-4">FETCH REMOTE DATA</div>
+                </div>
+                <div class="card">
+                    <div class="text bold">Item #1: Remote Headline</div>
+                    <div class="text sm gray">Fetched 2 mins ago</div>
+                </div>
+                <div class="card mt-4">
+                    <div class="text bold">Item #2: API Response Body</div>
+                    <div class="text sm gray">Fetched 2 mins ago</div>
+                </div>
+            </div>
+            ${renderTabBar()}
+        </div>
+    `;
+}
+
+function renderGradientCard(title, gradientKey) {
+    const gradient = GRADIENTS[gradientKey] || 'linear-gradient(135deg, #3b82f6, #6366f1)';
+    return `
+        <div class="card mb-4" style="background:${gradient}; padding:20px; margin:8px; border-radius:18px; box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+            <div class="text white lg bold">${title}</div>
+        </div>
+    `;
+}
+
+function renderTabBar() {
+    return `
+        <div class="row bg-white shadow" style="height:70px; box-shadow:0 -2px 10px rgba(0,0,0,0.1)">
+            <div class="column flex-1 p-2 items-center" style="cursor:pointer" onclick="navigateTo('Home')">
+                <div style="font-size:24px">🏠</div>
+                <div style="font-size:10px">Home</div>
+            </div>
+            <div class="column flex-1 p-2 items-center" style="cursor:pointer" onclick="navigateTo('Hardware')">
+                <div style="font-size:24px">⚙️</div>
+                <div style="font-size:10px">Device</div>
+            </div>
+            <div class="column flex-1 p-2 items-center" style="cursor:pointer" onclick="navigateTo('Colors')">
+                <div style="font-size:24px">🌈</div>
+                <div style="font-size:10px">Colors</div>
+            </div>
+            <div class="column flex-1 p-2 items-center" style="cursor:pointer" onclick="navigateTo('Framework')">
+                <div style="font-size:24px">🛠️</div>
+                <div style="font-size:10px">Tools</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderMainDrawer() {
+    return `
+        <div class="drawer-overlay ${drawerOpen ? 'active' : ''}" onclick="toggleDrawer()"></div>
+        <div class="drawer ${drawerOpen ? 'active' : ''}">
+            <div style="padding:24px 20px; background:#6366f1; color:white">
+                <div class="text lg bold">🐬 Dolphin Menu</div>
+                <div class="text sm" style="opacity:0.8; margin-top:4px">Native UI v4.1 (Stable)</div>
+            </div>
+            <div class="drawer-item" onclick="navigateTo('Home')">
+                <span style="font-size:20px">🏠</span>
+                <span>Home</span>
+            </div>
+            <div class="drawer-item" onclick="navigateTo('Animations')">
+                <span style="font-size:20px">✨</span>
+                <span>Animations</span>
+            </div>
+            <div class="drawer-item" onclick="navigateTo('NestedTab')">
+                <span style="font-size:20px">🔀</span>
+                <span>Nested Tabs</span>
+            </div>
+            <div class="drawer-item" onclick="navigateTo('FetchTest')">
+                <span style="font-size:20px">📊</span>
+                <span>Fetch Data</span>
+            </div>
+            <div class="drawer-item" onclick="navigateTo('Hardware')">
+                <span style="font-size:20px">⚙️</span>
+                <span>Device Tools</span>
+            </div>
+            <div class="drawer-item" onclick="navigateTo('Colors')">
+                <span style="font-size:20px">🎨</span>
+                <span>Color Palettes</span>
+            </div>
+            <div class="drawer-item" onclick="navigateTo('PhoneTest')">
+                <span style="font-size:20px">📞</span>
+                <span>Phone Integration</span>
+            </div>
+            <div class="drawer-item" onclick="navigateTo('Framework')">
+                <span style="font-size:20px">🛠️</span>
+                <span>Framework Support</span>
+            </div>
+            <div style="position:absolute; bottom:0; left:0; right:0; padding:16px 20px; color:#94a3b8; border-top:1px solid #f1f5f9">
+                <div class="text sm">© 2026 Dolphin Native Platform</div>
+            </div>
+        </div>
+    `;
+}
+
+function render() {
+    const screenRenderer = screens[currentScreen] || renderHomeScreen;
+    document.getElementById('app-root').innerHTML = screenRenderer() + renderMainDrawer();
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>
