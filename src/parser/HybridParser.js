@@ -651,54 +651,10 @@ class HybridParser {
      * @param {string} jsxString 
      */
     _jsxToHtml(jsxString) {
-        let html = jsxString;
-
-        // Convert JSX className to class
-        html = html.replace(/className=/g, 'class=');
-        
-        // Convert JSX htmlFor to for
-        html = html.replace(/htmlFor=/g, 'for=');
-        
-        // Handle self-closing tags
-        html = html.replace(/<(\w+)([^>]*)\/>/g, '<$1$2></$1>');
-        
-        // Convert style objects to style strings
-        html = html.replace(/style=\{\{([^}]+)\}\}/g, (match, styleObj) => {
-            try {
-                // Simple style object to string conversion
-                const styles = styleObj.split(',').map(s => s.trim());
-                const styleString = styles.map(s => {
-                    const [key, value] = s.split(':').map(p => p.trim());
-                    // Convert camelCase to kebab-case
-                    const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-                    // Remove quotes around values
-                    const cleanValue = value.replace(/['"]/g, '');
-                    return `${cssKey}: ${cleanValue}`;
-                }).join('; ');
-                return `style="${styleString}"`;
-            } catch (e) {
-                return match;
-            }
-        });
-
-        // Remove React import statements
-        html = html.replace(/import\s+.*from\s+['"]react['"];\s*/g, '');
-        
-        // Remove export statements
-        html = html.replace(/export\s+default\s+.*;\s*/g, '');
-        
-        // Convert onClick to onclick (and other events)
-        html = html.replace(/\b(on[A-Z][a-zA-Z]+)=/g, (match, p1) => {
-            return p1.toLowerCase() + '=';
-        });
-
-        // Extract JSX content from function (handles both return <...> and () => <...>)
+        if (!jsxString || typeof jsxString !== 'string') return '';
+        let html = jsxString.replace(/className=/g, 'class=').replace(/htmlFor=/g, 'for=');
         const tagMatch = html.match(/(<[a-zA-Z][\s\S]*>)/);
-        if (tagMatch) {
-            html = tagMatch[1];
-        }
-
-        return html;
+        return tagMatch ? tagMatch[1] : html;
     }
 
     /**
