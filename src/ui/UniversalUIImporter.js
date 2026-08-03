@@ -69,8 +69,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
                       : (normAttributes.classname ? normAttributes.classname
                       : (comp.tw || comp.className || ''));
                       
-            // Strip bracketed web-only classes [...] so Mobile Compiler ignores them completely
-            let tw = typeof rawTw === 'string' ? rawTw.replace(/\[.*?\]/g, '').trim() : rawTw;
+            let tw = typeof rawTw === 'string' ? rawTw.trim() : rawTw;
 
             // ── Auto-extract text color from className (e.g. text-red-100, text-white) ──
             const extractTextColorFromClass = (className) => {
