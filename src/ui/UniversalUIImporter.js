@@ -471,11 +471,10 @@ let compType = comp.props && comp.props.type ? comp.props.type
             bin[14] = (props.borderRadius || props.radius || 0) & 0xFF;
 
             // Byte 15: Signature / Animation / Gradient Bits
-            // Bit 0: Gradient | Bit 4: Animation ACTIVE | Bit 7: Loop
-            const animBits = ub.packAnimation(props.animation);
-            let sig = animBits;
-
+            // Bit 0: Gradient | Bit 4: Animation ACTIVE (0x10) | Bit 7: Loop
             const mobileTwClass = String(tw || '').replace(/\[.*?\]/g, '');
+            const hasAnim = Boolean(props.animation || twProps.animation || mobileTwClass.includes('animate-') || mobileTwClass.includes('framer-'));
+            let sig = hasAnim ? 0x10 : 0;
 
             if (props.scrollX || props.overflowX === 'scroll' || props.overflowX === 'auto' || mobileTwClass.includes('scroll-x') || mobileTwClass.includes('overflow-x-auto') || mobileTwClass.includes('overflow-x-scroll')) {
                 sig |= 0x02;
@@ -591,12 +590,8 @@ let compType = comp.props && comp.props.type ? comp.props.type
             }
 
             if (sig & 0x10) {
-                if (typeof props.animation === 'string' && props.animation !== '') {
-                    stringPool.push(props.animation);
-                } else {
-                    // If it's an object/binary (sig Bit 4 is on), push empty string to maintain alignment
-                    stringPool.push('');
-                }
+                let animStr = props.animation || twProps.animation || (mobileTwClass.match(/animate-([a-z0-9-]+)/)?.[0]) || '';
+                stringPool.push(animStr);
             }
 
             switch (typeCode) {

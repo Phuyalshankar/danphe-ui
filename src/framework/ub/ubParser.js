@@ -704,8 +704,9 @@ function parseClass(cls, darkMode = false) {
         return styles;
     }
 
-    if (ANIMATION_STYLE_MAP[cls]) {
-        styles.animation = ANIMATION_STYLE_MAP[cls].replace('animation:', '').replace(';', '').trim();
+    if (cls.startsWith('animate-') || ANIMATION_STYLE_MAP[cls]) {
+        const animName = cls.startsWith('animate-') ? cls.slice(8) : cls;
+        styles.animation = animName;
         return styles;
     }
 
