@@ -1,4 +1,4 @@
-package io.dolphin.runtime.hardware.titanv2
+package io.dolphin.runtime
 
 import android.util.Log
 import java.io.InputStream

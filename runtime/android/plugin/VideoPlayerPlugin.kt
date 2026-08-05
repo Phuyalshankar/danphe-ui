@@ -1,4 +1,4 @@
-package io.dolphin.runtime.plugin
+package io.dolphin.runtime
 
 import android.app.Activity
 import android.content.Context
@@ -9,7 +9,6 @@ import android.widget.FrameLayout
 import android.widget.MediaController
 import android.widget.VideoView
 import android.util.Log
-import io.dolphin.runtime.ViewFactory
 
 /**
  * Native Android Video Player Plugin using VideoView & MediaController.

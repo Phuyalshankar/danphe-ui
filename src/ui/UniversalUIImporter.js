@@ -1,4 +1,6 @@
-const ub = require('../utils/DolphinUIUtils');
+'use strict';
+
+const ub = require('../framework/ub');
 
 /**
  * 🌐 UniversalUIImporter - Titan 16-byte Protocol Mapper
@@ -69,7 +71,8 @@ let compType = comp.props && comp.props.type ? comp.props.type
                       : (normAttributes.classname ? normAttributes.classname
                       : (comp.tw || comp.className || ''));
                       
-            let tw = typeof rawTw === 'string' ? rawTw.trim() : rawTw;
+            // Strip bracketed web-only classes [...] so Mobile Compiler ignores them completely
+            const tw = typeof rawTw === 'string' ? rawTw.replace(/\[.*?\]/g, '').trim() : rawTw;
 
             // ── Auto-extract text color from className (e.g. text-red-100, text-white) ──
             const extractTextColorFromClass = (className) => {
@@ -137,7 +140,9 @@ let compType = comp.props && comp.props.type ? comp.props.type
             if (compType === 'th' || compType === 'td') {
                 compType = 'Column';
                 props.type = 'Column';
-                props.flex = 1;
+                if (!String(tw).includes('flex-')) {
+                    tw = (tw ? tw + ' ' : '') + 'flex-1';
+                }
             }
             if (compType === 'ul' || compType === 'ol') {
                 compType = 'Column';
@@ -245,25 +250,14 @@ let compType = comp.props && comp.props.type ? comp.props.type
             if (props.mb !== undefined) s.mb = props.mb;
             if (props.ml !== undefined) s.ml = props.ml;
 
-            const bin = Buffer.alloc(16);
+            const bin = Buffer.alloc(24);
 
             if (String(tw).includes('flex-row-between')) {
             }
 
             // Byte 1: Type Code
             let typeCode = this.getComponentCode(props.type || compType);
-
-            const isCardClass = String(tw).split(/\s+/).includes('card') || String(tw).includes('card-body') || props.type === 'Card' || compType === 'card' || compType === 'Card';
-            if (isCardClass && (typeCode === 0x12 || typeCode === 0x13 || typeCode === 0x14)) {
-                typeCode = 0x11; // Upgrade container to Card opcode (0x11)
-            }
-
-            const isBtnClass = String(tw).split(/\s+/).includes('btn') || String(tw).includes('button') || props.type === 'Button' || compType === 'button' || compType === 'Button';
-            if (isBtnClass && (typeCode === 0x12 || typeCode === 0x16)) {
-                typeCode = 0x10; // Upgrade container to Button opcode (0x10)
-            }
-
-            const isGridClass = String(tw).includes('grid') || String(tw).includes('grid-cols-') || String(tw).includes('grid-col-') || props.type === 'GridView' || props.type === 'Grid' || compType === 'GridView' || compType === 'Grid';
+            const isGridClass = String(tw).includes('grid') || String(tw).includes('grid-cols-') || props.type === 'GridView' || props.type === 'Grid' || compType === 'GridView' || compType === 'Grid';
             if (isGridClass && (typeCode === 0x12 || typeCode === 0x13 || typeCode === 0x14)) {
                 typeCode = 0x22; // Upgrade container/column/row to GridView opcode (0x22)
             }
@@ -499,13 +493,16 @@ let compType = comp.props && comp.props.type ? comp.props.type
             if (props.gradient) sig |= 0x01;
             
             // Bit 2: Explicit Border flag — ignore 'none', '0', '0px'
-            const hasValidBorder = (b, bw, bc) => {
+            const hasValidBorder = (b, bw, bc, twStr) => {
+                if (String(twStr || '').includes('border') && !String(twStr || '').includes('border-none')) return true;
+                if (b === true || b === 'true') return true;
                 if (b && b !== 'none' && b !== '0' && b !== '0px' && b !== 0) return true;
                 if (bw && bw !== '0' && bw !== '0px' && bw !== 0) return true;
                 if (bc && bc !== 'transparent' && bc !== 'none' && bc !== '0') return true;
+                if (String(props.className || '').includes('border') && !String(props.className || '').includes('border-none')) return true;
                 return false;
             };
-            if (hasValidBorder(props.border, props.borderWidth, props.borderColor)) sig |= 0x04;
+            if (hasValidBorder(props.border, props.borderWidth, props.borderColor, tw)) sig |= 0x04;
             if (props.justify === 'between' || String(tw).includes('justify-between') || String(tw).includes('flex-between')) sig |= 0x20;
             if (props.swipeable || props.swipe || mobileTwClass.includes('swipeable') || props.type === 'Screen' || compType === 'Screen') sig |= 0x40;
 
@@ -514,6 +511,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
             if (hasBindings) sig |= 0x08;
 
             bin[15] = sig;
+            bin[23] = sig;
 
             console.log(`   [UI] Opcode: 0x${bin[1].toString(16)}, Byte15(Sig): ${bin[15].toString(16)}, Byte12(Shade/Grav): ${bin[12]}, Byte13(Color/Count): ${bin[13]}`);
             binaries.push(bin);
@@ -531,14 +529,14 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 w = -1; // Default Input/TextField to 100% width (MATCH_PARENT)
             }
             let h = props.height !== undefined ? props.height : (twProps.height !== undefined ? twProps.height : 0);
-            if (!h && (String(tw).includes('h-full') || String(tw).includes('h-screen') || String(tw).includes('h-100'))) {
+            if (!h && (String(tw).includes('h-full') || String(tw).includes('h-screen') || String(tw).includes('h-100') || String(tw).includes('min-h-screen') || String(tw).includes('min-h-full'))) {
                 h = -1;
             }
             if (typeof h === 'string') {
                 if (h.includes('%') || h.includes('vh') || h === 'full') h = -1;
                 else h = parseInt(h.replace(/[^0-9-]/g, '')) || 0;
             }
-            const elevation = props.elevation || 0;
+            const elevation = props.elevation || (String(tw).includes('shadow-sm') ? 2 : (String(tw).includes('shadow-lg') ? 8 : (String(tw).includes('shadow-xl') ? 12 : (String(tw).includes('shadow-2xl') ? 16 : (String(tw).includes('shadow') ? 4 : 0)))));
             const size = props.size || 0;
             stringPool.push(`${Math.round(w)}|${Math.round(h)}|${Math.round(elevation)}|${Math.round(size)}`);
 
@@ -549,7 +547,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
             }
 
             if (sig & 0x04) {
-                let bWidth = "1px", bStyle = "solid", bColor = "#cccccc";
+                let bWidth = "1px", bStyle = "solid", bColor = "#e2e8f0";
                 if (props.border && typeof props.border === 'string' && props.border !== 'none') {
                     const parts = props.border.split(' ');
                     if (parts[0]) bWidth = parts[0];
@@ -559,7 +557,23 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 if (props.borderColor) bColor = props.borderColor;
                 if (props.borderWidth) bWidth = props.borderWidth;
                 if (props.borderStyle) bStyle = props.borderStyle;
-                stringPool.push(`${bWidth}|${bStyle}|${bColor}`);
+
+                let hexColor = bColor;
+                if (bColor && !bColor.startsWith('#') && !bColor.startsWith('rgb')) {
+                    const resolved = ub && ub.resolveColorToHex ? ub.resolveColorToHex(bColor) : null;
+                    if (resolved && typeof resolved === 'string' && resolved.startsWith('#')) {
+                        hexColor = resolved;
+                    } else if (bColor.includes('slate-200') || bColor.includes('gray-200') || bColor.includes('zinc-200')) {
+                        hexColor = '#cbd5e1';
+                    } else if (bColor.includes('slate-700') || bColor.includes('gray-700')) {
+                        hexColor = '#334155';
+                    } else if (bColor.includes('blue-500') || bColor.includes('blue-600')) {
+                        hexColor = '#2563eb';
+                    } else {
+                        hexColor = '#cbd5e1';
+                    }
+                }
+                stringPool.push(`${bWidth}|${bStyle}|${hexColor}`);
             }
 
             if (sig & 0x08) {
@@ -666,14 +680,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     stringPool.push(props.stateKey || props.action || '');
                     stringPool.push(props.label || '');
                     break;
-                case 0x18: // TextField: stateKey, label, hint, inputType, variant, iconName
-                    stringPool.push(props.stateKey || props.action || props.name || '');
-                    stringPool.push(props.label || props.floatingLabel || '');
-                    stringPool.push(props.placeholder || props.hint || '');
-                    stringPool.push(props.type || props.inputType || 'text');
-                    stringPool.push(props.variant || (String(props.className || tw || '').includes('filled') ? 'filled' : (String(props.className || tw || '').includes('standard') ? 'standard' : 'outlined')));
-                    stringPool.push(props.icon || props.iconName || '');
-                    break;
+
                 case 0x40: // File Upload: action, label
                     stringPool.push(props.action || '');
                     stringPool.push(props.label || '');
@@ -716,7 +723,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     stringPool.push(props.label || '');
                     stringPool.push(props.hint || props.placeholder || '');
                     stringPool.push(props.inputType || props.type || 'text');
-                    stringPool.push(props.variant || 'outlined');
+                    stringPool.push(props.variant || props.varient || (String(props.className || tw || '').includes('filled') ? 'filled' : (String(props.className || tw || '').includes('standard') ? 'standard' : 'outlined')));
                     let iconL = props.icon || props.iconLeft || props.startIcon || '';
                     let iconR = props.iconRight || props.endIcon || '';
                     let iconColorL = ub.resolveColorToHex(props.iconColor || props.iconColorLeft || props.startIconColor || '');
@@ -778,7 +785,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
         const stringPool = [];
 
         nodes.forEach(node => {
-            const bin = Buffer.alloc(16);
+            const bin = Buffer.alloc(24);
 
             // Byte 1: Type
             const typeCode = this.getComponentCode(node.type || node.tagName);
@@ -815,6 +822,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
             let sig = 0x00;
             if (styles.border || styles.borderColor || styles.borderWidth) sig |= 0x04;
             bin[15] = sig;
+            bin[23] = sig;
 
             binaries.push(bin);
 
@@ -864,6 +872,9 @@ let compType = comp.props && comp.props.type ? comp.props.type
         if (typeof type === 'function') {
             typeStr = type.name || '';
         }
+
+        const cleanType = String(typeStr).toLowerCase();
+        if (cleanType === 'card' || cleanType === 'cardview' || cleanType === 'card-view') return 0x11;
 
         const map = {
             // Native/Flutter Style
@@ -944,7 +955,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
 
     _convertSingleComponent(schema, platform = 'UNIVERSAL') {
         const result = this.importSchema(schema);
-        return result.binaries[0] || Buffer.alloc(16);
+        return result.binaries[0] || Buffer.alloc(24);
     }
 }
 

@@ -1,8 +1,8 @@
-package io.dolphin.runtime.plugin
+package io.dolphin.runtime
+
 
 import android.content.Context
 import android.view.View
-import io.dolphin.runtime.ViewFactory
 
 interface DolphinUIPlugin {
     /**

@@ -1,4 +1,4 @@
-package io.dolphin.runtime.plugin
+package io.dolphin.runtime
 
 import android.content.Context
 import android.graphics.Color
@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.CalendarView
 import android.widget.FrameLayout
 import android.widget.Toast
-import io.dolphin.runtime.ViewFactory
 
 /**
  * 🔌 Third-Party Kotlin UI Plugin Example: CalendarPlugin

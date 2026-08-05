@@ -1,4 +1,4 @@
-package io.dolphin.runtime.hardware
+package io.dolphin.runtime
 
 import android.annotation.SuppressLint
 import android.content.Context

@@ -109,12 +109,8 @@ async function cmdDev(args) {
                 const cwdNorm = cwd.replace(/\\/g, '/').toLowerCase();
                 Object.keys(require.cache).forEach(k => {
                     const n = k.replace(/\\/g, '/').toLowerCase();
-                    // Clear project files, src files, but skip node_modules dependencies
-                    if (n.startsWith(cwdNorm) || n.includes('/src/')) {
-                        // Skip node_modules unless it's dolphin-native itself
-                        if (!n.includes('/node_modules/') || n.includes('/dolphin-native/')) {
-                            delete require.cache[k];
-                        }
+                    if (!n.includes('/node_modules/') || n.includes('dolphin-native')) {
+                        delete require.cache[k];
                     }
                 });
 
@@ -124,7 +120,7 @@ async function cmdDev(args) {
                 appInstance   = bundleResult.appInstance;
 
                 if (appInstance) appInstance.attachDevServer(server);
-                server.pushScreenPatches(bundle, bundleResult.screens, bundleResult.entry);
+                server.pushReload(bundle);
 
                 // Push updated store state keys to connected devices
                 try {

@@ -1,4 +1,5 @@
-package io.dolphin.runtime.hardware
+package io.dolphin.runtime
+
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -141,11 +142,11 @@ object DolphinVideoCall {
         }.start()
 
         closeCamera()
-        io.dolphin.runtime.DolphinStateEngine.set("video_remote_frame", "")
-        io.dolphin.runtime.DolphinStateEngine.set("video_remote_active", false)
-        io.dolphin.runtime.DolphinStateEngine.set("video_remote_connecting", false)
-        io.dolphin.runtime.DolphinStateEngine.set("video_local_frame", "")
-        io.dolphin.runtime.DolphinStateEngine.set("video_local_active", false)
+        DolphinStateEngine.set("video_remote_frame", "")
+        DolphinStateEngine.set("video_remote_active", false)
+        DolphinStateEngine.set("video_remote_connecting", false)
+        DolphinStateEngine.set("video_local_frame", "")
+        DolphinStateEngine.set("video_local_active", false)
         log("📵 Video streaming stopped")
     }
 
@@ -252,10 +253,10 @@ object DolphinVideoCall {
                 if (!running.get()) return@setOnImageAvailableListener
                 val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
                 try {
-                    val videoEnabled = io.dolphin.runtime.DolphinStateEngine.get("local_video_enabled") as? Boolean ?: true
+                    val videoEnabled = DolphinStateEngine.get("local_video_enabled") as? Boolean ?: true
                     if (!videoEnabled) {
-                        io.dolphin.runtime.DolphinStateEngine.set("video_local_frame", "")
-                        io.dolphin.runtime.DolphinStateEngine.set("video_local_active", false)
+                        DolphinStateEngine.set("video_local_frame", "")
+                        DolphinStateEngine.set("video_local_active", false)
                         image.close()
                         return@setOnImageAvailableListener
                     }
@@ -284,11 +285,11 @@ object DolphinVideoCall {
                     
                     // Also update local preview frame!
                     val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-                    io.dolphin.runtime.DolphinStateEngine.set(
+                    DolphinStateEngine.set(
                         "video_local_frame",
                         "data:image/jpeg;base64,$b64"
                     )
-                    io.dolphin.runtime.DolphinStateEngine.set("video_local_active", true)
+                    DolphinStateEngine.set("video_local_active", true)
                 } finally {
                     image.close()
                 }
@@ -403,7 +404,7 @@ object DolphinVideoCall {
 
     private fun startReceiveLoop() {
         val intervalMs = (1000L / FPS)
-        io.dolphin.runtime.DolphinStateEngine.set("video_remote_connecting", true)
+        DolphinStateEngine.set("video_remote_connecting", true)
         Thread {
             while (running.get()) {
                 try {
@@ -416,15 +417,15 @@ object DolphinVideoCall {
                             val bytes = inputStream.readBytes()
                             if (bytes.isNotEmpty()) {
                                 val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-                                io.dolphin.runtime.DolphinStateEngine.set(
+                                DolphinStateEngine.set(
                                     "video_remote_frame",
                                     "data:image/jpeg;base64,$b64"
                                 )
-                                io.dolphin.runtime.DolphinStateEngine.set(
+                                DolphinStateEngine.set(
                                     "video_remote_active",
                                     true
                                 )
-                                io.dolphin.runtime.DolphinStateEngine.set(
+                                DolphinStateEngine.set(
                                     "video_remote_connecting",
                                     false
                                 )
@@ -475,7 +476,7 @@ object DolphinVideoCall {
 
     private fun log(msg: String) {
         Log.d(TAG, msg)
-        io.dolphin.runtime.DolphinRuntime.instance?.logToPC("VideoCall", msg)
+        DolphinRuntime.instance?.logToPC("VideoCall", msg)
         onLog?.invoke(msg)
     }
 
@@ -488,7 +489,7 @@ object DolphinVideoCall {
         try {
             val base64Frame = android.util.Base64.encodeToString(payload, android.util.Base64.NO_WRAP)
             val dataUri = "data:image/jpeg;base64,$base64Frame"
-            io.dolphin.runtime.DolphinStateEngine.set("video_remote_frame", dataUri)
+            DolphinStateEngine.set("video_remote_frame", dataUri)
         } catch (e: Exception) {
             Log.e(TAG, "renderRemoteFrameRaw failed: ${e.message}")
         }

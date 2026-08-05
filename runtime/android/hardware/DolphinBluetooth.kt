@@ -1,4 +1,5 @@
-package io.dolphin.runtime.hardware
+package io.dolphin.runtime
+
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -7,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.util.Log
-import io.dolphin.runtime.DolphinStateEngine
 
 object DolphinBluetooth {
     private const val TAG = "DolphinBluetooth"

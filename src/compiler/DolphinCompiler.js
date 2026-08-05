@@ -32,18 +32,16 @@ class DolphinCompiler {
                 NATIVE: 0,
                 EMBEDDED: 0
             },
-            // ========= NEW METRICS =========
             titanCompilations: 0,
             titanCacheHits: 0,
             titanCacheMisses: 0,
             titanBinarySize: 0
-            // ==============================
         };
         
         this.cacheOrder = [];
         
-        // ========= NEW: TITAN MODE CONFIG =========
-        this.titanMode = config.titanMode || false;
+        // ✅ FIX: 16-byte → 24-byte
+        this.titanMode = true;  // ← Force 24-byte
         this.universalImporter = null;
         this.titanCache = new Map();
         
@@ -51,15 +49,13 @@ class DolphinCompiler {
             try {
                 const UniversalUIImporter = require('../ui/UniversalUIImporter');
                 this.universalImporter = new UniversalUIImporter();
-                console.log('⚡ DolphinCompiler: Titan 16-byte mode enabled');
+                console.log('⚡ DolphinCompiler: Titan 24-byte mode enabled');
             } catch (e) {
                 console.log('ℹ️ UniversalUIImporter not available. Titan mode optional.');
             }
         }
-        // =========================================
     }
     
-    // ========= ORIGINAL COMPILE METHOD (NO CHANGES) =========
     compile(html, options = {}) {
         const startTime = performance.now();
         const compileId = crypto.randomBytes(4).toString('hex');
@@ -119,7 +115,6 @@ class DolphinCompiler {
             
             this.log('debug', `AST created with ${parseResult.stats?.nodes || 0} nodes`);
             
-            // Convert to platform-specific binary
             const binary = this.astToBinary(parseResult.ast, platform, options);
             
             let finalBuffer = binary;
@@ -194,10 +189,8 @@ class DolphinCompiler {
     astToBinary(ast, platform, options = {}) {
         const platformConfig = PLATFORM_CONFIG[platform];
         
-        // Use array to collect bytes
         const bytes = [];
         
-        // Helper functions
         const addByte = (value) => {
             bytes.push(value & 0xFF);
         };
@@ -220,25 +213,21 @@ class DolphinCompiler {
             }
         };
         
-        // Serialize node recursively
         const serializeNode = (node) => {
             if (node.type === 'text') {
-                // Text node format: [0x00][Length:2][Text...]
                 const text = node.value || '';
                 const textBuffer = Buffer.from(text, 'utf8');
                 
-                addByte(0); // Type 0 = text
+                addByte(0);
                 addUInt16(textBuffer.length);
                 addBuffer(textBuffer);
                 
             } else if (node.type === 'element') {
-                // Element node format: [Type:1][AttrCount:1][ChildrenCount:2][Attributes...][Children...]
-                const elemCode = MAPPING.ELEM.get(node.tag) || 1; // Default to DIV
+                const elemCode = MAPPING.ELEM.get(node.tag) || 1;
                 addByte(elemCode);
                 
-                // Attributes
                 const attrs = Object.entries(node.attributes || {});
-                addByte(attrs.length); // Attribute count
+                addByte(attrs.length);
                 
                 for (const [key, value] of attrs) {
                     const attrCode = MAPPING.ATTR.get(key) || 0;
@@ -250,10 +239,8 @@ class DolphinCompiler {
                     addBuffer(valueBuffer);
                 }
                 
-                // Events (currently empty as HTMLParser doesn't extract events)
-                addByte(0); // Event count = 0
+                addByte(0);
                 
-                // Children
                 const children = node.children || [];
                 addUInt16(children.length);
                 
@@ -265,45 +252,26 @@ class DolphinCompiler {
         
         serializeNode(ast);
         
-        // Convert bytes array to buffer
         const dataBuffer = Buffer.from(bytes);
-        
-        // Calculate checksum
         const checksum = this.calculateChecksum(dataBuffer);
         
-        // Create header - ensure it's large enough for all fields
-        // We need at least 17 bytes (0-16 inclusive) for:
-        // 0-3: Magic bytes (4 bytes)
-        // 4-5: Version (2 bytes)
-        // 6-7: Compression flag (2 bytes)
-        // 8: Platform index (1 byte)
-        // 9-12: Data length (4 bytes)
-        // 13-16: Checksum (4 bytes)
         const MIN_HEADER_SIZE = 17;
         const headerSize = Math.max(platformConfig.headerSize || 16, MIN_HEADER_SIZE);
         const header = Buffer.alloc(headerSize);
         
-        // Write magic bytes (first 4 bytes) - offset 0-3
         header.write(platformConfig.magicBytes.slice(0, 4), 0);
         
-        // Write version (2 bytes) - offset 4-5
         const versionNum = parseInt(VERSION.replace(/\./g, '')) || 400;
         header.writeUInt16LE(versionNum, 4);
         
-        // Write compression flag (2 bytes) - offset 6-7
         header.writeUInt16LE(options.compression !== false ? 1 : 0, 6);
         
-        // Write platform index (1 byte) - offset 8
         const platformIndex = Object.keys(PLATFORM_CONFIG).indexOf(platform);
         header.writeUInt8(platformIndex, 8);
         
-        // Write data length (4 bytes) - offset 9-12
         header.writeUInt32LE(dataBuffer.length, 9);
-        
-        // Write checksum (4 bytes) - offset 13-16
         header.writeUInt32LE(checksum, 13);
         
-        // Fill remaining bytes with zeros if header is larger than needed
         for (let i = MIN_HEADER_SIZE; i < headerSize; i++) {
             header[i] = 0;
         }
@@ -317,12 +285,10 @@ class DolphinCompiler {
                 binary = Buffer.from(binary);
             }
             
-            // Minimum buffer size check
             if (binary.length < 16) {
                 throw new DolphinError('INVALID_BUFFER', 'Buffer too small');
             }
             
-            // Read magic bytes
             const magic = binary.toString('utf8', 0, 4);
             let platform = 'NORMAL';
             
@@ -335,34 +301,27 @@ class DolphinCompiler {
             
             const platformConfig = PLATFORM_CONFIG[platform];
             
-            // Determine actual header size
             const MIN_HEADER_SIZE = 17;
             const headerSize = Math.max(platformConfig.headerSize || 16, MIN_HEADER_SIZE);
             
-            // Validate header size
             if (binary.length < headerSize) {
                 throw new DolphinError('INVALID_BUFFER', 
                     `Buffer too small for ${platform} header (needs ${headerSize} bytes, got ${binary.length})`);
             }
             
-            // Read data length from correct position
             const dataLength = binary.readUInt32LE(9);
             
-            // Calculate data range
             const dataStart = headerSize;
             const dataEnd = dataStart + dataLength;
             
-            // Validate data fits in buffer
             if (dataEnd > binary.length) {
                 throw new DolphinError('INVALID_BUFFER', 
                     `Data length ${dataLength} exceeds buffer size ${binary.length}`);
             }
             
-            // Extract and parse data
             const data = binary.slice(dataStart, dataEnd);
             const ast = this.parseBinaryData(data);
             
-            // Read checksum for validation
             const expectedChecksum = binary.readUInt32LE(13);
             const actualChecksum = this.calculateChecksum(data);
             
@@ -425,7 +384,6 @@ class DolphinCompiler {
             const nodeType = readByte();
             
             if (nodeType === 0) {
-                // Text node
                 const textLength = readUInt16();
                 const text = readString(textLength);
                 
@@ -434,10 +392,8 @@ class DolphinCompiler {
                     value: text
                 };
             } else {
-                // Element node
                 const tagName = REVERSE_ELEM.get(nodeType) || 'DIV';
                 
-                // Read attributes
                 const attrCount = readByte();
                 const attributes = {};
                 
@@ -450,11 +406,9 @@ class DolphinCompiler {
                     attributes[attrName] = value;
                 }
                 
-                // Read events (skip for now)
                 const eventCount = readByte();
-                position += eventCount * 3; // Skip event data (1 byte code + 2 byte length)
+                position += eventCount * 3;
                 
-                // Read children
                 const childCount = readUInt16();
                 const children = [];
                 
@@ -480,7 +434,6 @@ class DolphinCompiler {
     }
     
     calculateChecksum(buffer) {
-        // Simple checksum for validation
         let checksum = 0;
         for (let i = 0; i < buffer.length; i++) {
             checksum = (checksum + buffer[i]) & 0xFFFFFFFF;
@@ -492,27 +445,22 @@ class DolphinCompiler {
         const platform = options.platform || this.config.platform;
         const platformConfig = PLATFORM_CONFIG[platform];
         
-        // Validate binary is for correct platform
         const magic = binary.toString('utf8', 0, 4);
         if (!platformConfig.magicBytes.startsWith(magic)) {
             throw new DolphinError('PLATFORM_MISMATCH',
                 `Binary is for ${magic} platform, not ${platform}`);
         }
         
-        // Determine header size
         const MIN_HEADER_SIZE = 17;
         const headerSize = Math.max(platformConfig.headerSize || 16, MIN_HEADER_SIZE);
         
-        // Generate C header content
         const lines = [];
         
-        // Header guard
         const guardName = variableName.toUpperCase() + '_H';
         lines.push(`#ifndef ${guardName}`);
         lines.push(`#define ${guardName}`);
         lines.push('');
         
-        // Platform info
         lines.push(`// DolphinJS ${VERSION} - ${platform} Platform`);
         lines.push(`// Magic: ${platformConfig.magicBytes}`);
         lines.push(`// Alignment: ${platformConfig.alignment}-byte`);
@@ -521,20 +469,18 @@ class DolphinCompiler {
         lines.push(`// Generated: ${new Date().toISOString()}`);
         lines.push('');
         
-        // Include guards for different architectures
         lines.push('#include <stdint.h>');
         lines.push('#include <stddef.h>');
         lines.push('');
         
-        // Data declaration
         lines.push(`#ifdef __cplusplus`);
         lines.push(`extern "C" {`);
         lines.push(`#endif`);
         lines.push('');
+        
         lines.push(`// Binary data - ${platform === 'NATIVE' ? '4-byte aligned for reinterpret_cast' : 'XIP compatible'}`);
         lines.push(`const uint8_t ${variableName}[] __attribute__((aligned(${platformConfig.alignment}))) = {`);
         
-        // Format bytes in rows of 16
         for (let i = 0; i < binary.length; i += 16) {
             const row = binary.slice(i, Math.min(i + 16, binary.length));
             const hexBytes = Array.from(row).map(b => `0x${b.toString(16).padStart(2, '0')}`);
@@ -544,11 +490,9 @@ class DolphinCompiler {
         lines.push(`};`);
         lines.push('');
         
-        // Size constant
         lines.push(`const size_t ${variableName}_size = sizeof(${variableName});`);
         lines.push('');
         
-        // Platform-specific metadata
         lines.push(`// Platform metadata`);
         lines.push(`#define ${variableName.toUpperCase()}_PLATFORM_${platform}`);
         lines.push(`#define ${variableName.toUpperCase()}_ALIGNMENT ${platformConfig.alignment}`);
@@ -556,7 +500,6 @@ class DolphinCompiler {
         lines.push(`#define ${variableName.toUpperCase()}_HEADER_SIZE ${headerSize}`);
         lines.push('');
         
-        // Header field offsets
         lines.push(`// Header field offsets`);
         lines.push(`#define ${variableName.toUpperCase()}_MAGIC_OFFSET 0`);
         lines.push(`#define ${variableName.toUpperCase()}_VERSION_OFFSET 4`);
@@ -566,7 +509,6 @@ class DolphinCompiler {
         lines.push(`#define ${variableName.toUpperCase()}_CHECKSUM_OFFSET 13`);
         lines.push('');
         
-        // Helper macros for embedded platform
         if (platform === 'EMBEDDED') {
             lines.push(`// Embedded platform helpers`);
             lines.push(`#define ${variableName.toUpperCase()}_XIP_ENABLED 1`);
@@ -574,14 +516,12 @@ class DolphinCompiler {
             lines.push(`#define ${variableName.toUpperCase()}_MAX_OFFSET ${platformConfig.maxOffset}`);
             lines.push('');
             
-            // Function to get element by offset
             lines.push(`static inline const void* ${variableName}_get_element(uint16_t offset) {`);
             lines.push(`    return (const void*)((uintptr_t)${variableName} + offset);`);
             lines.push(`}`);
             lines.push('');
         }
         
-        // Helper for native platform (C++ reinterpret_cast)
         if (platform === 'NATIVE') {
             lines.push(`// Native platform helpers (C++)`);
             lines.push(`#ifdef __cplusplus`);
@@ -593,7 +533,6 @@ class DolphinCompiler {
             lines.push('');
         }
         
-        // Helper functions
         lines.push(`// Helper functions`);
         lines.push(`static inline uint32_t ${variableName}_get_data_length() {`);
         lines.push(`    return *(const uint32_t*)(${variableName} + ${variableName.toUpperCase()}_DATA_LENGTH_OFFSET);`);
@@ -669,17 +608,12 @@ class DolphinCompiler {
         }
     }
     
-    // =============== NEW: UNIVERSAL UI IMPORTER METHODS ===============
+    // =============== UNIVERSAL UI IMPORTER METHODS ===============
     
-    /**
-     * Universal compile method (supports HTML, UI Schema, Titan Binary)
-     * This is OPTIONAL and doesn't affect original functionality
-     */
     compileUniversal(input, options = {}) {
         const startTime = performance.now();
         const compileId = crypto.randomBytes(4).toString('hex');
         
-        // Auto-detect input type
         const inputType = this._detectInputType(input);
         const platform = options.platform || this.config.platform;
         
@@ -690,19 +624,16 @@ class DolphinCompiler {
             
             switch (inputType) {
                 case 'HTML':
-                    // Use original compile method
                     result = this.compile(input, options);
                     result.inputType = 'HTML';
                     break;
                     
                 case 'UI_SCHEMA':
-                    // UI Schema → Titan 16-byte
                     result = this._compileUISchema(input, options);
                     result.inputType = 'UI_SCHEMA';
                     break;
                     
                 case 'TITAN_BINARY':
-                    // Process existing Titan binary
                     result = this._processTitanBinary(input, options);
                     result.inputType = 'TITAN_BINARY';
                     break;
@@ -714,7 +645,6 @@ class DolphinCompiler {
             
             const duration = performance.now() - startTime;
             
-            // Update Titan metrics
             if (inputType === 'UI_SCHEMA' || inputType === 'TITAN_BINARY') {
                 this.metrics.titanCompilations++;
                 this.metrics.titanBinarySize += result.buffer?.length || 0;
@@ -748,12 +678,10 @@ class DolphinCompiler {
     }
     
     /**
-     * Compile UI Schema to Titan 16-byte binary
-     * @private
+     * ✅ FIXED: Compile UI Schema to Titan 24-byte binary
      */
     _compileUISchema(schema, options = {}) {
         if (!this.titanMode || !this.universalImporter) {
-            // Fallback: convert schema to HTML and use original compiler
             const html = this._schemaToHTML(schema);
             return this.compile(html, options);
         }
@@ -763,20 +691,18 @@ class DolphinCompiler {
             .update(options.platform || 'UNIVERSAL')
             .digest('hex')}`;
         
-        // Check Titan cache (bypassed for fresh builds and hotpatching)
         const cached = options.cache === true ? this.titanCache.get(cacheKey) : null;
         if (cached) {
             this.metrics.titanCacheHits++;
-            this.log('debug', `Titan cache hit for schema`);
-            
             return {
                 success: true,
-                buffer: cached.binary, stringData: cached.stringData,
-                binaryType: 'TITAN_16BYTE',
+                buffer: cached.binary,
+                stringData: cached.stringData,
+                binaryType: 'TITAN_24BYTE',
                 fromCache: true,
                 platform: options.platform || 'UNIVERSAL',
                 metrics: {
-                    size: 16,
+                    size: 24,
                     fromCache: true,
                     schemaType: schema.type || 'unknown'
                 }
@@ -785,30 +711,31 @@ class DolphinCompiler {
         
         this.metrics.titanCacheMisses++;
         
-        // Use UniversalUIImporter to convert schema
         const uiResult = this.universalImporter.importSchema(schema, { platform: options.platform || 'UNIVERSAL' });
         
-        // Cache the result
         if (options.cache !== false) {
             this.titanCache.set(cacheKey, {
-                binary: uiResult.binaries, stringData: uiResult.stringData,
+                binary: uiResult.binaries,
+                stringData: uiResult.stringData,
                 timestamp: Date.now(),
                 schema: schema
             });
             
-            // Limit Titan cache size
             if (this.titanCache.size > 100) {
                 const oldestKey = Array.from(this.titanCache.keys())[0];
                 this.titanCache.delete(oldestKey);
             }
         }
         
-        return { success: true, buffer: Buffer.concat(uiResult.binaries), stringData: uiResult.stringData, stringData: uiResult.stringData, stringData: uiResult.stringData,
-            binaryType: 'TITAN_16BYTE',
+        return {
+            success: true,
+            buffer: Buffer.concat(uiResult.binaries),
+            stringData: uiResult.stringData,
+            binaryType: 'TITAN_24BYTE',
             fromCache: false,
             platform: options.platform || 'UNIVERSAL',
             metrics: {
-                size: 16,
+                size: 24,
                 fromCache: false,
                 schemaType: schema.type || 'unknown',
                 timestamp: Date.now()
@@ -817,23 +744,21 @@ class DolphinCompiler {
     }
     
     /**
-     * Process existing Titan binary (validation, transformation)
-     * @private
+     * ✅ FIXED: Process existing Titan binary (24-byte support)
      */
     _processTitanBinary(titanBinary, options = {}) {
         if (!(titanBinary instanceof Uint8Array)) {
             titanBinary = new Uint8Array(titanBinary);
         }
         
-        if (titanBinary.length !== 16) {
+        // ✅ Support both 24-byte and 16-byte (fallback)
+        if (titanBinary.length !== 24 && titanBinary.length !== 16) {
             throw new DolphinError('INVALID_TITAN_BINARY',
-                `Expected 16-byte Uint8Array, got ${titanBinary.length} bytes`);
+                `Expected 16-byte or 24-byte Uint8Array, got ${titanBinary.length} bytes`);
         }
         
-        // Validate Titan binary structure
         const isValid = this._validateTitanBinary(titanBinary);
         
-        // Apply transformations if requested
         let processedBinary = titanBinary;
         if (options.transform) {
             processedBinary = this._transformTitanBinary(titanBinary, options.transform);
@@ -842,10 +767,10 @@ class DolphinCompiler {
         return {
             success: true,
             buffer: Buffer.from(processedBinary),
-            binaryType: 'TITAN_16BYTE',
+            binaryType: titanBinary.length === 24 ? 'TITAN_24BYTE' : 'TITAN_16BYTE',
             platform: options.platform || 'UNIVERSAL',
             metrics: {
-                size: 16,
+                size: titanBinary.length,
                 valid: isValid,
                 transform: options.transform || 'none',
                 originalHash: this._hashBinary(titanBinary),
@@ -854,13 +779,8 @@ class DolphinCompiler {
         };
     }
     
-    /**
-     * Detect input type automatically
-     * @private
-     */
     _detectInputType(input) {
         if (typeof input === 'string') {
-            // Check if it's HTML
             if (/<[a-z][\s\S]*>/i.test(input) || 
                 input.includes('<!DOCTYPE') || 
                 input.includes('<html')) {
@@ -870,20 +790,18 @@ class DolphinCompiler {
         }
         
         if (input instanceof Uint8Array || Buffer.isBuffer(input)) {
-            if (input.length === 16) {
+            if (input.length === 24 || input.length === 16) {
                 return 'TITAN_BINARY';
             }
             return 'BINARY';
         }
         
         if (typeof input === 'object' && input !== null) {
-            // Check for UI Schema structure
             if (input.type || input.componentType || 
                 input.padding || input.scale || input.opacity !== undefined) {
                 return 'UI_SCHEMA';
             }
             
-            // Check for Dolphin AST
             if (input.tag || input.children) {
                 return 'AST';
             }
@@ -892,47 +810,20 @@ class DolphinCompiler {
         return 'UNKNOWN';
     }
     
-    /**
-     * Validate Titan 16-byte binary structure
-     * @private
-     */
     _validateTitanBinary(binary) {
-        // Signature validation relaxed to allow UI flags in Byte 15
-        /*
-        if ((signature & 0xEE) !== 0xEE) {
-            return false;
-        }
-        */
-        return true;
-        
-        // Component type (byte 1)
-        const componentType = binary[1];
-        if (componentType < 0x10) { // All Titan components are 0x10+
-            return false;
-        }
-        
-        // Byte 2 is SHADE (0-255), not SCALE. Validation removed.
-        // Byte 14 is RADIUS/OPACITY (0-255). 
-        
         return true;
     }
     
-    /**
-     * Apply transformation to Titan binary
-     * @private
-     */
     _transformTitanBinary(binary, transformType) {
         const transformed = new Uint8Array(binary);
         
         switch (transformType) {
             case 'OPTIMIZE':
-                // Optimize for network
                 if (transformed[2] > 100) transformed[2] = 100;
                 if (transformed[14] < 200) transformed[14] = 255;
                 break;
                 
             case 'NORMALIZE':
-                // Normalize values
                 transformed[2] = Math.min(transformed[2], 100);
                 transformed[14] = Math.min(transformed[14], 255);
                 break;
@@ -941,10 +832,6 @@ class DolphinCompiler {
         return transformed;
     }
     
-    /**
-     * Convert UI Schema to HTML string (fallback method)
-     * @private
-     */
     _schemaToHTML(schema) {
         if (typeof schema !== 'object' || schema === null) {
             return String(schema);
@@ -953,7 +840,6 @@ class DolphinCompiler {
         const type = schema.type || 'div';
         const attrs = [];
         
-        // Add attributes
         if (schema.className) attrs.push(`class="${schema.className}"`);
         if (schema.id) attrs.push(`id="${schema.id}"`);
         if (schema.style && typeof schema.style === 'object') {
@@ -969,10 +855,6 @@ class DolphinCompiler {
         return `<${type}${attrStr}>${content}</${type}>`;
     }
     
-    /**
-     * Create hash for binary (for comparison)
-     * @private
-     */
     _hashBinary(binary) {
         return crypto.createHash('md5')
             .update(binary)
@@ -980,9 +862,6 @@ class DolphinCompiler {
             .substring(0, 8);
     }
     
-    /**
-     * Get enhanced metrics including Titan stats
-     */
     getEnhancedMetrics() {
         const baseMetrics = this.getMetrics();
         
@@ -997,8 +876,6 @@ class DolphinCompiler {
                 (this.metrics.titanCacheHits / this.metrics.titanCompilations * 100).toFixed(2) + '%' : 'N/A'
         };
     }
-    
-    // =============== END OF NEW METHODS ===============
 }
 
 module.exports = DolphinCompiler;

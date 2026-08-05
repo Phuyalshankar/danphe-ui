@@ -6,6 +6,7 @@ const DolphinError = require('../errors/DolphinError');
 /**
  * Production-grade HTML Parser for DolphinJS
  * Supports: tags, attributes, nested structures, void elements, comments, doctype
+ * 24-byte Protocol Ready
  */
 class HTMLParser {
     constructor(config = {}) {
@@ -18,6 +19,16 @@ class HTMLParser {
         };
         this.errors = [];
         this.warnings = [];
+        
+        // 🆕 24-byte: Cache for performance
+        this._voidTags = new Set([
+            'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 
+            'IMG', 'INPUT', 'LINK', 'META', 'PARAM', 
+            'SOURCE', 'TRACK', 'WBR', 'SLIDER', 'CHECKBOX',
+            // 🆕 24-byte: More void elements
+            'VIDEO', 'AUDIO', 'IFRAME', 'CANVAS', 'SVG',
+            'PATH', 'CIRCLE', 'RECT', 'LINE', 'POLYLINE'
+        ]);
     }
     
     parse(html) {
@@ -90,6 +101,9 @@ class HTMLParser {
         processed = processed.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '<script></script>');
         processed = processed.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '<style></style>');
         
+        // 🆕 24-byte: Remove CDATA sections
+        processed = processed.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, '');
+        
         // Normalize whitespace in tags (but keep text content)
         processed = processed.replace(/>\s+</g, '><');
         
@@ -97,6 +111,11 @@ class HTMLParser {
         if (this.config.decodeEntities) {
             processed = this.decodeHTMLEntities(processed);
         }
+        
+        // 🆕 24-byte: Normalize data-* attributes
+        processed = processed.replace(/data-statekey=/gi, 'data-statekey=');
+        processed = processed.replace(/data-action=/gi, 'data-action=');
+        processed = processed.replace(/data-target=/gi, 'data-target=');
         
         // Trim and return
         return processed.trim();
@@ -109,10 +128,20 @@ class HTMLParser {
             '&gt;': '>',
             '&quot;': '"',
             '&#039;': "'",
-            '&nbsp;': ' '
+            '&nbsp;': ' ',
+            // 🆕 24-byte: More entities
+            '&apos;': "'",
+            '&copy;': '©',
+            '&reg;': '®',
+            '&trade;': '™',
+            '&mdash;': '—',
+            '&ndash;': '–',
+            '&hellip;': '…'
         };
         
-        return text.replace(/&(amp|lt|gt|quot|#039|nbsp);/g, match => entities[match] || match);
+        return text.replace(/&(amp|lt|gt|quot|#039|nbsp|apos|copy|reg|trade|mdash|ndash|hellip);/g, 
+            match => entities[match] || match
+        );
     }
     
     validateStructure(html) {
@@ -167,8 +196,11 @@ class HTMLParser {
                     
                     const tagName = tagNameMatch[0].toLowerCase();
                     
-                    // Check if it's a void element
-                    if (!this.isVoidElement(tagName)) {
+                    // 🆕 24-byte: Check custom elements
+                    if (this.isCustomElement(tagName)) {
+                        // Custom elements are self-closing by default
+                        // Don't push to stack
+                    } else if (!this.isVoidElement(tagName)) {
                         // Check if it's self-closing
                         if (html[tagEnd - 1] === '/' || tagContent.endsWith('/')) {
                             // Self-closing, don't push to stack
@@ -293,7 +325,7 @@ class HTMLParser {
         };
         
         // If not self-closing and not void element, parse children
-        if (!selfClosing && !this.isVoidElement(tagName)) {
+        if (!selfClosing && !this.isVoidElement(tagName) && !this.isCustomElement(tagName)) {
             this.parseFragment(state, element);
             
             // Look for closing tag
@@ -406,7 +438,13 @@ class HTMLParser {
                 }
             }
             
-            attributes[attrName] = attrValue;
+            // 🆕 24-byte: Normalize data-* attributes
+            if (attrName.startsWith('DATA-')) {
+                const key = attrName.substring(5).toLowerCase();
+                attributes[key] = attrValue;
+            } else {
+                attributes[attrName] = attrValue;
+            }
         }
         
         return attributes;
@@ -439,12 +477,12 @@ class HTMLParser {
     }
     
     isVoidElement(tagName) {
-        const voidTags = new Set([
-            'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 
-            'IMG', 'INPUT', 'LINK', 'META', 'PARAM', 
-            'SOURCE', 'TRACK', 'WBR', 'SLIDER', 'CHECKBOX'
-        ]);
-        return voidTags.has(tagName.toUpperCase());
+        return this._voidTags.has(tagName.toUpperCase());
+    }
+    
+    // 🆕 24-byte: Custom elements support
+    isCustomElement(tagName) {
+        return /^[a-z]/.test(tagName) && tagName.includes('-');
     }
     
     countNodes(node) {

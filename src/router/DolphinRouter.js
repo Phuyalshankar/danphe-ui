@@ -123,6 +123,9 @@ class DolphinRouter {
     // ─── URL Helpers ────────────────────────────────────────────
 
     getPath() {
+        if (this.mode === 'memory' || typeof window === 'undefined') {
+            return this.current || '/';
+        }
         if (this.mode === 'hash') {
             return window.location.hash.slice(1) || '/';
         }
@@ -130,6 +133,7 @@ class DolphinRouter {
     }
 
     getQuery() {
+        if (typeof window === 'undefined') return {};
         const url = this.mode === 'hash' ? window.location.hash : window.location.href;
         const queryString = url.split('?')[1] || '';
         const params = {};

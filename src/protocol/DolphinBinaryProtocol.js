@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * 🌊 Dolphin Binary Protocol v1.0
+ * 🌊 Dolphin Binary Protocol v2.0
  *
  * Wire format for .dolp bundle files.
  * This is the contract between:
@@ -30,7 +30,7 @@
  * │   DATA      [...]    = raw compiled .dolp data          │
  * ├─────────────────────────────────────────────────────────┤
  * │ TITAN COMPONENT TABLE                                   │
- * │   [16 bytes per component]  ← Titan binary format      │
+ * │   [24 bytes per component]  ← Titan binary format      │
  * ├─────────────────────────────────────────────────────────┤
  * │ FOOTER (4 bytes)                                        │
  * │   CHECKSUM  [0..3]   = XOR32 of entire bundle          │
@@ -38,11 +38,10 @@
  */
 
 const { Buffer } = require('buffer');
-const crypto = require('crypto');
 
 // Protocol constants
 const MAGIC        = Buffer.from('DOLP');
-const PROTOCOL_VER = 0x0100; // version 1.0
+const PROTOCOL_VER = 0x0200; // ✅ v2.0 (24-byte protocol)
 const FLAGS_NONE   = 0x0000;
 const FLAGS_COMPRESSED = 0x0001;
 const FLAGS_HAS_ASSETS = 0x0002;
@@ -51,10 +50,11 @@ const FLAGS_HAS_ASSETS = 0x0002;
 const CMD = {
     FULL_RELOAD:      0x01, // send entire bundle
     PATCH_SCREEN:     0x02, // send updated screen data only
-    PATCH_COMPONENT:  0x03, // send updated 16-byte component
+    PATCH_COMPONENT:  0x03, // send updated 24-byte component
     PING:             0x04, // keepalive
     PONG:             0x05,
     ACK:              0x06, // runtime confirms patch applied
+    PATCH_DELTA:      0x07, // send 24-byte component delta byte diff
 };
 
 class DolphinBinaryProtocol {
@@ -72,7 +72,7 @@ class DolphinBinaryProtocol {
      *
      * @param {object} app
      *   app.screens    : { name: string, data: Buffer, components: Uint8Array[] }[]
-     *   app.components : Uint8Array[]  (global component table — 16 bytes each)
+     *   app.components : Uint8Array[]  (global component table — 24 bytes each)
      *   app.flags      : number (optional FLAGS_*)
      * @returns {Buffer}
      */
@@ -114,7 +114,7 @@ class DolphinBinaryProtocol {
             // Handle both array of components or a single binary buffer
             let compCnt = 0;
             if (screen.components) compCnt = screen.components.length;
-            else if (screen.binary) compCnt = Math.floor(screen.binary.length / 16);
+            else if (screen.binary) compCnt = Math.floor(screen.binary.length / 24); // ✅ 24!
             
             // Handle raw string data pool
             let data = screen.rawData || screen.data || Buffer.alloc(0);
@@ -133,8 +133,8 @@ class DolphinBinaryProtocol {
         });
 
         // ── TITAN COMPONENT TABLE ──────────────────────
-        // Each component is exactly 16 bytes
-        const titanTable = Buffer.alloc(components.length * 16);
+        // Each component is exactly 24 bytes
+        const titanTable = Buffer.alloc(components.length * 24); // ✅ 24!
         components.forEach((comp, i) => {
             let src = comp;
             if (comp && comp.binary) {
@@ -146,7 +146,7 @@ class DolphinBinaryProtocol {
             if (!src || typeof src.copy !== 'function') {
                 throw new Error(`Invalid component at index ${i}`);
             }
-            src.copy(titanTable, i * 16, 0, 16);
+            src.copy(titanTable, i * 24, 0, 24); // ✅ 24!
         });
 
         // ── ASSEMBLE ───────────────────────────────────
@@ -163,7 +163,6 @@ class DolphinBinaryProtocol {
 
     // ─────────────────────────────────────────────────────
     // DESERIALIZATION  (.dolp file → JS object)
-    // For debugging / inspect command — not used on device
     // ─────────────────────────────────────────────────────
 
     /**
@@ -213,9 +212,9 @@ class DolphinBinaryProtocol {
         // ── READ TITAN TABLE ───────────────────────────
         const components = [];
         for (let i = 0; i < compCount; i++) {
-            const comp = new Uint8Array(bundle.slice(cursor, cursor + 16));
+            const comp = new Uint8Array(bundle.slice(cursor, cursor + 24)); // ✅ 24!
             components.push(comp);
-            cursor += 16;
+            cursor += 24; // ✅ 24!
         }
 
         return {
@@ -262,13 +261,13 @@ class DolphinBinaryProtocol {
     }
 
     /**
-     * Build a PATCH_COMPONENT message (16-byte titan update)
+     * Build a PATCH_COMPONENT message (24-byte titan update)
      * @param {number} index
      * @param {Uint8Array} titanBinary
      * @returns {Buffer}
      */
     buildPatchComponent(index, titanBinary) {
-        const payload = Buffer.alloc(2 + 16);
+        const payload = Buffer.alloc(2 + 24); // ✅ 24!
         payload.writeUInt16LE(index, 0);
         Buffer.from(titanBinary).copy(payload, 2);
         return this._buildMessage(CMD.PATCH_COMPONENT, payload);
@@ -352,14 +351,19 @@ class DolphinBinaryProtocol {
         return map[code] || `0x${code.toString(16)}`;
     }
 
-    /** Pretty-print a Titan 16-byte component */
+    /** Pretty-print a Titan 24-byte component */
     inspectComponent(bin, index = 0) {
-        if (bin.length < 16) return '(invalid — less than 16 bytes)';
+        if (bin.length < 24) return '(invalid — less than 24 bytes)';
         const lines = [
             `  [${index}] ${this.decodeComponentType(bin[1])} (${this.decodeLibrary(bin[0])})`,
             `       Scale:   ${bin[2]}%   Zoom: ${bin[3]}%`,
             `       Padding: T${bin[4]} R${bin[5]} B${bin[6]} L${bin[7]}`,
             `       Margin:  T${bin[8]} R${bin[9]} B${bin[10]} L${bin[11]}`,
+            `       Width:   ${(bin[16] | (bin[17] << 8))}px`,
+            `       Height:  ${(bin[18] | (bin[19] << 8))}px`,
+            `       Color:   ${bin[20]}`,
+            `       Radius:  ${bin[21]}`,
+            `       Z-Index: ${bin[22]}`,
             `       Anim:    type=0x${bin[12].toString(16)} dur=${Math.round(bin[13]/255*5000)}ms`,
             `       Opacity: ${Math.round(bin[14]/255*100)}%`,
             `       Sig:     0x${bin[15].toString(16).toUpperCase()} ${bin[15] === 0x00 ? '✅' : '❓'}`

@@ -1,9 +1,9 @@
-package io.dolphin.runtime.hardware
+package io.dolphin.runtime
+
 
 import android.content.Context
 import android.util.Log
 import android.graphics.BitmapFactory
-import io.dolphin.runtime.DolphinRuntime
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
@@ -57,7 +57,7 @@ object TitanTcpClient {
                 outputStream = sock.getOutputStream()
                 isConnected.set(true)
                 Log.i(TAG, "P2P client connected: ${sock.remoteSocketAddress}")
-                io.dolphin.runtime.DolphinStateEngine.set("titan_connected", true)
+                DolphinStateEngine.set("titan_connected", true)
 
                 // Send register packet immediately (keeps protocol aligned)
                 sendPacket(CMD_REGISTER, myExt, 0, null)
@@ -94,7 +94,7 @@ object TitanTcpClient {
                 outputStream = sock.getOutputStream()
                 isConnected.set(true)
                 Log.i(TAG, "Connected to remote TCP successfully")
-                io.dolphin.runtime.DolphinStateEngine.set("titan_connected", true)
+                DolphinStateEngine.set("titan_connected", true)
 
                 // Send register packet immediately
                 sendPacket(CMD_REGISTER, myExt, 0, null)
@@ -119,7 +119,7 @@ object TitanTcpClient {
         if (!isConnected.getAndSet(false)) {
             try { serverSocket?.close() } catch (_: Exception) {}
             serverSocket = null
-            io.dolphin.runtime.DolphinStateEngine.set("titan_connected", false)
+            DolphinStateEngine.set("titan_connected", false)
             return
         }
         try {
@@ -132,7 +132,7 @@ object TitanTcpClient {
         serverSocket = null
         outputStream = null
         activeCallPartnerExt = 0
-        io.dolphin.runtime.DolphinStateEngine.set("titan_connected", false)
+        DolphinStateEngine.set("titan_connected", false)
         Log.i(TAG, "Disconnected from Titan TCP session")
     }
 

@@ -1,4 +1,5 @@
-package io.dolphin.runtime.hardware
+package io.dolphin.runtime
+
 
 import android.content.Context
 import android.app.Activity
@@ -14,8 +15,6 @@ import android.media.AudioAttributes
 import android.media.MediaRecorder
 import android.util.Base64
 import android.content.Intent
-import io.dolphin.runtime.DolphinRuntime
-import io.dolphin.runtime.DolphinBackgroundService
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.concurrent.thread
@@ -532,21 +531,21 @@ object DolphinHardwareBridge {
             }
             // ── Video Call actions ──────────────────────────────────────────────
             if (action == "hw:video:call") {
-                val server = io.dolphin.runtime.DolphinStateEngine.get("intercom_server")?.toString() ?: ""
-                val myId   = io.dolphin.runtime.DolphinStateEngine.get("intercom_device_id")?.toString() ?: ""
-                val peerId = io.dolphin.runtime.DolphinStateEngine.get("intercom_target_id")?.toString() ?: ""
-                io.dolphin.runtime.DolphinRuntime.instance?.logToPC("HardwareBridge", "hw:video:call params -> server=$server, myId=$myId, peerId=$peerId")
+                val server = DolphinStateEngine.get("intercom_server")?.toString() ?: ""
+                val myId   = DolphinStateEngine.get("intercom_device_id")?.toString() ?: ""
+                val peerId = DolphinStateEngine.get("intercom_target_id")?.toString() ?: ""
+                DolphinRuntime.instance?.logToPC("HardwareBridge", "hw:video:call params -> server=$server, myId=$myId, peerId=$peerId")
                 if (server.isNotEmpty() && myId.isNotEmpty() && peerId.isNotEmpty()) {
                     // Check CAMERA permission before starting
                     val hasCam = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                         androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.CAMERA) ==
                             android.content.pm.PackageManager.PERMISSION_GRANTED
                     } else true
-                    io.dolphin.runtime.DolphinRuntime.instance?.logToPC("HardwareBridge", "hasCam permission = $hasCam")
+                    DolphinRuntime.instance?.logToPC("HardwareBridge", "hasCam permission = $hasCam")
                     if (hasCam) {
                         DolphinVideoCall.startCall(ctx, server, myId, peerId)
                         Log.i(TAG, "📹 Video call started → $peerId")
-                        io.dolphin.runtime.DolphinRuntime.instance?.logToPC("HardwareBridge", "📹 Video call started → $peerId")
+                        DolphinRuntime.instance?.logToPC("HardwareBridge", "📹 Video call started → $peerId")
                     } else {
                         if (ctx is android.app.Activity) {
                             Log.i(TAG, "📷 Requesting CAMERA permission for video call")
@@ -561,25 +560,25 @@ object DolphinHardwareBridge {
                     }
                 } else {
                     Log.w(TAG, "hw:video:call — missing params (server=$server, myId=$myId, peerId=$peerId)")
-                    io.dolphin.runtime.DolphinRuntime.instance?.logToPC("HardwareBridge", "❌ ERROR: missing params for hw:video:call")
+                    DolphinRuntime.instance?.logToPC("HardwareBridge", "❌ ERROR: missing params for hw:video:call")
                 }
                 return true
             }
             if (action == "hw:video:answer") {
-                val server = io.dolphin.runtime.DolphinStateEngine.get("intercom_server")?.toString() ?: ""
-                val myId   = io.dolphin.runtime.DolphinStateEngine.get("intercom_device_id")?.toString() ?: ""
-                val peerId = io.dolphin.runtime.DolphinStateEngine.get("intercom_target_id")?.toString() ?: ""
-                io.dolphin.runtime.DolphinRuntime.instance?.logToPC("HardwareBridge", "hw:video:answer params -> server=$server, myId=$myId, peerId=$peerId")
+                val server = DolphinStateEngine.get("intercom_server")?.toString() ?: ""
+                val myId   = DolphinStateEngine.get("intercom_device_id")?.toString() ?: ""
+                val peerId = DolphinStateEngine.get("intercom_target_id")?.toString() ?: ""
+                DolphinRuntime.instance?.logToPC("HardwareBridge", "hw:video:answer params -> server=$server, myId=$myId, peerId=$peerId")
                 if (server.isNotEmpty() && myId.isNotEmpty() && peerId.isNotEmpty()) {
                     val hasCam = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                         androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.CAMERA) ==
                             android.content.pm.PackageManager.PERMISSION_GRANTED
                     } else true
-                    io.dolphin.runtime.DolphinRuntime.instance?.logToPC("HardwareBridge", "hasCam permission = $hasCam")
+                    DolphinRuntime.instance?.logToPC("HardwareBridge", "hasCam permission = $hasCam")
                     if (hasCam) {
                         DolphinVideoCall.acceptCall(ctx, server, myId, peerId)
                         Log.i(TAG, "📹 Video call accepted ← $peerId")
-                        io.dolphin.runtime.DolphinRuntime.instance?.logToPC("HardwareBridge", "📹 Video call accepted ← $peerId")
+                        DolphinRuntime.instance?.logToPC("HardwareBridge", "📹 Video call accepted ← $peerId")
                     } else {
                         if (ctx is android.app.Activity) {
                             Log.i(TAG, "📷 Requesting CAMERA permission for video answer")
@@ -594,14 +593,14 @@ object DolphinHardwareBridge {
                     }
                 } else {
                     Log.w(TAG, "hw:video:answer — missing params (server=$server, myId=$myId, peerId=$peerId)")
-                    io.dolphin.runtime.DolphinRuntime.instance?.logToPC("HardwareBridge", "❌ ERROR: missing params for hw:video:answer")
+                    DolphinRuntime.instance?.logToPC("HardwareBridge", "❌ ERROR: missing params for hw:video:answer")
                 }
                 return true
             }
             if (action == "hw:video:hangup") {
-                val server = io.dolphin.runtime.DolphinStateEngine.get("intercom_server")?.toString() ?: ""
-                val myId   = io.dolphin.runtime.DolphinStateEngine.get("intercom_device_id")?.toString() ?: ""
-                val peerId = io.dolphin.runtime.DolphinStateEngine.get("intercom_target_id")?.toString() ?: ""
+                val server = DolphinStateEngine.get("intercom_server")?.toString() ?: ""
+                val myId   = DolphinStateEngine.get("intercom_device_id")?.toString() ?: ""
+                val peerId = DolphinStateEngine.get("intercom_target_id")?.toString() ?: ""
                 DolphinVideoCall.hangup(ctx, server, myId, peerId)
                 Log.i(TAG, "📵 Video call hung up")
                 return true
@@ -890,7 +889,7 @@ object DolphinHardwareBridge {
                             number = parts[3]
                         }
                         if (number.isEmpty() || number.any { it.isLetter() }) {
-                            number = io.dolphin.runtime.DolphinStateEngine.get("phone_number")?.toString() ?: ""
+                            number = DolphinStateEngine.get("phone_number")?.toString() ?: ""
                         }
                         if (number.isNotEmpty() && !number.any { it.isLetter() }) {
                             DolphinPhone.dialNumber(ctx, number)
@@ -920,8 +919,8 @@ object DolphinHardwareBridge {
                             toast(ctx, "💬 Sending SMS to $num...")
                         } else {
                             // Fallback: search for sms_phone and sms_message in State Engine
-                            val num = io.dolphin.runtime.DolphinStateEngine.get("sms_phone")?.toString() ?: ""
-                            val msgText = io.dolphin.runtime.DolphinStateEngine.get("sms_message")?.toString() ?: ""
+                            val num = DolphinStateEngine.get("sms_phone")?.toString() ?: ""
+                            val msgText = DolphinStateEngine.get("sms_message")?.toString() ?: ""
                             if (num.isNotEmpty()) {
                                 DolphinSMS.composeSMS(ctx, num, msgText)
                                 toast(ctx, "💬 Sending SMS to $num...")
@@ -949,7 +948,7 @@ object DolphinHardwareBridge {
                     "get", "list", "" -> {
                         val list = DolphinContacts.getContacts(ctx)
                         val txt = if (list.isEmpty()) "📖 Contacts: 0 Found (Permission Needed)" else "📖 Contacts: ${list.size} Found"
-                        io.dolphin.runtime.DolphinStateEngine.updateState("lastTransferStatus", txt)
+                        DolphinStateEngine.updateState("lastTransferStatus", txt)
                         toast(ctx, txt)
                     }
                 }
@@ -962,16 +961,16 @@ object DolphinHardwareBridge {
                             ?: locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
                         if (lastLoc != null) {
                             val txt = "📍 GPS: Lat ${String.format(java.util.Locale.US, "%.4f", lastLoc.latitude)}, Long ${String.format(java.util.Locale.US, "%.4f", lastLoc.longitude)}"
-                            io.dolphin.runtime.DolphinStateEngine.updateState("lastTransferStatus", txt)
+                            DolphinStateEngine.updateState("lastTransferStatus", txt)
                             toast(ctx, txt)
                         } else {
                             val txt = "📍 GPS: Kathmandu (Lat 27.7172, Long 85.3240)"
-                            io.dolphin.runtime.DolphinStateEngine.updateState("lastTransferStatus", txt)
+                            DolphinStateEngine.updateState("lastTransferStatus", txt)
                             toast(ctx, txt)
                         }
                     } catch (e: Exception) {
                         val txt = "📍 GPS: Lat 27.7172, Long 85.3240"
-                        io.dolphin.runtime.DolphinStateEngine.updateState("lastTransferStatus", txt)
+                        DolphinStateEngine.updateState("lastTransferStatus", txt)
                         toast(ctx, txt)
                     }
                 }
@@ -983,11 +982,11 @@ object DolphinHardwareBridge {
                         val accel = sm.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
                         val gyro = sm.getDefaultSensor(android.hardware.Sensor.TYPE_GYROSCOPE)
                         val txt = "🧭 Accel: ${accel?.name ?: "OK"} | Gyro: ${gyro?.name ?: "OK"}"
-                        io.dolphin.runtime.DolphinStateEngine.updateState("lastTransferStatus", txt)
+                        DolphinStateEngine.updateState("lastTransferStatus", txt)
                         toast(ctx, txt)
                     } catch (e: Exception) {
                         val txt = "🧭 Sensors Active (X: 0.1, Y: 9.8, Z: 0.0)"
-                        io.dolphin.runtime.DolphinStateEngine.updateState("lastTransferStatus", txt)
+                        DolphinStateEngine.updateState("lastTransferStatus", txt)
                         toast(ctx, txt)
                     }
                 }

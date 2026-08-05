@@ -3,10 +3,12 @@
 const HTMLParser = require('./HTMLParser');
 const { performance } = require('perf_hooks');
 const callbackRegistry = require('../runtime/CallbackRegistry');
+const ub = require('../framework/ub');
 
 /**
  * 🌊 HybridParser - Supports both HTML strings and JSX components
  * Automatically detects input type and renders accordingly
+ * UPGRADED: 24-byte Protocol Support (v2.0) + Full CSS Props
  */
 class HybridParser {
     constructor(config = {}) {
@@ -21,7 +23,7 @@ class HybridParser {
         this.jsxCache = new Map();
         this.callbackRegistry = callbackRegistry;
         
-        this._log('🌊 HybridParser initialized');
+        this._log('🌊 HybridParser v2.0 (24-byte) initialized');
         this._log(`   Platform: ${this.config.platform}`);
         this._log(`   JSX Support: ${this.config.enableJSX ? 'ON' : 'OFF'}`);
         this._log(`   Lambda Support: ENABLED`);
@@ -36,13 +38,11 @@ class HybridParser {
         const startTime = performance.now();
         
         try {
-            // Auto-detect content type
             const contentType = this._detectContentType(content);
             
             let result;
             switch (contentType) {
                 case 'UI_SCHEMA':
-                    // Pass through - compilation layer handles UI schema objects directly
                     result = { content };
                     break;
                 case 'JSX':
@@ -83,14 +83,10 @@ class HybridParser {
      * @param {string|object} content 
      */
     _detectContentType(content) {
-        // ── REACT ELEMENT CHECK MUST BE FIRST ──
-        // Babel-compiled JSX produces objects with $$typeof.
-        // These must NOT fall into UI_SCHEMA even when type is a string like 'div'.
         if (content && typeof content === 'object' && content.$$typeof === Symbol.for('react.element')) {
             return 'COMPONENT';
         }
 
-        // Check if it's a React component (function/class)
         if (typeof content === 'function') {
             try {
                 const element = content();
@@ -101,7 +97,6 @@ class HybridParser {
             return 'JSX';
         }
         
-        // Plain Dolphin native UI schema object  { type: 'Column', children: [...] }
         if (typeof content === 'object' && content !== null) {
             if (typeof content.type === 'string') {
                 return 'UI_SCHEMA';
@@ -111,7 +106,6 @@ class HybridParser {
             }
         }
         
-        // String content
         if (typeof content === 'string') {
             if (this._containsJSXSyntax(content)) {
                 return 'JSX';
@@ -127,16 +121,16 @@ class HybridParser {
      * @param {string} str 
      */
     _containsJSXSyntax(str) {
-        // Look for JSX indicators
         const jsxIndicators = [
-            /import\s+.*from\s+['"]react['"]/, // React import
-            /export\s+default/, // ES6 export
-            /const\s+\w+\s*=\s*\(\)\s*=>\s*<[^>]+>/, // Arrow function component
-            /function\s+\w+\(\)\s*{[\s\S]*return\s*<[^>]+>/, // Function component
-            /class\s+\w+\s+extends\s+React\.Component/, // Class component
-            /<\w+[^>]*>[\s\S]*<\/\w+>/, // JSX tags with props
-            /\{\s*\w+\.\w+\s*\}/, // JSX expressions
-            /\{\s*\w+\s*\}/ // Simple JSX expressions
+            /import\s+.*from\s+['"]react['"]/,
+            /export\s+default/,
+            /const\s+\w+\s*=\s*\(\)\s*=>\s*<[^>]+>/,
+            /function\s+\w+\(\)\s*{[\s\S]*return\s*<[^>]+>/,
+            /class\s+\w+\s+extends\s+React\.Component/,
+            /<\w+[^>]*>[\s\S]*<\/\w+>/,
+            /\{\s*\w+\.\w+\s*\}/,
+            /\{\s*\w+\s*\}/,
+            /stateKey:\s*['"]?\w+['"]?/
         ];
         
         return jsxIndicators.some(pattern => pattern.test(str));
@@ -152,10 +146,8 @@ class HybridParser {
             throw new Error('JSX support is disabled');
         }
 
-        // Create a cache key
         const cacheKey = this._generateCacheKey(jsxContent, options);
         
-        // Check cache first
         if (this.jsxCache.has(cacheKey)) {
             this._log('📦 Using cached JSX compilation');
             return this.jsxCache.get(cacheKey);
@@ -164,23 +156,19 @@ class HybridParser {
         try {
             let jsxString;
             
-            // Handle function components
             if (typeof jsxContent === 'function') {
                 jsxString = jsxContent.toString();
             } else {
                 jsxString = jsxContent;
             }
 
-            // Convert JSX to HTML-like string for Dolphin processing
             const htmlEquivalent = this._jsxToHtml(jsxString);
             
-            // Parse the converted HTML
             const result = this.htmlParser.parse(htmlEquivalent, {
                 ...options,
                 originalType: 'JSX'
             });
 
-            // Cache the result
             this.jsxCache.set(cacheKey, result);
             
             return {
@@ -205,25 +193,18 @@ class HybridParser {
 
     /**
      * Parse component object (React element or function component)
-     * Converts the full React element tree into a Dolphin native schema,
-     * then hands it off to the bridge for binary compilation.
      */
     _parseComponent(component, options = {}) {
-        // ── PATH A: Babel React element (most common with app.jsx) ──
         if (component && component.$$typeof === Symbol.for('react.element')) {
             const schema = this._reactElementToSchema(component);
             if (schema) {
-                // Return the schema as the content; the framework will call
-                // bridge.compile(schema) which routes to _compileUISchema.
                 return { content: schema, html: null, convertedHTML: null };
             }
-            // Fallback: try HTML string conversion
             const htmlString = this._reactElementToHtml(component);
             const result = this._parseHTML(htmlString, options);
             return { ...result, content: result.ast, convertedHTML: htmlString };
         }
         
-        // ── PATH B: Function component ──
         if (typeof component === 'function') {
             try {
                 const element = component();
@@ -233,7 +214,6 @@ class HybridParser {
             } catch (e) {}
         }
         
-        // ── PATH C: Custom object with render fn ──
         if (component && component.render && typeof component.render === 'function') {
             return this._parseJSX(component.render, options);
         }
@@ -242,23 +222,17 @@ class HybridParser {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // REACT ELEMENT → DOLPHIN NATIVE SCHEMA
-    // Converts Babel-compiled JSX trees into { type, children, ... } objects
-    // that UniversalUIImporter can compile to Titan 16-byte binary.
-    // Works for BOTH HTML tags (div, p, button) and custom components
-    // (GradientCard, AppBar wrapper, etc.).
+    // REACT ELEMENT → DOLPHIN NATIVE SCHEMA (24-byte)
     // ─────────────────────────────────────────────────────────────────────
 
     _reactElementToSchema(element) {
         if (element === null || element === undefined) return null;
 
-        // Primitive text / number nodes
         if (typeof element === 'string' || typeof element === 'number') {
             const text = String(element).trim();
             return text ? { type: 'Text', text } : null;
         }
 
-        // Handle array of elements (e.g. products.map) recursively
         if (Array.isArray(element)) {
             return element.map(e => this._reactElementToSchema(e)).filter(Boolean);
         }
@@ -267,16 +241,13 @@ class HybridParser {
 
         const { type, props = {} } = element;
 
-        // ── Custom function component (GradientCard, etc.) ──
         if (typeof type === 'function') {
             try {
                 const rendered = type(props);
                 if (!rendered) return null;
-                // Returned a plain Dolphin schema (no $$typeof)
                 if (!rendered.$$typeof) {
                     return this._processSchemaChildren(rendered);
                 }
-                // Returned another React element
                 return this._reactElementToSchema(rendered);
             } catch (e) {
                 return null;
@@ -285,7 +256,6 @@ class HybridParser {
 
         if (typeof type !== 'string') return null;
 
-        // ── Collect children ──
         const rawChildren = props.children;
         const childArray = Array.isArray(rawChildren)
             ? rawChildren
@@ -299,7 +269,6 @@ class HybridParser {
         return this._htmlElementToSchema(type, props, childSchemas);
     }
 
-    /** Walk a schema tree and convert any React-element children in-place. */
     _processSchemaChildren(schema) {
         if (!schema || typeof schema !== 'object') return schema;
         const out = { ...schema };
@@ -314,32 +283,148 @@ class HybridParser {
         return out;
     }
 
+    // ─── 🆕 CSS Props Extraction ──────────────────────────────────────────────
+    
     /**
-     * Map an HTML-like tag + props to a Dolphin native schema node.
-     * Handles:
-     *   - <div type="AppBar" title="..."> → { type:'AppBar', title:'...' }
-     *   - <button className="btn btn-blue"> → { type:'Button', ... }
-     *   - <h3>, <p>, <span>             → { type:'Text', text:'...' }
-     *   - <div className="card">         → { type:'Card', ... }
-     *   - <div className="row">          → { type:'Row', ... }
+     * Extract CSS props from className
+     * @param {string} className - Tailwind classes
+     * @returns {Object} - CSS props
      */
+    _extractCSSProps(className) {
+        if (!className || typeof className !== 'string') return {};
+        
+        const props = {};
+        const classes = className.split(/\s+/).filter(Boolean);
+        
+        classes.forEach(cls => {
+            // ── Width ──
+            if (cls === 'w-full' || cls === 'w-screen') {
+                props.width = -1;
+            } else if (cls.startsWith('w-')) {
+                const val = parseInt(cls.slice(2));
+                if (!isNaN(val)) props.width = val * 4;
+            }
+            
+            // ── Height ──
+            if (cls === 'h-full' || cls === 'h-screen') {
+                props.height = -1;
+            } else if (cls.startsWith('h-')) {
+                const val = parseInt(cls.slice(2));
+                if (!isNaN(val)) props.height = val * 4;
+            }
+            
+            // ── Padding ──
+            if (cls === 'p-0') props.padding = 0;
+            else if (cls.startsWith('p-')) {
+                const val = parseInt(cls.slice(2));
+                if (!isNaN(val)) props.padding = val * 4;
+            }
+            
+            // ── Margin ──
+            if (cls === 'm-0') props.margin = 0;
+            else if (cls.startsWith('m-')) {
+                const val = parseInt(cls.slice(2));
+                if (!isNaN(val)) props.margin = val * 4;
+            }
+            
+            // ── Background Color ──
+            const bgMatch = cls.match(/^bg-([a-z]+)-?(\d+)?/);
+            if (bgMatch) {
+                const color = bgMatch[1];
+                const shade = bgMatch[2] || '500';
+                props.backgroundColor = `${color}-${shade}`;
+            }
+            if (cls === 'bg-white') props.backgroundColor = 'white';
+            if (cls === 'bg-black') props.backgroundColor = 'black';
+            if (cls === 'bg-transparent') props.backgroundColor = 'transparent';
+            
+            // ── Text Color ──
+            const textMatch = cls.match(/^text-([a-z]+)-?(\d+)?/);
+            if (textMatch) {
+                const color = textMatch[1];
+                const shade = textMatch[2] || '500';
+                props.color = `${color}-${shade}`;
+            }
+            if (cls === 'text-white') props.color = 'white';
+            if (cls === 'text-black') props.color = 'black';
+            
+            // ── Border Radius ──
+            if (cls === 'rounded') props.borderRadius = 4;
+            else if (cls === 'rounded-sm') props.borderRadius = 2;
+            else if (cls === 'rounded-md') props.borderRadius = 6;
+            else if (cls === 'rounded-lg') props.borderRadius = 8;
+            else if (cls === 'rounded-xl') props.borderRadius = 12;
+            else if (cls === 'rounded-2xl') props.borderRadius = 16;
+            else if (cls === 'rounded-3xl') props.borderRadius = 24;
+            else if (cls === 'rounded-full') props.borderRadius = 999;
+            else if (cls.startsWith('rounded-')) {
+                const val = parseInt(cls.slice(8));
+                if (!isNaN(val)) props.borderRadius = val;
+            }
+            
+            // ── Border ──
+            if (cls === 'border' || cls === 'border-2' || cls === 'border-4') {
+                props.borderColor = '#d1d5db';
+            }
+            if (cls.startsWith('border-') && cls.includes('-')) {
+                const parts = cls.split('-');
+                if (parts.length >= 2) {
+                    props.borderColor = parts[1];
+                    if (parts[2]) props.borderColor += `-${parts[2]}`;
+                }
+            }
+            
+            // ── Font Size ──
+            if (cls === 'text-xs') props.fontSize = 10;
+            else if (cls === 'text-sm') props.fontSize = 12;
+            else if (cls === 'text-base') props.fontSize = 14;
+            else if (cls === 'text-lg') props.fontSize = 16;
+            else if (cls === 'text-xl') props.fontSize = 20;
+            else if (cls === 'text-2xl') props.fontSize = 24;
+            else if (cls === 'text-3xl') props.fontSize = 30;
+            else if (cls === 'text-4xl') props.fontSize = 36;
+            
+            // ── Opacity ──
+            if (cls.startsWith('opacity-')) {
+                const val = parseInt(cls.slice(8));
+                if (!isNaN(val)) props.opacity = val / 100;
+            }
+            
+            // ── Box Shadow ──
+            if (cls === 'shadow' || cls === 'shadow-md') props.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)';
+            else if (cls === 'shadow-lg') props.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1)';
+            else if (cls === 'shadow-xl') props.boxShadow = '0 20px 25px -5px rgba(0,0,0,0.1)';
+            else if (cls === 'shadow-2xl') props.boxShadow = '0 25px 50px -12px rgba(0,0,0,0.25)';
+            else if (cls === 'shadow-none') props.boxShadow = 'none';
+        });
+        
+        return props;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // HTML ELEMENT → SCHEMA (24-byte UPGRADED)
+    // ─────────────────────────────────────────────────────────────────────
+
     _htmlElementToSchema(tag, props, childSchemas) {
-        let cls      = props.className || props.class || '';
-        // Strip out Web-only CSS blocks in brackets [...] for Native Mobile UI compilation
+        let cls = props.className || props.class || '';
         const mobileCls = cls.replace(/(?:^|\s)\[[^\]]*\]/g, '').trim();
         const clsArr = mobileCls.split(/\s+/).filter(Boolean);
         const action = props.action || props['data-action'] || '';
 
-        // Explicit Dolphin type override via type="AppBar" etc.
-        // Only treat as override when it's a known Dolphin component name.
+        // ─── Parse with ub.parseTW for 24-byte fields ───
+        const twProps = ub.parseTW(mobileCls);
+
+        // ─── Extract CSS Props for FormEngine ───
+        const cssProps = this._extractCSSProps(mobileCls);
+
         const DOLPHIN_TYPES = new Set([
             'AppBar','Button','Card','Container','Column','Row','Text',
             'Image','Icon','TextField','Slider','Switch','Checkbox','Select',
             'Radio','FileUpload','ListView','GridView','Modal','TabBar','tab-bar','tabbar'
         ]);
         const isTabBarType = props.type === 'TabBar' || props.type === 'tab-bar' || props.type === 'tabbar';
-        const propsType    = props.type && (DOLPHIN_TYPES.has(props.type) || isTabBarType || (typeof props.type === 'string' && props.type.startsWith('0x'))) ? props.type : null;
-        const tagLower     = (tag || '').toLowerCase();
+        const propsType = props.type && (DOLPHIN_TYPES.has(props.type) || isTabBarType || (typeof props.type === 'string' && props.type.startsWith('0x'))) ? props.type : null;
+        const tagLower = (tag || '').toLowerCase();
 
         let type = 'Container';
         if (isTabBarType) {
@@ -360,7 +445,6 @@ class HybridParser {
         } else if (tagLower === 'i' || clsArr.some(c => /^fa-[a-z0-9-]+$/i.test(c))) {
             type = 'Icon';
         } else if (tagLower === 'div' && action) {
-            // यदि div भित्र अरु complex कम्पोनेन्टहरू (Image, Row, आदि) छन् भने Container नै राख्ने
             const isComplex = childSchemas.some(c => !['Text', 'option'].includes(c.type));
             type = isComplex ? 'Container' : 'Button';
         } else if (['h1','h2','h3','h4','h5','h6','p','span','label'].includes(tagLower)) {
@@ -394,7 +478,7 @@ class HybridParser {
         } else if (tagLower === 'option') {
             type = 'option';
         } else if (tagLower === 'form') {
-            type = 'Column'; // Form acts as a container
+            type = 'Column';
         } else if (tagLower === 'img' || tagLower === 'image') {
             type = 'Image';
         } else if (tagLower === 'video') {
@@ -415,7 +499,7 @@ class HybridParser {
 
         const schema = { type };
 
-        // Default sizes for headings (Reduced to prevent "zoom" feeling)
+        // ─── Default sizes for headings ───
         if (tagLower === 'h1') schema.size = 24;
         else if (tagLower === 'h2') schema.size = 20;
         else if (tagLower === 'h3') schema.size = 18;
@@ -424,62 +508,60 @@ class HybridParser {
         else if (tagLower === 'h6') schema.size = 12;
         if (['h1','h2','h3','h4','h5','h6'].includes(tagLower)) schema.bold = true;
 
-        // --- Class → schema props ---
+        // ─── Class → schema props ───
         clsArr.forEach(c => {
-            if (c.startsWith('p-'))          schema.p       = parseInt(c.slice(2)) * 4;
-            else if (c.startsWith('pt-'))    schema.pt      = parseInt(c.slice(3)) * 4;
-            else if (c.startsWith('pb-'))    schema.pb      = parseInt(c.slice(3)) * 4;
-            else if (c.startsWith('pl-'))    schema.pl      = parseInt(c.slice(3)) * 4;
-            else if (c.startsWith('pr-'))    schema.pr      = parseInt(c.slice(3)) * 4;
-            else if (c.startsWith('px-'))    { schema.pl = schema.pr = parseInt(c.slice(3)) * 4; }
-            else if (c.startsWith('py-'))    { schema.pt = schema.pb = parseInt(c.slice(3)) * 4; }
-            else if (c.startsWith('m-'))       schema.m       = parseInt(c.slice(2)) * 4;
-            else if (c.startsWith('mt-'))      schema.mt      = parseInt(c.slice(3)) * 4;
-            else if (c === 'text-xs')          schema.size = 10;
-            else if (c === 'text-sm')          schema.size = 12;
-            else if (c === 'text-base')        schema.size = 14;
-            else if (c === 'text-lg')          schema.size = 16;
-            else if (c === 'text-xl')          schema.size = 20;
-            else if (c === 'text-2xl')         schema.size = 24;
-            else if (c === 'text-3xl')         schema.size = 30;
-            else if (c === 'text-4xl')         schema.size = 36;
-            else if (c.startsWith('mb-'))      schema.mb      = parseInt(c.slice(3)) * 4;
-            else if (c.startsWith('ml-'))      schema.ml      = parseInt(c.slice(3)) * 4;
-            else if (c.startsWith('mr-'))      schema.mr      = parseInt(c.slice(3)) * 4;
-            else if (c.startsWith('mx-'))    { schema.ml = schema.mr = parseInt(c.slice(3)) * 4; }
-            else if (c.startsWith('my-'))    { schema.mt = schema.mb = parseInt(c.slice(3)) * 4; }
-            else if (c.startsWith('gap-'))     schema.gap     = parseInt(c.slice(4)) * 4;
-            else if (c.startsWith('flex-'))    schema.flex    = parseInt(c.slice(5));
+            if (c.startsWith('p-')) schema.p = parseInt(c.slice(2)) * 4;
+            else if (c.startsWith('pt-')) schema.pt = parseInt(c.slice(3)) * 4;
+            else if (c.startsWith('pb-')) schema.pb = parseInt(c.slice(3)) * 4;
+            else if (c.startsWith('pl-')) schema.pl = parseInt(c.slice(3)) * 4;
+            else if (c.startsWith('pr-')) schema.pr = parseInt(c.slice(3)) * 4;
+            else if (c.startsWith('px-')) { schema.pl = schema.pr = parseInt(c.slice(3)) * 4; }
+            else if (c.startsWith('py-')) { schema.pt = schema.pb = parseInt(c.slice(3)) * 4; }
+            else if (c.startsWith('m-')) schema.m = parseInt(c.slice(2)) * 4;
+            else if (c.startsWith('mt-')) schema.mt = parseInt(c.slice(3)) * 4;
+            else if (c === 'text-xs') schema.size = 10;
+            else if (c === 'text-sm') schema.size = 12;
+            else if (c === 'text-base') schema.size = 14;
+            else if (c === 'text-lg') schema.size = 16;
+            else if (c === 'text-xl') schema.size = 20;
+            else if (c === 'text-2xl') schema.size = 24;
+            else if (c === 'text-3xl') schema.size = 30;
+            else if (c === 'text-4xl') schema.size = 36;
+            else if (c.startsWith('mb-')) schema.mb = parseInt(c.slice(3)) * 4;
+            else if (c.startsWith('ml-')) schema.ml = parseInt(c.slice(3)) * 4;
+            else if (c.startsWith('mr-')) schema.mr = parseInt(c.slice(3)) * 4;
+            else if (c.startsWith('mx-')) { schema.ml = schema.mr = parseInt(c.slice(3)) * 4; }
+            else if (c.startsWith('my-')) { schema.mt = schema.mb = parseInt(c.slice(3)) * 4; }
+            else if (c.startsWith('gap-')) schema.gap = parseInt(c.slice(4)) * 4;
+            else if (c.startsWith('flex-')) schema.flex = parseInt(c.slice(5));
             else if (c === 'rounded') schema.radius = 4;
             else if (c.startsWith('rounded-')) {
                 const r = c.slice(8);
-                if      (r === 'none') schema.radius = 0;
-                else if (r === 'sm')   schema.radius = 2;
-                else if (r === 'md')   schema.radius = 6;
-                else if (r === 'lg')   schema.radius = 8;
-                else if (r === 'xl')   schema.radius = 12;
-                else if (r === '2xl')  schema.radius = 16;
-                else if (r === '3xl')  schema.radius = 24;
-                else if (r === 'full') schema.radius = 200; // 200 = very large → always circle
+                if (r === 'none') schema.radius = 0;
+                else if (r === 'sm') schema.radius = 2;
+                else if (r === 'md') schema.radius = 6;
+                else if (r === 'lg') schema.radius = 8;
+                else if (r === 'xl') schema.radius = 12;
+                else if (r === '2xl') schema.radius = 16;
+                else if (r === '3xl') schema.radius = 24;
+                else if (r === 'full') schema.radius = 255;
                 else {
-                    // arbitrary: rounded-4, rounded-[15px]
                     const clean = r.replace('[','').replace(']','').replace('px','');
                     const val = parseInt(clean);
                     if (!isNaN(val)) schema.radius = val;
                 }
             }
-            else if (c === 'flex-1')           schema.flex    = 1;
-            else if (c === 'h-full')           schema.height  = -1;
-            else if (c.startsWith('h-'))       schema.height  = parseInt(c.slice(2)) * 4;
-            else if (c === 'w-full')           schema.width   = -1;
-            else if (c.startsWith('w-'))       schema.width   = parseInt(c.slice(2)) * 4;
+            else if (c === 'flex-1') schema.flex = 1;
+            else if (c === 'h-full') schema.height = -1;
+            else if (c.startsWith('h-')) schema.height = parseInt(c.slice(2)) * 4;
+            else if (c === 'w-full') schema.width = -1;
+            else if (c.startsWith('w-')) schema.width = parseInt(c.slice(2)) * 4;
             else if (c === 'shadow' || c === 'shadow-lg') schema.elevation = 4;
             else if (c === 'bg-white' || c === 'bg-slate-50') { schema.bg = 'white'; schema.shade = 254; schema.bgShade = 254; }
-            else if (c === 'bg-light' || c === 'bg-slate-100') { schema.bg = 'gray';  schema.shade = 252; schema.bgShade = 252; }
+            else if (c === 'bg-light' || c === 'bg-slate-100') { schema.bg = 'gray'; schema.shade = 252; schema.bgShade = 252; }
             else if (c === 'bg-black' || c === 'bg-slate-900') { schema.bg = 'black'; schema.shade = 254; schema.bgShade = 254; }
             else if (c.startsWith('bg-gradient-')) { schema.gradient = c.replace('bg-', ''); }
             else if (c.startsWith('bg-grdient-')) { schema.gradient = c.replace('bg-', '').replace('grdient', 'gradient'); }
-            // Support for bg-[color]-[shade]
             else if (c.startsWith('bg-') && c.includes('-')) {
                 const parts = c.split('-');
                 if (parts.length >= 3) {
@@ -487,17 +569,15 @@ class HybridParser {
                     schema.bgShade = parseInt(parts[2]) || 128;
                 }
             }
-            else if (c === 'text-white')       { schema.color = 'white'; schema.shade = 128; schema.colorShade = 128; }
+            else if (c === 'text-white') { schema.color = 'white'; schema.shade = 128; schema.colorShade = 128; }
             else if (c === 'text-slate-900' || c === 'text-black') { schema.color = 'black'; schema.shade = 128; schema.colorShade = 128; }
-            else if (c === 'text-blue')        schema.color   = 'blue-150';
-            else if (c === 'text-muted')       schema.color   = 'gray-120';
-            else if (c === 'overflow-scroll' || c === 'overflow-y-scroll' || c === 'overflow-y-auto' || c === 'scroll-y' || c === 'scrollable')  schema.scroll  = true;
-            // --- Alignment Fixes ---
-            else if (c === 'items-center')     schema.items   = 'center';
-            else if (c === 'items-end')        schema.items   = 'end';
-            else if (c === 'justify-center')   schema.justify = 'center';
-            else if (c === 'justify-between')  schema.justify = 'between';
-            // Support for opacity classes (e.g., opacity-50)
+            else if (c === 'text-blue') schema.color = 'blue-150';
+            else if (c === 'text-muted') schema.color = 'gray-120';
+            else if (c === 'overflow-scroll' || c === 'overflow-y-scroll' || c === 'overflow-y-auto' || c === 'scroll-y' || c === 'scrollable') schema.scroll = true;
+            else if (c === 'items-center') schema.items = 'center';
+            else if (c === 'items-end') schema.items = 'end';
+            else if (c === 'justify-center') schema.justify = 'center';
+            else if (c === 'justify-between') schema.justify = 'between';
             else if (c.startsWith('opacity-')) {
                 const op = parseInt(c.slice(8));
                 if (!isNaN(op)) {
@@ -505,28 +585,48 @@ class HybridParser {
                 }
             }
         });
-        schema.className = cls; // keep raw class for ub.parseTW
 
-        // --- Explicit style props ---
+        // ─── 🆕 24-byte: Apply ub.parseTW results ───
+        if (twProps.width !== undefined) schema.width = twProps.width;
+        if (twProps.height !== undefined) schema.height = twProps.height;
+        if (twProps.zIndex !== undefined) schema.zIndex = twProps.zIndex;
+        if (twProps.colorIndex !== undefined) schema.colorIndex = twProps.colorIndex;
+        if (twProps.radiusExtended !== undefined) schema.radiusExtended = twProps.radiusExtended;
+        if (twProps.opacity !== undefined) schema.opacity = twProps.opacity / 255;
+
+        // ─── 🆕 CSS Props for FormEngine ───
+        if (Object.keys(cssProps).length > 0) {
+            schema.cssProps = cssProps;
+        }
+
+        // ─── Style props ───
+        schema.className = cls;
+
         if (props.style && typeof props.style === 'object') {
             const st = props.style;
-            if (st.height)    schema.height    = typeof st.height    === 'number' ? st.height    : parseInt(st.height)    || 0;
-            if (st.width)     schema.width     = typeof st.width     === 'number' ? st.width     : parseInt(st.width)     || 0;
-            if (st.fontSize)  schema.size      = typeof st.fontSize  === 'number' ? st.fontSize  : parseInt(st.fontSize)  || 0;
+            if (st.height) schema.height = typeof st.height === 'number' ? st.height : parseInt(st.height) || 0;
+            if (st.width) schema.width = typeof st.width === 'number' ? st.width : parseInt(st.width) || 0;
+            if (st.fontSize) schema.size = typeof st.fontSize === 'number' ? st.fontSize : parseInt(st.fontSize) || 0;
+            // ✅ CSS Props from inline style
+            if (st.backgroundColor) schema.cssProps = { ...schema.cssProps, backgroundColor: st.backgroundColor };
+            if (st.color) schema.cssProps = { ...schema.cssProps, color: st.color };
+            if (st.borderRadius) schema.cssProps = { ...schema.cssProps, borderRadius: st.borderRadius };
+            if (st.padding) schema.cssProps = { ...schema.cssProps, padding: st.padding };
+            if (st.margin) schema.cssProps = { ...schema.cssProps, margin: st.margin };
         }
         if (props.height) schema.height = typeof props.height === 'number' ? props.height : parseInt(props.height) || 0;
-        if (props.width)  schema.width  = typeof props.width  === 'number' ? props.width  : parseInt(props.width)  || 0;
-        if (action)           schema.action = action;
-        if (props.stateKey)   schema.stateKey = props.stateKey;
-        if (props.gradient)   schema.gradient = props.gradient;
-        if (props.animation)  schema.animation = props.animation;
-        if (props.title)      schema.title  = props.title;
-        if (props.src)        schema.src = props.src;
-        if (props.url)        schema.url = props.url;
-        // --- Platform targeting: preserve target/platform for mobile compiler filtering ---
-        if (props.target)     schema.target   = props.target;
-        if (props.platform)   schema.platform = props.platform;
+        if (props.width) schema.width = typeof props.width === 'number' ? props.width : parseInt(props.width) || 0;
+        if (action) schema.action = action;
+        if (props.stateKey) schema.stateKey = props.stateKey;
+        if (props.gradient) schema.gradient = props.gradient;
+        if (props.animation) schema.animation = props.animation;
+        if (props.title) schema.title = props.title;
+        if (props.src) schema.src = props.src;
+        if (props.url) schema.url = props.url;
+        if (props.target) schema.target = props.target;
+        if (props.platform) schema.platform = props.platform;
 
+        // ─── TextField ───
         if (type === 'TextField') {
             schema.placeholder = props.placeholder || '';
             schema.stateKey = props.stateKey || props.name || '';
@@ -539,7 +639,6 @@ class HybridParser {
             schema.iconColorRight = props.iconColorRight || props.endIconColor || '';
             schema.iconSize = props.iconSize || '';
             
-            // --- Unification of Variants (outlined, filled, standard) ---
             const variant = props.variant || 'outlined';
             schema.variant = variant;
             
@@ -561,7 +660,6 @@ class HybridParser {
                     clsArr.push('border-slate-300');
                 }
             } else {
-                // Outlined (Default)
                 schema.border = true;
                 if (!clsArr.some(c => c.startsWith('bg-'))) {
                     clsArr.push('bg-white');
@@ -574,7 +672,7 @@ class HybridParser {
             if (props.border !== undefined) {
                 schema.border = props.border === true || props.border === 'true';
             }
-            schema.className = clsArr.join(' '); // Synchronize back to the styling class list
+            schema.className = clsArr.join(' ');
         } else if (type === 'Checkbox' || type === 'Switch' || type === 'Radio' || type === 'RadioButton') {
             schema.stateKey = props.stateKey || props.name || '';
             schema.initial = props.checked !== undefined ? props.checked : (props.initial || false);
@@ -605,13 +703,12 @@ class HybridParser {
         }
 
         if (tagLower === 'option') {
-            schema.tag = 'option'; // Mark for parent <select>
+            schema.tag = 'option';
         }
 
-        // --- Text / Button content ---
+        // ─── Text / Button content ───
         const TEXT_TYPES = new Set(['Text','Button','AppBar','option','p','span','h1','h2','h3','h4','h5','h6']);
 
-        // Recursive helper to find all text in children (robust version)
         const extractAllText = (nodes) => {
             return nodes.map(node => {
                 if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -624,16 +721,12 @@ class HybridParser {
             }).join(' ').trim();
         };
 
-        // केवल टेक्स्ट टाइप भएका कम्पोनेन्ट (Text, Button, AppBar) मा मात्र टेक्स्ट एक्स्ट्र्याक्ट गर्ने
         if (TEXT_TYPES.has(type)) {
-            // गहिरो तह (nested layers जस्तै div > div > span) बाट पनि text निकाल्ने
             const deepText = extractAllText(childSchemas);
             if (deepText) {
                 schema.text = deepText;
             }
             
-            // यदि यो 'Button' हो र यसमा इमेज जस्ता सामाग्री छन् भने मात्र children राख्ने,
-            // नत्र Container/Row/Column को children डिलेट नगर्ने
             if (type === 'Button' || type === 'Text') {
                 const rest = childSchemas.filter(c => c.type === 'Image' || c.type === 'ListView' || c.type === 'GridView');
                 if (rest.length > 0) schema.children = rest;
@@ -643,6 +736,10 @@ class HybridParser {
             schema.children = childSchemas;
         }
 
+        // ─── 🆕 24-byte: Ensure width/height are set ───
+        if (schema.width === undefined && twProps.width !== undefined) schema.width = twProps.width;
+        if (schema.height === undefined && twProps.height !== undefined) schema.height = twProps.height;
+
         return schema;
     }
 
@@ -651,15 +748,45 @@ class HybridParser {
      * @param {string} jsxString 
      */
     _jsxToHtml(jsxString) {
-        if (!jsxString || typeof jsxString !== 'string') return '';
-        let html = jsxString.replace(/className=/g, 'class=').replace(/htmlFor=/g, 'for=');
+        let html = jsxString;
+
+        html = html.replace(/className=/g, 'class=');
+        html = html.replace(/htmlFor=/g, 'for=');
+        html = html.replace(/<(\w+)([^>]*)\/>/g, '<$1$2></$1>');
+        
+        html = html.replace(/style=\{\{([^}]+)\}\}/g, (match, styleObj) => {
+            try {
+                const styles = styleObj.split(',').map(s => s.trim());
+                const styleString = styles.map(s => {
+                    const [key, value] = s.split(':').map(p => p.trim());
+                    const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+                    const cleanValue = value.replace(/['"]/g, '');
+                    return `${cssKey}: ${cleanValue}`;
+                }).join('; ');
+                return `style="${styleString}"`;
+            } catch (e) {
+                return match;
+            }
+        });
+
+        html = html.replace(/import\s+.*from\s+['"]react['"];\s*/g, '');
+        html = html.replace(/export\s+default\s+.*;\s*/g, '');
+        html = html.replace(/\b(on[A-Z][a-zA-Z]+)=/g, (match, p1) => {
+            return p1.toLowerCase() + '=';
+        });
+
+        html = html.replace(/stateKey:\s*['"]?([a-zA-Z0-9_$]+)['"]?/g, 'data-statekey="$1"');
+
         const tagMatch = html.match(/(<[a-zA-Z][\s\S]*>)/);
-        return tagMatch ? tagMatch[1] : html;
+        if (tagMatch) {
+            html = tagMatch[1];
+        }
+
+        return html;
     }
 
     /**
-     * Convert React element to HTML string (fallback path).
-     * The preferred path is _reactElementToSchema → schema → binary.
+     * Convert React element to HTML string (fallback path)
      */
     _reactElementToHtml(element) {
         if (!element || typeof element !== 'object') {
@@ -668,11 +795,9 @@ class HybridParser {
 
         const { type, props } = element;
         
-        // Handle text nodes
         if (typeof type === 'string') {
             let attrs = '';
             
-            // Convert props to HTML attributes
             if (props) {
                 Object.keys(props).forEach(key => {
                     if (key === 'children') return;
@@ -699,7 +824,11 @@ class HybridParser {
                             attrs += ` style="${styles}"`;
                         }
                     } else {
-                        attrs += ` ${key}="${value}"`;
+                        if (key === 'stateKey') {
+                            attrs += ` data-statekey="${value}"`;
+                        } else {
+                            attrs += ` ${key}="${value}"`;
+                        }
                     }
                 });
             }

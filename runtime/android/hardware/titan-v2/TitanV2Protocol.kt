@@ -1,4 +1,4 @@
-package io.dolphin.runtime.hardware.titanv2
+package io.dolphin.runtime
 
 /**
  * 🚀 TITAN PROTOCOL v2 — NVR Edition

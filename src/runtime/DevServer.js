@@ -3,7 +3,6 @@
 const http  = require('http');
 const fs    = require('fs');
 const path  = require('path');
-const os    = require('os');
 const { EventEmitter } = require('events');
 const net = require('net');
 const dgram = require('dgram');
@@ -98,7 +97,7 @@ class DolphinServer extends EventEmitter {
      * Targeted patch for a single component
      */
     patchComponent(deviceId, index, titanBinary) {
-        const payload = Buffer.alloc(2 + 16);
+        const payload = Buffer.alloc(2 + 24);
         payload.writeUInt16LE(index, 0);
         Buffer.from(titanBinary).copy(payload, 2);
         this.sendToDevice(deviceId, payload, 0x03 /* PATCH_COMPONENT */);
@@ -125,12 +124,12 @@ class DolphinServer extends EventEmitter {
      */
     patchScreen(deviceId, name, screen) {
         const nameBuf = Buffer.from(name, 'utf8');
-        const binary = screen.binary; // 16-byte components
+        const binary = screen.binary; // 24-byte components
         const rawData = screen.rawData || Buffer.alloc(0);
         
         // Protocol for PATCH_SCREEN (0x02):
         // [1 byte nameLen] [N bytes name] [4 bytes compCount] [4 bytes rawDataLen] [M bytes components] [K bytes rawData]
-        const compCount = (binary.length / 16) | 0;
+        const compCount = (binary.length / 24) | 0;
         const payload = Buffer.alloc(1 + nameBuf.length + 4 + 4 + binary.length + rawData.length);
         
         payload[0] = nameBuf.length;
@@ -300,6 +299,17 @@ class DevServer extends EventEmitter {
                 const screenName = action.substring(4);
                 this.deviceScreens[id] = screenName;
                 console.log(`📌 Device ${id} navigated to screen: ${screenName}`);
+            } else if (action === 'diagnostics:logcat') {
+                console.log(`\n================ 📱 REALTIME DEVICE LOGCAT (${id}) ================`);
+                console.log(value);
+                console.log(`===================================================================\n`);
+                try {
+                    const logDir = path.join(this.watchDir, 'logs');
+                    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+                    fs.writeFileSync(path.join(logDir, 'device_logcat.txt'), value, 'utf8');
+                } catch (e) {
+                    console.error('Failed to save logcat to file:', e.message);
+                }
             }
         });
 
@@ -376,7 +386,29 @@ class DevServer extends EventEmitter {
             }
             const url = req.url.split('?')[0];
             
-            const isWebRoute = (url === '/' || url === '/app' || url === '/web' || url === '/about' || url === '/products' || url === '/contact') || (!url.includes('.') && !url.startsWith('/api/') && !url.startsWith('/events') && !url.startsWith('/dist') && !url.startsWith('/download') && url !== '/dashboard' && url !== '/admin' && url !== '/download-apk');
+            if (url === '/hexdump' || url === '/inspect') {
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(this._renderHexdump());
+                return;
+            }
+            if (url === '/logcat') {
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(this._renderLogcatPage());
+                return;
+            }
+            if (url === '/api/dolphin/logcat') {
+                cors(res);
+                res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+                const logPath = path.join(this.watchDir, 'logs', 'device_logcat.txt');
+                let logs = 'No logs received yet. Open app and make a change.';
+                if (fs.existsSync(logPath)) {
+                    logs = fs.readFileSync(logPath, 'utf8');
+                }
+                res.end(logs);
+                return;
+            }
+
+            const isWebRoute = (url === '/' || url === '/app' || url === '/web' || url === '/about' || url === '/products' || url === '/contact') || (!url.includes('.') && !url.startsWith('/api/') && !url.startsWith('/events') && !url.startsWith('/dist') && !url.startsWith('/download') && url !== '/dashboard' && url !== '/admin' && url !== '/hexdump' && url !== '/inspect' && url !== '/logcat' && url !== '/download-apk');
 
             if (isWebRoute) {
                 const DolphinWebEngine = require('../web/DolphinWebEngine');
@@ -449,6 +481,14 @@ class DevServer extends EventEmitter {
             } else if (url === '/dashboard' || url === '/admin') {
                 res.writeHead(200, { 'Content-Type': 'text/html' });
                 res.end(this._renderDashboard());
+            } else if (url === '/hexdump' || url === '/inspect') {
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(this._renderHexdump());
+            } else if (url === '/api/dolphin/snapshot') {
+                cors(res);
+                this._savedSnapshot = this._bundle ? Buffer.from(this._bundle) : null;
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, size: this._savedSnapshot ? this._savedSnapshot.length : 0 }));
             } else if (url === '/api/dolphin/server') {
                 cors(res);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -933,20 +973,32 @@ class DevServer extends EventEmitter {
     }
 
     _findLatestApk() {
+        const primaryDir = path.join(this.watchDir, 'dist');
+        if (fs.existsSync(primaryDir)) {
+            try {
+                const files = fs.readdirSync(primaryDir).filter(f => f.endsWith('.apk'));
+                if (files.length > 0) {
+                    const apks = files.map(file => {
+                        const fullPath = path.join(primaryDir, file);
+                        return { file, path: fullPath, stat: fs.statSync(fullPath) };
+                    }).sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
+                    return apks[0];
+                }
+            } catch(e) {}
+        }
+
         const candidateDirs = [
-            path.join(this.watchDir, 'dist'),
             path.join(process.cwd(), 'dist'),
-            path.join(os.homedir(), 'Desktop', 'petrol-pump', 'mui-app', 'dist'),
-            path.resolve(this.watchDir, '..', 'test-apk', 'dist')
+            path.resolve(this.watchDir, '..', 'test-apk', 'dist'),
+            path.resolve(process.cwd(), '..', 'test-apk', 'dist')
         ];
 
         try {
-            const desktopPath = path.join(os.homedir(), 'Desktop');
-            if (fs.existsSync(desktopPath)) {
-                const subDirs = fs.readdirSync(desktopPath);
+            const parentDir = path.dirname(this.watchDir);
+            if (fs.existsSync(parentDir)) {
+                const subDirs = fs.readdirSync(parentDir);
                 subDirs.forEach(sub => {
-                    candidateDirs.push(path.join(desktopPath, sub, 'dist'));
-                    candidateDirs.push(path.join(desktopPath, sub, 'mui-app', 'dist'));
+                    candidateDirs.push(path.join(parentDir, sub, 'dist'));
                 });
             }
         } catch(e) {}
@@ -1455,151 +1507,315 @@ class DevServer extends EventEmitter {
 
     _watchFiles() {
         let watchTimeout = null;
-        const watchHandler = (evt, file, dirPath) => {
-            if (!file) return;
-            const fullRelPath = dirPath ? `${dirPath}/${file}` : file;
-            const normFile = fullRelPath.replace(/\\/g, '/');
-            
-            if (normFile.includes('node_modules') || 
-                normFile.includes('dist') || 
-                normFile.includes('.dolphin') ||
-                normFile.includes('.git')) return;
-            
-            if (!normFile.endsWith('.js') && !normFile.endsWith('.jsx')) return;
-            
-            console.log(`🔍 Watcher detected change in: ${normFile}`);
-            
-            if (watchTimeout) clearTimeout(watchTimeout);
-            watchTimeout = setTimeout(() => {
-                console.log(`📝 Rebuilding due to change in: ${normFile}`);
-                this.emit('fileChanged', { file: normFile, evt });
-            }, 100);
-        };
+        const activeWatchers = new Map();
 
-        const addWatch = (targetDir, relPrefix = '') => {
+        const watchDirRecursive = (dir) => {
+            if (activeWatchers.has(dir)) return;
             try {
-                if (!fs.existsSync(targetDir)) return;
-                fs.watch(targetDir, { recursive: true }, (evt, file) => watchHandler(evt, file, relPrefix));
-            } catch (e) {
-                // Fallback for non-recursive Windows platforms
-                try {
-                    fs.readdirSync(targetDir, { withFileTypes: true }).forEach(dirent => {
-                        if (dirent.isDirectory()) {
-                            const sub = path.join(targetDir, dirent.name);
-                            const subRel = relPrefix ? `${relPrefix}/${dirent.name}` : dirent.name;
-                            addWatch(sub, subRel);
+                const watcher = fs.watch(dir, (evt, filename) => {
+                    if (!filename) return;
+                    const fullPath = path.join(dir, filename);
+                    const relPath = path.relative(this.watchDir, fullPath).replace(/\\/g, '/');
+                    
+                    if (relPath.includes('node_modules') || 
+                        relPath.includes('dist') || 
+                        relPath.includes('.dolphin') ||
+                        relPath.includes('.git')) return;
+                    
+                    if (!relPath.endsWith('.js') && !relPath.endsWith('.jsx')) return;
+                    
+                    console.log(`🔍 Watcher detected change in: ${relPath}`);
+                    
+                    if (watchTimeout) clearTimeout(watchTimeout);
+                    watchTimeout = setTimeout(() => {
+                        console.log(`📝 Rebuilding due to change in: ${relPath}`);
+                        this.emit('fileChanged', { file: relPath, evt });
+                    }, 350);
+                });
+                activeWatchers.set(dir, watcher);
+
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    if (entry.isDirectory()) {
+                        const name = entry.name;
+                        if (name !== 'node_modules' && name !== 'dist' && !name.startsWith('.')) {
+                            watchDirRecursive(path.join(dir, name));
                         }
-                    });
-                } catch (e2) {}
-            }
+                    }
+                }
+            } catch (e) {}
         };
 
-        addWatch(this.watchDir);
+        watchDirRecursive(this.watchDir);
     }
 
-    _renderInspector() {
-        if (!this._bundle) return '<h1>No bundle loaded.</h1><p>Save app.jsx to generate binary data.</p>';
+    _renderHexdump() {
+        if (!this._bundle) return '<h1>No bundle loaded.</h1><p>Run dolphin dev / save project files to build bundle.</p>';
         
         const bytes = this._bundle;
-        // Correct Parsing based on BinaryParser.kt
-        // Header (20 bytes)
+        const magic = bytes.slice(0, 4).toString('ascii');
+        const version = bytes.readUInt16LE(4);
+        const flags = bytes.readUInt16LE(6);
         const scrCount = bytes.readUInt16LE(8);
         const compCount = bytes.readUInt16LE(10);
+        const entryIdx = bytes.readUInt16LE(12);
+        const drawerIdx = bytes.readUInt16LE(14);
         
-        // Skip screens to find components
         let cursor = 20;
+        const screens = [];
         for (let i = 0; i < scrCount; i++) {
             const nameLen = bytes[cursor++];
-            cursor += nameLen; // Name
-            cursor += 2; // Offset
-            cursor += 2; // Count
-            const dataLen = bytes.readUInt32LE(cursor);
-            cursor += 4;
-            cursor += dataLen; // Data
+            const name = bytes.toString('utf8', cursor, cursor + nameLen);
+            cursor += nameLen;
+            const compOff = bytes.readUInt16LE(cursor); cursor += 2;
+            const compCnt = bytes.readUInt16LE(cursor); cursor += 2;
+            const dataLen = bytes.readUInt32LE(cursor); cursor += 4;
+            const rawData = bytes.slice(cursor, cursor + dataLen);
+            cursor += dataLen;
+
+            // Extract printable strings from data pool
+            const strings = [];
+            let strStart = 0;
+            for (let j = 0; j < rawData.length; j++) {
+                if (rawData[j] === 0) {
+                    if (j > strStart) {
+                        strings.push(rawData.toString('utf8', strStart, j));
+                    } else {
+                        strings.push('∅');
+                    }
+                    strStart = j + 1;
+                }
+            }
+
+            screens.push({
+                index: i,
+                name,
+                compOff,
+                compCnt,
+                dataLen,
+                strings
+            });
         }
 
         const comps = [];
         for (let i = 0; i < compCount; i++) {
-            if (cursor + 16 > bytes.length - 4) break;
-            const bin = bytes.slice(cursor, cursor + 16);
-            comps.push(this._decodeBinary(bin, i));
-            cursor += 16;
+            if (cursor + 24 > bytes.length - 4) break;
+            const bin = bytes.slice(cursor, cursor + 24);
+            comps.push(this._decodeTitan24(bin, i));
+            cursor += 24;
         }
 
         return `<!DOCTYPE html>
 <html>
 <head>
-    <title>Dolphin Binary Inspector</title>
+    <title>Dolphin Binary Hexdump & Debugger</title>
+    <meta charset="utf-8">
     <style>
-        body { font-family: monospace; background: #0f172a; color: #f8fafc; padding: 20px; }
-        h2 { color: #00d2ff; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
-        th, td { border: 1px solid #334155; padding: 10px; text-align: left; }
-        th { background: #1e293b; color: #94a3b8; text-transform: uppercase; }
-        tr:hover { background: rgba(255,255,255,0.05); }
-        .flag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-right: 4px; font-weight: bold; }
-        .flag-on { background: #059669; color: white; }
-        .flag-off { background: #334155; color: #94a3b8; }
-        .hex { color: #f59e0b; }
+        body { font-family: 'JetBrains Mono', monospace, sans-serif; background: #090d16; color: #f8fafc; padding: 20px; line-height: 1.5; }
+        h1, h2, h3 { color: #38bdf8; margin-bottom: 8px; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+        .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 10px; }
+        .meta-item { background: #0f172a; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e293b; }
+        .meta-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+        .meta-val { font-size: 16px; font-weight: bold; color: #38bdf8; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        th, td { border: 1px solid #334155; padding: 8px 10px; text-align: left; }
+        th { background: #0f172a; color: #94a3b8; text-transform: uppercase; }
+        tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+        tr:hover { background: rgba(56, 189, 248, 0.08); }
+        .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .tag-blue { background: #0284c7; color: white; }
+        .tag-green { background: #16a34a; color: white; }
+        .tag-amber { background: #d97706; color: white; }
+        .hex { color: #fbbf24; font-family: monospace; letter-spacing: 1px; }
+        .btn { display: inline-block; background: #0284c7; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; border: none; cursor: pointer; }
+        .btn:hover { background: #0369a1; }
+        .str-badge { background: #1e293b; border: 1px solid #475569; padding: 2px 6px; border-radius: 4px; color: #cbd5e1; font-size: 11px; margin-right: 4px; display: inline-block; margin-bottom: 4px; }
     </style>
 </head>
 <body>
-    <h2>🌊 Binary Inspector (TITAN-16)</h2>
-    <p>Inspecting: ${comps.length} components</p>
-    <table>
-        <thead>
-            <tr>
-                <th>Idx</th>
-                <th>Type</th>
-                <th>Color (Code:Shade)</th>
-                <th>Radius</th>
-                <th>Flags (Byte 15)</th>
-                <th>Hex Dump</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${comps.map(c => `
+    <div style="display:flex; justify-between; align-items:center; margin-bottom: 16px;">
+        <div>
+            <h1>🌊 Dolphin Native Binary Hexdump & Debugger</h1>
+            <p style="color:#94a3b8; font-size:13px;">Live inspect 24-byte Titan protocol, string pools, and screen offsets</p>
+        </div>
+        <div>
+            <button onclick="saveSnapshot()" class="btn">📸 Save Baseline Snapshot</button>
+            <a href="/" class="btn" style="background:#475569; margin-left:8px;">Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📦 Bundle Metadata Header</h3>
+        <div class="meta-grid">
+            <div class="meta-item"><div class="meta-label">Magic</div><div class="meta-val">${magic}</div></div>
+            <div class="meta-item"><div class="meta-label">Version</div><div class="meta-val">0x${version.toString(16)}</div></div>
+            <div class="meta-item"><div class="meta-label">Screens</div><div class="meta-val">${scrCount}</div></div>
+            <div class="meta-item"><div class="meta-label">Components</div><div class="meta-val">${compCount}</div></div>
+            <div class="meta-item"><div class="meta-label">Total Size</div><div class="meta-val">${bytes.length} B</div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📱 Screens & String Data Pools</h3>
+        <table>
+            <thead>
                 <tr>
-                    <td>${c.idx}</td>
-                    <td style="font-weight:bold">${c.type}</td>
-                    <td>${c.colorCode}:${c.shade}</td>
-                    <td>${c.radius}px</td>
-                    <td>
-                        ${c.hasBorder ? '<span class="flag flag-on">BORDER</span>' : ''}
-                        ${c.hasGradient ? '<span class="flag flag-on">GRADIENT</span>' : ''}
-                        ${c.isScrollable ? '<span class="flag flag-on">SCROLL</span>' : ''}
-                        ${c.hasAnim ? '<span class="flag flag-on">ANIM</span>' : ''}
-                        ${!c.hasBorder && !c.hasGradient && !c.isScrollable && !c.hasAnim ? '<span class="flag flag-off">NONE</span>' : ''}
-                    </td>
-                    <td class="hex">${c.hex}</td>
+                    <th>Idx</th>
+                    <th>Screen Name</th>
+                    <th>Comp Offset</th>
+                    <th>Comp Count</th>
+                    <th>Data Len</th>
+                    <th>String Pool Items</th>
                 </tr>
-            `).join('')}
-        </tbody>
-    </table>
-    <div style="margin-top:20px"><a href="/" style="color:#00d2ff"><- Back to Dashboard</a></div>
+            </thead>
+            <tbody>
+                ${screens.map(s => `
+                    <tr>
+                        <td>#${s.index}</td>
+                        <td style="font-weight:bold; color:#38bdf8">${s.name}</td>
+                        <td>${s.compOff}</td>
+                        <td>${s.compCnt}</td>
+                        <td>${s.dataLen} B</td>
+                        <td>${s.strings.slice(0, 15).map(str => `<span class="str-badge">${str.replace(/</g, '&lt;')}</span>`).join('')} ${s.strings.length > 15 ? `<span style="color:#94a3b8">+${s.strings.length - 15} more</span>` : ''}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>🧩 24-Byte Titan Component Table (${comps.length} components)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Idx</th>
+                    <th>Type (Opcode)</th>
+                    <th>Color (Code:Shade)</th>
+                    <th>Padding (T R B L)</th>
+                    <th>Margin (T R B L)</th>
+                    <th>Radius</th>
+                    <th>Flags (Sig)</th>
+                    <th>24-Byte Hex Dump</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${comps.map(c => `
+                    <tr>
+                        <td>#${c.idx}</td>
+                        <td><span class="tag tag-blue">${c.typeName} (0x${c.type.toString(16)})</span></td>
+                        <td>${c.colorCode}:${c.shade}</td>
+                        <td>${c.padT} ${c.padR} ${c.padB} ${c.padL}</td>
+                        <td>${c.marT} ${c.marR} ${c.marB} ${c.marL}</td>
+                        <td>${c.radius}px</td>
+                        <td>
+                            ${c.hasBorder ? '<span class="tag tag-green">BORDER</span> ' : ''}
+                            ${c.hasGradient ? '<span class="tag tag-amber">GRADIENT</span> ' : ''}
+                            ${c.isScrollable ? '<span class="tag tag-blue">SCROLL</span> ' : ''}
+                            ${c.hasAnim ? '<span class="tag tag-green">ANIM</span> ' : ''}
+                        </td>
+                        <td class="hex">${c.hex}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function saveSnapshot() {
+            fetch('/api/dolphin/snapshot')
+                .then(res => res.json())
+                .then(d => alert('✅ Baseline snapshot saved (' + d.size + ' bytes)! You can now edit files and compare!'));
+        }
+    </script>
 </body>
 </html>`;
     }
 
-    _decodeBinary(bin, idx) {
-        const types = { 
-            0x10: 'Button', 0x11: 'Card', 0x12: 'Container', 0x13: 'Column', 0x14: 'Row', 
-            0x18: 'TextField', 0x1D: 'AppBar', 0x22: 'GridView', 0x1E: 'ListView' 
+    _decodeTitan24(bin, idx) {
+        const types = {
+            0x10: 'Button', 0x11: 'Card', 0x12: 'Container', 0x13: 'Column', 0x14: 'Row',
+            0x15: 'Switch', 0x16: 'Text', 0x17: 'Checkbox', 0x18: 'TextField', 0x19: 'Select',
+            0x1B: 'RadioButton', 0x1D: 'Header', 0x1F: 'Image', 0x27: 'TabBar', 0x28: 'Drawer'
         };
-        const sig = bin[15];
+        const type = bin[1] & 0xFF;
+        const sig = bin[15] & 0xFF;
         return {
             idx,
-            type: types[bin[1]] || `0x${bin[1].toString(16)}`,
-            shade: bin[2],
-            colorCode: bin[3],
-            radius: bin[14],
+            type,
+            typeName: types[type] || `Opcode_0x${type.toString(16)}`,
+            shade: bin[2] & 0xFF,
+            colorCode: bin[3] & 0xFF,
+            padT: bin[4] & 0xFF,
+            padR: bin[5] & 0xFF,
+            padB: bin[6] & 0xFF,
+            padL: bin[7] & 0xFF,
+            marT: bin[8] & 0xFF,
+            marR: bin[9] & 0xFF,
+            marB: bin[10] & 0xFF,
+            marL: bin[11] & 0xFF,
+            radius: bin[14] & 0xFF,
             hasBorder: (sig & 0x04) !== 0,
             hasGradient: (sig & 0x01) !== 0,
             isScrollable: (sig & 0x02) !== 0,
             hasAnim: (sig & 0x10) !== 0,
-            hex: Array.from(bin).map(b => b.toString(16).padStart(2, '0')).join(' ')
+            hex: Array.from(bin).map(b => (b & 0xFF).toString(16).padStart(2, '0')).join(' ')
         };
     }
+
+    _renderLogcatPage() {
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolphin Native — Live Device Logcat</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0f172a; color: #f8fafc; font-family: monospace; font-size: 13px; padding: 20px; line-height: 1.5; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 15px; margin-bottom: 20px; }
+        h1 { color: #38bdf8; font-size: 20px; }
+        .status { background: #0284c7; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        pre { background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 15px; overflow-x: auto; max-height: 80vh; color: #4ade80; font-family: 'Consolas', 'Fira Code', monospace; white-space: pre-wrap; word-break: break-all; }
+        .controls { display: flex; gap: 10px; }
+        button { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>📱 Real-Time Android Device Logcat</h1>
+            <p style="color: #94a3b8; font-size: 12px;">Live logs streamed over WebSocket from connected Android device</p>
+        </div>
+        <div class="controls">
+            <span class="status" id="live-indicator">LIVE AUTO-REFRESH (2s)</span>
+            <button onclick="fetchLogs()">🔄 Refresh Now</button>
+        </div>
+    </header>
+
+    <pre id="log-content">Loading live logcat from device...</pre>
+
+    <script>
+        function fetchLogs() {
+            fetch('/api/dolphin/logcat')
+                .then(r => r.text())
+                .then(txt => {
+                    const el = document.getElementById('log-content');
+                    el.textContent = txt;
+                    el.scrollTop = el.scrollHeight;
+                })
+                .catch(err => {
+                    document.getElementById('log-content').textContent = 'Failed to fetch logs: ' + err;
+                });
+        }
+        fetchLogs();
+        setInterval(fetchLogs, 2000);
+    </script>
+</body>
+</html>`;
+    }
+
     pushReload(bundle) {
         this._bundle = bundle;
         this._patchCount++;

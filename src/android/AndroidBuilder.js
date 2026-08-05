@@ -485,6 +485,7 @@ import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import io.dolphin.runtime.DolphinRuntime
 import io.dolphin.runtime.DolphinBackgroundService
+import io.dolphin.runtime.DolphinStateEngine
 import android.content.Intent
 import ${pkg}.BuildConfig
 import android.view.Gravity
@@ -519,15 +520,15 @@ ${(this.customPluginClasses || []).map(cls => `        try {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
+            setBackgroundColor(android.graphics.Color.parseColor("#f8fafc"))
         }
-        setContentView(drawerLayout)
-        
         // Content container for screens
         contentContainer = android.widget.FrameLayout(this).apply {
             layoutParams = DrawerLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
+            setBackgroundColor(android.graphics.Color.parseColor("#f8fafc"))
         }
         drawerLayout.addView(contentContainer)
         
@@ -542,6 +543,7 @@ ${(this.customPluginClasses || []).map(cls => `        try {
             isClickable = true
         }
         drawerLayout.addView(navigationView)
+        setContentView(drawerLayout)
 
         // WAKE UP DEVICE ON CALL
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -582,10 +584,16 @@ ${(this.customPluginClasses || []).map(cls => `        try {
 
         runtime.onAction = { action, value ->
             Log.d("MainActivity", "⚡ onAction received: action=\$action value=\$value")
-            if (action.startsWith("nav:") || action.startsWith("tab:")) {
-                val screenName = action.substringAfter(":")
+            val isNavAction = (action.startsWith("nav:") || action.startsWith("tab:") ||
+                              action.startsWith("app.switchScreen:") || action.startsWith("app.switchTab:") ||
+                              action.startsWith("app.navigate:") || action.startsWith("switchScreen:") ||
+                              action.startsWith("switchTab:") || action.startsWith("navigate:")) &&
+                              !action.endsWith(":MainDrawer") && !action.endsWith(":Drawer")
+            if (isNavAction) {
+                val screenName = if (action.contains(":")) action.substringAfter(":") else (value?.toString() ?: "")
                 runOnUiThread {
                     try {
+                        val resolvedName = runtime.resolveScreenName(screenName) ?: screenName
                         val targetScreen = if (screenName == "back") {
                             if (screenHistory.isNotEmpty()) {
                                 screenHistory.removeAt(screenHistory.size - 1)
@@ -593,10 +601,10 @@ ${(this.customPluginClasses || []).map(cls => `        try {
                                 "Home"
                             }
                         } else {
-                            if (currentScreen != "back" && currentScreen != screenName) {
+                            if (currentScreen != "back" && currentScreen != resolvedName) {
                                 screenHistory.add(currentScreen)
                             }
-                            screenName
+                            resolvedName
                         }
 
                         currentScreen = targetScreen
@@ -623,22 +631,36 @@ ${(this.customPluginClasses || []).map(cls => `        try {
                                 contentContainer.removeView(oldView)
                             }
                         }
-                        drawerLayout.closeDrawers()
+                        try { drawerLayout.closeDrawers() } catch (e: Exception) {}
                     } catch (e: Exception) {
                         Log.e("MainActivity", "Failed to navigate: \${e.message}")
                         Toast.makeText(this@MainActivity, "Screen not found: \$screenName", Toast.LENGTH_SHORT).show()
                     }
                 }
-            } else if (action == "drawer:open") {
+            } else if (action == "drawer:open" || action == "drawer:toggle" || action == "drawer:show") {
                 runOnUiThread {
-                    if (runtime.getScreenNames().contains("MainDrawer")) {
-                        val drawerView = runtime.buildScreen("MainDrawer")
-                        navigationView.removeAllViews()
-                        navigationView.addView(drawerView)
+                    try {
+                        val drawerScreen = runtime.resolveScreenName("MainDrawer")
+                                       ?: runtime.resolveScreenName("Drawer")
+                                       ?: "MainDrawer"
+                        if (runtime.getScreenNames().contains(drawerScreen)) {
+                            val drawerView = runtime.buildScreen(drawerScreen)
+                            navigationView.removeAllViews()
+                            navigationView.addView(drawerView)
+                        }
+                        drawerLayout.openDrawer(Gravity.START)
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Error opening drawer: \${e.message}")
                     }
-                    drawerLayout.openDrawer(Gravity.START)
+                }
+            } else if (action == "drawer:close") {
+                runOnUiThread {
+                    try { drawerLayout.closeDrawers() } catch (e: Exception) {}
                 }
             } else {
+                runOnUiThread {
+                    DolphinStateEngine.handleAction(action)
+                }
                 when(action) {
                     "TOGGLE_FLASH" -> toggleFlash((value?.toString()?.toBoolean() ?: false))
                     "OPEN_CAMERA" -> checkAndRequestPermissions()
@@ -697,31 +719,65 @@ ${(this.customPluginClasses || []).map(cls => `        try {
         // AUTO-REQUEST ON START
         checkAndRequestPermissions()
 
-        try {
-            val bytes = assets.open("app.dolp").readBytes()
-            runtime.loadFromBytes(bytes)
+        fun loadAndRenderBootBundle() {
+            var loadedSuccessfully = false
+            val cacheFile = java.io.File(filesDir, "hotpatch_cache.dolp")
             
-            val action = intent?.getStringExtra("action")
-            if (action == "incoming_call" || action == "open_chat") {
-                handleIntent(intent)
-            } else {
-                val newView = runtime.buildEntryScreen()
-                newView.layoutParams = android.widget.FrameLayout.LayoutParams(
+            // Delete stale dev cache on cold boot so fresh embedded app.dolp is always used
+            if (cacheFile.exists()) {
+                try {
+                    Log.i("MainActivity", "🧹 Purging stale hotpatch cache on cold boot")
+                    cacheFile.delete()
+                } catch (_: Exception) {}
+            }
+
+            try {
+                Log.i("MainActivity", "📦 Loading fresh bundle from assets/app.dolp")
+                runtime.loadFromBytes(assets.open("app.dolp").readBytes())
+                val entryView = runtime.buildEntryScreen()
+                entryView.layoutParams = android.widget.FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 contentContainer.removeAllViews()
-                contentContainer.addView(newView)
-                
-                // Initialize Drawer content if available
-                if (runtime.getScreenNames().contains("MainDrawer")) {
+                contentContainer.addView(entryView)
+                contentContainer.post {
+                    entryView.requestLayout()
+                }
+                loadedSuccessfully = true
+                Log.i("MainActivity", "✅ Cold boot succeeded from assets/app.dolp")
+            } catch (assetErr: Exception) {
+                Log.e("MainActivity", "❌ Failed cold boot from assets/app.dolp: \${assetErr.message}", assetErr)
+            }
+
+            if (loadedSuccessfully && runtime.getScreenNames().contains("MainDrawer")) {
+                try {
                     val drawerView = runtime.buildScreen("MainDrawer")
                     navigationView.removeAllViews()
                     navigationView.addView(drawerView)
-                }
+                } catch (_: Exception) {}
             }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Dolphin: \${e.message}", Toast.LENGTH_LONG).show()
+
+            if (!loadedSuccessfully) {
+                Log.e("MainActivity", "🚨 Emergency UI active — could not load any bundle")
+                contentContainer.removeAllViews()
+                val emergencyTv = android.widget.TextView(this).apply {
+                    text = "🐬 Dolphin Engine\\n\\nTap to reload app"
+                    textSize = 18f
+                    gravity = android.view.Gravity.CENTER
+                    setTextColor(android.graphics.Color.WHITE)
+                    setBackgroundColor(android.graphics.Color.parseColor("#0f172a"))
+                    setOnClickListener { loadAndRenderBootBundle() }
+                }
+                contentContainer.addView(emergencyTv, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            }
+        }
+
+        val action = intent?.getStringExtra("action")
+        if (action == "incoming_call" || action == "open_chat") {
+            handleIntent(intent)
+        } else {
+            loadAndRenderBootBundle()
         }
         if (BuildConfig.DEBUG && BuildConfig.DOLPHIN_HOTPATCH_ENABLED) {
             runtime.connectDevServer(BuildConfig.DOLPHIN_DEV_HOST, BuildConfig.DOLPHIN_DEV_PORT) { patchType, screenName ->
@@ -765,19 +821,8 @@ ${(this.customPluginClasses || []).map(cls => `        try {
                                 navigationView.addView(drawerView)
                             }
                         } else if (patchType == "FULL_RELOAD") {
-                            val target = currentScreen
-                            val newView = runtime.buildScreen(target)
-                            newView.layoutParams = android.widget.FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                            val oldView = if (contentContainer.childCount > 0) contentContainer.getChildAt(0) else null
-                            contentContainer.addView(newView)
-                            // Defer removal by one frame so Android measures newView with
-                            // EXACTLY dimensions before oldView is removed (prevents UI shrink).
-                            if (oldView != null) {
-                                contentContainer.post { contentContainer.removeView(oldView) }
-                            }
+                            // ✅ DolphinRuntime handles FULL_RELOAD internally (bundle parse + buildScreen + contentContainer update)
+                            // MainActivity only needs to update the drawer if present
                             if (runtime.getScreenNames().contains("MainDrawer")) {
                                 val drawerView = runtime.buildScreen("MainDrawer")
                                 navigationView.removeAllViews()
@@ -791,13 +836,9 @@ ${(this.customPluginClasses || []).map(cls => `        try {
                                     ViewGroup.LayoutParams.MATCH_PARENT,
                                     ViewGroup.LayoutParams.MATCH_PARENT
                                 )
-                                val oldView = if (contentContainer.childCount > 0) contentContainer.getChildAt(0) else null
+                                contentContainer.removeAllViews()
                                 contentContainer.addView(newView)
-                                // Defer removal by one frame so Android measures newView with
-                                // EXACTLY dimensions before oldView is removed (prevents UI shrink).
-                                if (oldView != null) {
-                                    contentContainer.post { contentContainer.removeView(oldView) }
-                                }
+                                newView.requestLayout()
                             }
                         }
                     }
@@ -966,8 +1007,8 @@ ${(this.customPluginClasses || []).map(cls => `        try {
             Toast.makeText(this, "Picked: \$displayTxt", Toast.LENGTH_LONG).show()
 
             val result = mapOf("files" to filesList)
-            io.dolphin.runtime.hardware.DolphinHardwareBridge.pendingResultCallback?.invoke(result)
-            io.dolphin.runtime.hardware.DolphinHardwareBridge.pendingResultCallback = null
+            io.dolphin.runtime.DolphinHardwareBridge.pendingResultCallback?.invoke(result)
+            io.dolphin.runtime.DolphinHardwareBridge.pendingResultCallback = null
         }
     }
 
@@ -1019,40 +1060,37 @@ ${this.splash ? `    <style name="Theme.Splash" parent="Theme.MaterialComponents
 
     _copyRuntimeFiles() {
         const destDir = path.join(this.projectDir, 'app/src/main/java/io/dolphin/runtime');
-        fs.readdirSync(DOLPHIN_RUNTIME_DIR).forEach(f => {
-            if (f.endsWith('.kt')) {
-                const src = path.join(DOLPHIN_RUNTIME_DIR, f);
-                const dst = path.join(destDir, f);
-                fs.copyFileSync(src, dst);
-                this._log(`   ✅ ${f}`);
-            }
-        });
-        
-        // Copy hardware directory
-        const hwSrc = path.join(DOLPHIN_RUNTIME_DIR, 'hardware');
-        const hwDst = path.join(destDir, 'hardware');
-        if (fs.existsSync(hwSrc)) {
-            if (!fs.existsSync(hwDst)) fs.mkdirSync(hwDst, { recursive: true });
-            fs.readdirSync(hwSrc).forEach(f => {
-                if (f.endsWith('.kt')) {
-                    fs.copyFileSync(path.join(hwSrc, f), path.join(hwDst, f));
-                    this._log(`   ✅ hardware/${f}`);
-                }
-            });
+        const buildDir = path.join(this.projectDir, 'app/build');
+        const tmpKotlin = path.join(buildDir, 'tmp/kotlin-classes');
+        const buildIntermediates = path.join(buildDir, 'intermediates');
+        if (fs.existsSync(tmpKotlin)) {
+            try { fs.rmSync(tmpKotlin, { recursive: true, force: true }); } catch (e) {}
+        }
+        if (fs.existsSync(buildIntermediates)) {
+            try { fs.rmSync(buildIntermediates, { recursive: true, force: true }); } catch (e) {}
         }
 
-        // Copy plugin directory
-        const pluginSrc = path.join(DOLPHIN_RUNTIME_DIR, 'plugin');
-        const pluginDst = path.join(destDir, 'plugin');
-        if (fs.existsSync(pluginSrc)) {
-            if (!fs.existsSync(pluginDst)) fs.mkdirSync(pluginDst, { recursive: true });
-            fs.readdirSync(pluginSrc).forEach(f => {
-                if (f.endsWith('.kt')) {
-                    fs.copyFileSync(path.join(pluginSrc, f), path.join(pluginDst, f));
-                    this._log(`   ✅ plugin/${f}`);
+        // Clean destDir to avoid duplicate class files
+        if (fs.existsSync(destDir)) {
+            try { fs.rmSync(destDir, { recursive: true, force: true }); } catch (e) {}
+        }
+        fs.mkdirSync(destDir, { recursive: true });
+
+        const copyDirRecursive = (src) => {
+            fs.readdirSync(src).forEach(item => {
+                if (item.startsWith('.')) return; // Skip hidden dirs
+                if (item === 'tests') return; // Skip test files
+                const srcPath = path.join(src, item);
+                if (fs.statSync(srcPath).isDirectory()) {
+                    copyDirRecursive(srcPath);
+                } else if (item.endsWith('.kt')) {
+                    const dstFile = path.join(destDir, item);
+                    fs.copyFileSync(srcPath, dstFile);
+                    this._log(`   ✅ ${item}`);
                 }
             });
-        }
+        };
+        copyDirRecursive(DOLPHIN_RUNTIME_DIR);
 
         // Copy user external plugins
         if (this.userPluginsDir && fs.existsSync(this.userPluginsDir)) {

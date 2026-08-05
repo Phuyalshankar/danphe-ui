@@ -14,7 +14,7 @@ const DolphinError = require('./errors/DolphinError');
 const AlignmentUtils = require('./utils/AlignmentUtils');
 
 // Framework modules
-const { DolphinFramework, DolphinApp } = require('./framework/DolphinFramework');
+const DolphinFramework = require('./framework/DolphinFramework');
 const { DolphinRouter } = require('./router/DolphinRouter');
 const UniversalUIImporter = require('./ui/UniversalUIImporter');
 const Integration = require('./integration');
@@ -23,6 +23,9 @@ const Integration = require('./integration');
 const { MAPPING } = require('./constants/mappings');
 const { MAGIC_BYTES, PLATFORM_CONFIG } = require('./constants/platforms');
 const { VERSION, DEFAULT_CONFIG } = require('./constants/defaults');
+
+// Framework components
+const components = require('./framework/components');
 
 module.exports = {
     // Core
@@ -38,13 +41,14 @@ module.exports = {
     
     // Framework
     DolphinFramework,
-    DolphinApp,
-    createApp: (config) => DolphinFramework.createApp(config),
     DolphinRouter,
     UniversalUIImporter,
     Integration,
     get DolphinWebEngine() { return require('./web/DolphinWebEngine'); },
     get DolphinWebStore() { return require('./web/DolphinWebStore'); },
+    
+    // Components
+    ...components,
     
     // Constants
     MAPPING,
@@ -55,7 +59,7 @@ module.exports = {
     
     // Factory
     create: (config) => new DolphinCSS(config),
-    createApp: (config) => DolphinFramework.createApp(config),
+    createApp: (config) => DolphinFramework.DolphinFramework.createApp(config),
     createBinStore: (config) => new LightBinStore(config),
     createRouter: (config) => new DolphinRouter(config),
     defineStore,
@@ -144,5 +148,3 @@ module.exports.GestureRecognizer= _ui.GestureRecognizer;
 module.exports.Responsive       = _ui.Responsive;
 module.exports.ResponsiveContext = _ui.ResponsiveContext;
 module.exports.BREAKPOINTS      = _ui.BREAKPOINTS;
-module.exports.createApp        = (config) => DolphinFramework.createApp(config);
-

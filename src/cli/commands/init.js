@@ -96,11 +96,21 @@ module.exports = function registerServerHandlers(server) {
     // Dynamic Action Dispatcher (Handles app.increment, app.toggleLogin, app.showToast, app.resetAll)
     server.on('deviceAction', ({ id, action, value }) => {
         console.log(\`\\n⚡ [Device Action] \${id} -> \${action}\`);
-        
-        if (action && action.includes('.')) {
-            const [mod, method] = action.split('.');
+        if (!action) return;
+
+        let actionName = action;
+        let actionParam = value;
+
+        if (action.includes(':')) {
+            const colonIdx = action.indexOf(':');
+            actionName = action.substring(0, colonIdx).trim();
+            actionParam = action.substring(colonIdx + 1).trim() || value;
+        }
+
+        if (actionName.includes('.')) {
+            const [mod, method] = actionName.split('.');
             if (actions[mod] && typeof actions[mod][method] === 'function') {
-                actions[mod][method](value);
+                actions[mod][method](actionParam);
                 return;
             }
         }

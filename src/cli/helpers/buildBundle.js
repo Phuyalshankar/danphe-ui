@@ -41,10 +41,45 @@ function loadInitialStoreState(appPath) {
  *
  * @param {string} appPath   - Absolute path to app.js / app.jsx
  * @param {object} config    - dolphin.config.js contents
+
+/**
+ * Build a .dolp bundle from the given app entry file.
+ *
+ * @param {string} appPath   - Absolute path to app.js / app.jsx
+ * @param {object} config    - dolphin.config.js contents
  * @returns {{ buffer, screens, entry, actionHandler, appInstance }}
  */
 function buildBundle(appPath, config) {
+    // Clear require cache for framework compiler modules so hotpatch always uses fresh code
+    Object.keys(require.cache).forEach(key => {
+        if (key.includes('ubParser') || key.includes('UniversalUIImporter') || key.includes('CDNStyleBridge')) {
+            delete require.cache[key];
+        }
+    });
+
+    // Inject project-local node_modules into NODE_PATH so require('dolphin-native') inside
+    // app.jsx resolves from the TEST PROJECT's own node_modules (which has the file: symlink)
+    // rather than from the CLI package's own directory.
+    const projectNodeModules = path.join(path.dirname(appPath), 'node_modules');
+    const existingNodePath = process.env.NODE_PATH || '';
+    if (!existingNodePath.includes(projectNodeModules)) {
+        process.env.NODE_PATH = projectNodeModules + (existingNodePath ? path.delimiter + existingNodePath : '');
+        require('module').Module._initPaths();
+    }
+
     const app = require(appPath);
+
+    // Clear compiler cache & refresh universalImporter so new compiler fixes apply immediately
+    if (app) {
+        const comp = app.compiler || (app.app && app.app.compiler);
+        if (comp) {
+            if (comp.titanCache) comp.titanCache.clear();
+            try {
+                const UniversalUIImporter = require('../../ui/UniversalUIImporter');
+                comp.universalImporter = new UniversalUIImporter();
+            } catch (e) {}
+        }
+    }
     const initialStoreState = loadInitialStoreState(appPath);
 
     // Support both: DolphinApp instance (export app) or pre-built bundle (export app.build())
@@ -74,15 +109,15 @@ function buildBundle(appPath, config) {
 
         if (Array.isArray(screen.binary)) {
             screen.binary.forEach(bin => {
-                if (bin && bin.length >= 16) {
-                    components.push(Buffer.from(bin.slice(0, 16)));
-                    screenComps.push(Buffer.from(bin.slice(0, 16)));
+                if (bin && bin.length > 0) {
+                    components.push(Buffer.from(bin.slice(0, 24)));
+                    screenComps.push(Buffer.from(bin.slice(0, 24)));
                 }
             });
         } else if (Buffer.isBuffer(screen.binary)) {
-            for (let i = 0; i < screen.binary.length; i += 16) {
-                if (i + 16 <= screen.binary.length) {
-                    const chunk = screen.binary.slice(i, i + 16);
+            for (let i = 0; i < screen.binary.length; i += 24) {
+                if (i + 24 <= screen.binary.length) {
+                    const chunk = screen.binary.slice(i, i + 24);
                     components.push(chunk);
                     screenComps.push(chunk);
                 }
