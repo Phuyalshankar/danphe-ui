@@ -1,6 +1,5 @@
 package io.dolphin.runtime
 
-
 import android.content.Context
 import android.util.Log
 import android.view.View
@@ -30,6 +29,7 @@ class ButtonBuilder : ComponentBuilder {
             isAllCaps = false
             cornerRadius = factory.dp(8)
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            stateListAnimator = null // Disable Android Material Button default state animator to allow custom animations
 
             factory.applyStyles(this, data)
             factory.applyTextStyles(this, data)
@@ -40,7 +40,28 @@ class ButtonBuilder : ComponentBuilder {
 
             if (action.isNotEmpty()) {
                 setOnClickListener {
-                    factory.onAction?.invoke(action, displayTitle)
+                    if (action.startsWith("anim:")) {
+                        val animName = action.substring(5)
+                        DolphinEventDebugger.trace(this, action, "AnimationEngine", "EXECUTED", "animStr=$animName")
+                        AnimationEngine.apply(this, animName)
+                        factory.onAction?.invoke(action, displayTitle)
+                    } else if (action.startsWith("alert:")) {
+                        val message = action.substring(6)
+                        DolphinEventDebugger.trace(this, action, "AlertDialog", "SHOWING", "msg=$message")
+                        val activity = ctx as? android.app.Activity
+                        activity?.runOnUiThread {
+                            android.app.AlertDialog.Builder(ctx)
+                                .setTitle("Alert")
+                                .setMessage(message)
+                                .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
+                                .show()
+                        }
+                        factory.onAction?.invoke(action, displayTitle)
+                    } else {
+                        DolphinStateEngine.handleAction(action)
+                        DolphinEventDebugger.trace(this, action, "DolphinRuntime", "DISPATCHED")
+                        factory.onAction?.invoke(action, displayTitle)
+                    }
                 }
             }
         }

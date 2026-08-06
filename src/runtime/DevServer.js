@@ -1832,6 +1832,10 @@ class DevServer extends EventEmitter {
         fetchLogs();
         setInterval(fetchLogs, 2000);
     </script>
+</body>
+</html>`;
+    }
+
     _renderEventsPage() {
         return `<!DOCTYPE html>
 <html lang="en">

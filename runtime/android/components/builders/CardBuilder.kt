@@ -1,6 +1,5 @@
 package io.dolphin.runtime
 
-
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -48,7 +47,18 @@ class CardBuilder : ComponentBuilder {
         if (action.isNotEmpty()) {
             cardView.isClickable = true
             cardView.isFocusable = true
-            cardView.setOnClickListener { factory.onAction?.invoke(action, "Card") }
+            cardView.setOnClickListener {
+                if (action.startsWith("anim:")) {
+                    val animName = action.substring(5)
+                    DolphinEventDebugger.trace(cardView, action, "AnimationEngine", "EXECUTED", "animStr=$animName")
+                    AnimationEngine.apply(cardView, animName)
+                    factory.onAction?.invoke(action, "Card")
+                } else {
+                    DolphinStateEngine.handleAction(action)
+                    DolphinEventDebugger.trace(cardView, action, "DolphinRuntime", "DISPATCHED")
+                    factory.onAction?.invoke(action, "Card")
+                }
+            }
         }
 
         // 2. Inner Container for Children Layout
@@ -59,49 +69,22 @@ class CardBuilder : ComponentBuilder {
                 ViewGroup.LayoutParams.MATCH_PARENT, 
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            setBackgroundColor(Color.TRANSPARENT)
-        }
-        factory.applyGravity(innerContainer, data)
-        cardView.addView(innerContainer)
-
-        // 3. Apply Base Styles & Colors
-        factory.applyStyles(cardView, data)
-
-        // 4. Build Children
-        repeat(count) { i ->
-            val child = factory.buildComp()
-            if (child != null) {
-                val clp: LinearLayout.LayoutParams = factory.getOrCreateLinearLayoutParams(child, ViewGroup.LayoutParams.MATCH_PARENT)
-
-                if (orientation == 1) {
-                    if (clp.weight > 0) clp.width = 0
-                    if (gapPx > 0 && i > 0) clp.leftMargin = gapPx
-                } else {
-                    if (clp.width <= 0 && clp.width != ViewGroup.LayoutParams.WRAP_CONTENT) {
-                        clp.width = ViewGroup.LayoutParams.MATCH_PARENT
-                    }
-                    if (clp.weight > 0) {
-                        if (!factory.isInScrollView) {
-                            clp.height = 0
-                        } else {
-                            clp.weight = 0f
-                            clp.height = ViewGroup.LayoutParams.WRAP_CONTENT
-                        }
-                    }
-                    if (gapPx > 0 && i > 0) clp.topMargin = gapPx
-                }
-
-                if (justifyBetween && i > 0) {
-                    val spacer = View(ctx).apply {
-                        layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
-                    }
-                    innerContainer.addView(spacer)
-                }
-                innerContainer.addView(child, clp as ViewGroup.LayoutParams)
+            if (justifyBetween) {
+                this.gravity = android.view.Gravity.CENTER_VERTICAL
             }
         }
 
-        innerContainer.enforceNow()
+        factory.applyStyles(cardView, data)
+
+        // 3. Build & Attach Children to Inner Container
+        for (i in 0 until count) {
+            val childView = factory.buildComp()
+            if (childView != null) {
+                innerContainer.addView(childView)
+            }
+        }
+
+        cardView.addView(innerContainer)
         return cardView
     }
 }
