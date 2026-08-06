@@ -649,7 +649,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     break;
 
                 case 0x10: // Button: action, text, icon
-                    stringPool.push(props.action || '');
+                    stringPool.push(props.action || props.onClick || '');
                     stringPool.push(props.text || flattenText(childArr).trim() || '');
                     const btnIcon = props.icon || props.iconName || props.iconLeft || props.iconRight || twProps.icon || twProps.iconLeft || (String(props.className || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/i) || [])[1] || '';
                     stringPool.push(btnIcon);
