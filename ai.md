@@ -14,9 +14,10 @@ Dolphin Native is a **Zero-WebView, Zero-React-Native-JS-Bridge, High-Performanc
 
 ## 1.1 Repository Blueprint & Standard Framework Rules
 
-### 📌 Repository Definitions:
-- **`d:\dolphin-native`**: Initial R&D Proof-of-Concept / Feasibility Sandbox (DO NOT DEVELOP PRODUCTION FEATURES HERE).
+### 📌 Repository & Integration Blueprints:
 - **`d:\dolphin-native-2`**: **OFFICIAL PRODUCTION-GRADE REPOSITORY** (All framework updates, Kotlin runtime modules, and production features MUST reside here).
+- **`integration.md`**: **FEATURE EXPANSION BLUEPRINT** (Step-by-step checklist of JS Compiler & Kotlin Runtime files to modify when adding UI components, CSS props, animations, hardware APIs, or state actions).
+- **`d:\dolphin-native`**: Initial R&D Proof-of-Concept / Feasibility Sandbox.
 
 ### 📐 Standard Framework Architecture Rules:
 1. **Single Source of Truth**:
