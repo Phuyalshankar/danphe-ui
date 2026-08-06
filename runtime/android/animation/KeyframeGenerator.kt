@@ -12,6 +12,7 @@ import android.view.animation.OvershootInterpolator
 /**
  * 🌊 KeyframeGenerator
  * Houses all 20+ Android View PropertyAnimators and Spring Physics Keyframes.
+ * Enhanced with DP scaling and high-visibility tap feedback.
  */
 object KeyframeGenerator {
 
@@ -23,6 +24,8 @@ object KeyframeGenerator {
         v.translationY = 0f
         v.translationX = 0f
         v.rotation = 0f
+        v.rotationY = 0f
+        v.rotationX = 0f
     }
 
     fun animateProperty(v: View, animStr: String) {
@@ -86,27 +89,32 @@ object KeyframeGenerator {
     }
 
     fun slideIn(v: View, dur: Long = 350) {
-        v.translationX = -200f; v.alpha = 0f
+        val density = v.context.resources.displayMetrics.density
+        v.translationX = -100f * density; v.alpha = 0f
         v.animate().translationX(0f).alpha(1f).setDuration(dur).start()
     }
 
     fun slideInLeft(v: View, dur: Long = 350) {
-        v.translationX = -400f; v.alpha = 0f
+        val density = v.context.resources.displayMetrics.density
+        v.translationX = -150f * density; v.alpha = 0f
         v.animate().translationX(0f).alpha(1f).setDuration(dur).start()
     }
 
     fun slideInRight(v: View, dur: Long = 350) {
-        v.translationX = 400f; v.alpha = 0f
+        val density = v.context.resources.displayMetrics.density
+        v.translationX = 150f * density; v.alpha = 0f
         v.animate().translationX(0f).alpha(1f).setDuration(dur).start()
     }
 
     fun slideUp(v: View, dur: Long = 350) {
-        v.translationY = 200f; v.alpha = 0f
+        val density = v.context.resources.displayMetrics.density
+        v.translationY = 80f * density; v.alpha = 0f
         v.animate().translationY(0f).alpha(1f).setDuration(dur).start()
     }
 
     fun slideDown(v: View, dur: Long = 350) {
-        v.translationY = -200f; v.alpha = 0f
+        val density = v.context.resources.displayMetrics.density
+        v.translationY = -80f * density; v.alpha = 0f
         v.animate().translationY(0f).alpha(1f).setDuration(dur).start()
     }
 
@@ -120,17 +128,22 @@ object KeyframeGenerator {
         v.animate().rotation(0f).setDuration(dur).setInterpolator(AccelerateDecelerateInterpolator()).start()
     }
 
-    fun bounceIn(v: View, dur: Long = 600) {
-        v.translationY = -200f; v.alpha = 0f
-        v.animate().translationY(0f).alpha(1f).setDuration(dur).setInterpolator(BounceInterpolator()).start()
+    fun bounceIn(v: View, dur: Long = 500) {
+        v.animate().cancel()
+        v.scaleX = 1.35f; v.scaleY = 0.7f
+        v.animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(dur)
+            .setInterpolator(BounceInterpolator())
+            .start()
     }
 
-    fun pulse(v: View, dur: Long = 1000) {
-        val anim = ObjectAnimator.ofFloat(v, "scaleX", 1f, 1.08f, 1f)
-        val animY = ObjectAnimator.ofFloat(v, "scaleY", 1f, 1.08f, 1f)
-        anim.duration = dur; animY.duration = dur
-        anim.repeatCount = ValueAnimator.INFINITE; animY.repeatCount = ValueAnimator.INFINITE
-        anim.start(); animY.start()
+    fun pulse(v: View, dur: Long = 800) {
+        val sX = ObjectAnimator.ofFloat(v, "scaleX", 1f, 1.25f, 1f)
+        val sY = ObjectAnimator.ofFloat(v, "scaleY", 1f, 1.25f, 1f)
+        sX.duration = dur; sY.duration = dur
+        sX.start(); sY.start()
     }
 
     fun breathe(v: View, dur: Long = 1200) {
@@ -139,7 +152,7 @@ object KeyframeGenerator {
 
     fun float(v: View, dur: Long = 1400) {
         val density = v.context.resources.displayMetrics.density
-        val anim = ObjectAnimator.ofFloat(v, "translationY", 0f, -12f * density, 0f)
+        val anim = ObjectAnimator.ofFloat(v, "translationY", 0f, -16f * density, 0f)
         anim.duration = dur
         anim.repeatCount = ValueAnimator.INFINITE
         anim.interpolator = AccelerateDecelerateInterpolator()
@@ -147,7 +160,7 @@ object KeyframeGenerator {
     }
 
     fun shimmer(v: View, dur: Long = 1000) {
-        val anim = ObjectAnimator.ofFloat(v, "alpha", 1f, 0.4f, 1f)
+        val anim = ObjectAnimator.ofFloat(v, "alpha", 1f, 0.3f, 1f)
         anim.duration = dur
         anim.repeatCount = ValueAnimator.INFINITE
         anim.start()
@@ -159,27 +172,31 @@ object KeyframeGenerator {
     }
 
     fun wave(v: View, dur: Long = 800) {
-        val anim = ObjectAnimator.ofFloat(v, "rotation", 0f, 20f, -20f, 15f, -10f, 0f)
+        val anim = ObjectAnimator.ofFloat(v, "rotation", 0f, 25f, -25f, 18f, -12f, 0f)
         anim.duration = dur
         anim.start()
     }
 
     fun heartBeat(v: View, dur: Long = 900) {
-        val sX = ObjectAnimator.ofFloat(v, "scaleX", 1f, 1.25f, 1f, 1.25f, 1f)
-        val sY = ObjectAnimator.ofFloat(v, "scaleY", 1f, 1.25f, 1f, 1.25f, 1f)
+        val sX = ObjectAnimator.ofFloat(v, "scaleX", 1f, 1.3f, 1f, 1.3f, 1f)
+        val sY = ObjectAnimator.ofFloat(v, "scaleY", 1f, 1.3f, 1f, 1.3f, 1f)
         sX.duration = dur; sY.duration = dur
         sX.start(); sY.start()
     }
 
     fun headShake(v: View, dur: Long = 600) {
-        val tX = ObjectAnimator.ofFloat(v, "translationX", 0f, -8f, 6f, -4f, 2f, 0f)
-        val rot = ObjectAnimator.ofFloat(v, "rotation", 0f, -4f, 4f, -2f, 1f, 0f)
+        val density = v.context.resources.displayMetrics.density
+        val d = 16f * density
+        val tX = ObjectAnimator.ofFloat(v, "translationX", 0f, -d, d, -d / 2, d / 2, 0f)
+        val rot = ObjectAnimator.ofFloat(v, "rotation", 0f, -6f, 6f, -3f, 3f, 0f)
         tX.duration = dur; rot.duration = dur
         tX.start(); rot.start()
     }
 
     fun shake(v: View, dur: Long = 500) {
-        val anim = ObjectAnimator.ofFloat(v, "translationX", 0f, 25f, -25f, 20f, -20f, 15f, -15f, 0f)
+        val density = v.context.resources.displayMetrics.density
+        val d = 20f * density
+        val anim = ObjectAnimator.ofFloat(v, "translationX", 0f, d, -d, d * 0.7f, -d * 0.7f, 0f)
         anim.duration = dur; anim.start()
     }
 
@@ -188,48 +205,58 @@ object KeyframeGenerator {
         anim.duration = dur; anim.start()
     }
 
-    fun flip(v: View, dur: Long = 600) {
-        v.rotationY = -180f
-        v.animate().rotationY(0f).setDuration(dur).setInterpolator(AccelerateDecelerateInterpolator()).start()
+    fun flip(v: View, dur: Long = 700) {
+        val density = v.context.resources.displayMetrics.density
+        v.cameraDistance = 8000f * density
+        v.rotationY = 0f
+        val anim = ObjectAnimator.ofFloat(v, "rotationY", 0f, 360f)
+        anim.duration = dur
+        anim.interpolator = AccelerateDecelerateInterpolator()
+        anim.start()
     }
 
     fun zoomIn(v: View, dur: Long = 500) {
-        v.scaleX = 0.3f; v.scaleY = 0.3f; v.alpha = 0f
-        v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(dur).start()
+        v.animate().cancel()
+        v.scaleX = 0.4f; v.scaleY = 0.4f; v.alpha = 0.5f
+        v.animate().scaleX(1.2f).scaleY(1.2f).alpha(1f).setDuration(dur / 2).withEndAction {
+            v.animate().scaleX(1f).scaleY(1f).setDuration(dur / 2).start()
+        }.start()
     }
 
     fun zoomOut(v: View, dur: Long = 500) {
-        v.scaleX = 1.5f; v.scaleY = 1.5f; v.alpha = 0f
+        v.scaleX = 1.4f; v.scaleY = 1.4f; v.alpha = 0.5f
         v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(dur).start()
     }
 
     fun swing(v: View, dur: Long = 700) {
-        val anim = ObjectAnimator.ofFloat(v, "rotation", 0f, 15f, -10f, 5f, -5f, 0f)
+        val anim = ObjectAnimator.ofFloat(v, "rotation", 0f, 20f, -15f, 10f, -5f, 0f)
         anim.duration = dur; anim.start()
     }
 
     fun tada(v: View, dur: Long = 800) {
-        val sX = ObjectAnimator.ofFloat(v, "scaleX", 1f, 0.9f, 0.9f, 1.1f, 1.1f, 1.1f, 1.1f, 1.1f, 1.1f, 1f)
-        val sY = ObjectAnimator.ofFloat(v, "scaleY", 1f, 0.9f, 0.9f, 1.1f, 1.1f, 1.1f, 1.1f, 1.1f, 1.1f, 1f)
-        val rot = ObjectAnimator.ofFloat(v, "rotation", 0f, -3f, -3f, 3f, -3f, 3f, -3f, 3f, -3f, 0f)
+        val sX = ObjectAnimator.ofFloat(v, "scaleX", 1f, 0.85f, 0.85f, 1.25f, 1.25f, 1.25f, 1.25f, 1f)
+        val sY = ObjectAnimator.ofFloat(v, "scaleY", 1f, 0.85f, 0.85f, 1.25f, 1.25f, 1.25f, 1.25f, 1f)
+        val rot = ObjectAnimator.ofFloat(v, "rotation", 0f, -6f, -6f, 6f, -6f, 6f, -6f, 0f)
         sX.duration = dur; sY.duration = dur; rot.duration = dur
         sX.start(); sY.start(); rot.start()
     }
 
     fun rubberBand(v: View, dur: Long = 800) {
-        val sX = ObjectAnimator.ofFloat(v, "scaleX", 1f, 1.25f, 0.75f, 1.15f, 0.95f, 1.05f, 1f)
-        val sY = ObjectAnimator.ofFloat(v, "scaleY", 1f, 0.75f, 1.25f, 0.85f, 1.05f, 0.95f, 1f)
+        val sX = ObjectAnimator.ofFloat(v, "scaleX", 1f, 1.35f, 0.7f, 1.2f, 0.9f, 1.05f, 1f)
+        val sY = ObjectAnimator.ofFloat(v, "scaleY", 1f, 0.7f, 1.35f, 0.8f, 1.1f, 0.95f, 1f)
         sX.duration = dur; sY.duration = dur; sX.start(); sY.start()
     }
 
     fun wobble(v: View, dur: Long = 800) {
-        val tX = ObjectAnimator.ofFloat(v, "translationX", 0f, -25f, 20f, -15f, 10f, -5f, 0f)
-        val rot = ObjectAnimator.ofFloat(v, "rotation", 0f, -5f, 3f, -3f, 2f, -1f, 0f)
+        val density = v.context.resources.displayMetrics.density
+        val d = 20f * density
+        val tX = ObjectAnimator.ofFloat(v, "translationX", 0f, -d, d * 0.8f, -d * 0.6f, d * 0.4f, 0f)
+        val rot = ObjectAnimator.ofFloat(v, "rotation", 0f, -7f, 5f, -4f, 2f, 0f)
         tX.duration = dur; rot.duration = dur; tX.start(); rot.start()
     }
 
     fun jello(v: View, dur: Long = 800) {
-        val anim = ObjectAnimator.ofFloat(v, "rotation", 0f, -12.5f, 6.25f, -3.125f, 1.5625f, -0.78125f, 0.390625f, 0f)
+        val anim = ObjectAnimator.ofFloat(v, "rotation", 0f, -15f, 8f, -4f, 2f, 0f)
         anim.duration = dur; anim.start()
     }
 }

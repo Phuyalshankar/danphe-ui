@@ -391,7 +391,27 @@ class DevServer extends EventEmitter {
                 res.end(this._renderHexdump());
                 return;
             }
+            if (url === '/events') {
+                cors(res);
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(this._renderEventsPage());
+                return;
+            }
+            if (url === '/api/dolphin/events') {
+                cors(res);
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                const logPath = path.join(this.watchDir, 'logs', 'device_logcat.txt');
+                let events = [];
+                if (fs.existsSync(logPath)) {
+                    const logs = fs.readFileSync(logPath, 'utf8');
+                    const lines = logs.split('\n').filter(l => l.includes('EVENT_FLOW') || l.includes('DEVICE ACTION') || l.includes('DolphinRuntime') || l.includes('CallbackHandler') || l.includes('DolphinStateEngine'));
+                    events = lines.slice(-50);
+                }
+                res.end(JSON.stringify({ success: true, count: events.length, events }));
+                return;
+            }
             if (url === '/logcat') {
+                cors(res);
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(this._renderLogcatPage());
                 return;
@@ -1811,6 +1831,57 @@ class DevServer extends EventEmitter {
         }
         fetchLogs();
         setInterval(fetchLogs, 2000);
+    </script>
+    _renderEventsPage() {
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>⚡ Dolphin Event Flow Debugger</title>
+    <style>
+        body { background: #090d16; color: #f8fafc; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; margin: 0; padding: 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 15px; margin-bottom: 20px; }
+        h1 { margin: 0; font-size: 20px; color: #38bdf8; }
+        .status { background: #10b98122; color: #34d399; padding: 4px 10px; border-radius: 20px; font-size: 12px; border: 1px solid #05966944; }
+        .event-card { background: #0f172a; border: 1px solid #1e293b; border-left: 4px solid #38bdf8; padding: 12px 16px; margin-bottom: 10px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+        .event-card.success { border-left-color: #10b981; }
+        .event-card.warning { border-left-color: #f59e0b; }
+        .time { color: #64748b; font-size: 11px; }
+        .subsystem { color: #c084fc; font-weight: bold; }
+        .action { color: #f43f5e; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>⚡ Dolphin Event & Touch Pipeline Debugger</h1>
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 4px;">1-Second Instant Event Flow Trace: User Tap ➔ Action Extraction ➔ State Engine ➔ Execution Subsystem</p>
+        </div>
+        <div>
+            <span class="status">LIVE TRACE (1s)</span>
+        </div>
+    </header>
+
+    <div id="events-container">Loading event stream...</div>
+
+    <script>
+        function fetchEvents() {
+            fetch('/api/dolphin/events')
+                .then(r => r.json())
+                .then(data => {
+                    const container = document.getElementById('events-container');
+                    if (!data.events || data.events.length === 0) {
+                        container.innerHTML = '<p style="color: #64748b;">No tap events recorded yet. Tap any button on your phone!</p>';
+                        return;
+                    }
+                    container.innerHTML = data.events.map(ev => \`<div class="event-card success">\${ev}</div>\`).reverse().join('');
+                })
+                .catch(err => {
+                    document.getElementById('events-container').textContent = 'Error loading event trace: ' + err;
+                });
+        }
+        fetchEvents();
+        setInterval(fetchEvents, 1000);
     </script>
 </body>
 </html>`;

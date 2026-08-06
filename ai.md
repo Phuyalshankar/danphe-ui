@@ -51,7 +51,10 @@ When `dolphin dev` is running, AI agents can directly inspect runtime state and 
 2. **`/hexdump` (`http://localhost:7787/hexdump`)**:
    - Returns HTML/Text inspection of the binary Titan bundle, component tables, string pools (`rawData`), and screen counts.
 
-3. **`/dashboard` (`http://localhost:7787/dashboard`)**:
+3. **`/events` & `/api/dolphin/events` (`http://localhost:7787/events`)**:
+   - ⚡ **Realtime 1-Second Event Flow Debugger**: Traces user taps, action extraction, state engine updates, and execution subsystems (`AnimationEngine`, `DolphinStateEngine`, `CallbackHandler`, `AlertDialog`, `Nav`).
+
+4. **`/dashboard` (`http://localhost:7787/dashboard`)**:
    - Shows active connected devices, TCP socket ports, and build status.
 
 ---

@@ -582,6 +582,7 @@ fun ViewFactory.createButton(bin: ByteArray): View {
         this.textSize = 15f
         this.isClickable = true
         this.isFocusable = true
+        this.stateListAnimator = null
         this.backgroundTintList = null
         androidx.core.view.ViewCompat.setBackgroundTintList(this, null)
         
@@ -599,18 +600,13 @@ fun ViewFactory.createButton(bin: ByteArray): View {
         applyTextStyles(this, bin)
 
         setOnClickListener {
-            val handled = DolphinStateEngine.handleAction(action)
-            if (!handled) {
-                if (action.startsWith("anim:")) {
-                    val animName = action.substring(5)
-                    AnimationEngine.apply(this, animName)
-                } else {
-                    onAction?.invoke(action, text)
-                }
-            } else if (action.startsWith("nav:")) {
-                onAction?.invoke(action, text)
+            if (action.startsWith("anim:")) {
+                val animName = action.substring(5)
+                DolphinEventDebugger.trace(this, action, "AnimationEngine", "EXECUTED", "animStr=$animName")
+                AnimationEngine.apply(this, animName)
             } else if (action.startsWith("alert:")) {
                 val message = action.substring(6)
+                DolphinEventDebugger.trace(this, action, "AlertDialog", "SHOWING", "msg=$message")
                 val activity = ctx as? android.app.Activity
                 activity?.runOnUiThread {
                     android.app.AlertDialog.Builder(ctx)
@@ -618,6 +614,14 @@ fun ViewFactory.createButton(bin: ByteArray): View {
                         .setMessage(message)
                         .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
                         .show()
+                }
+            } else {
+                val handled = DolphinStateEngine.handleAction(action)
+                if (handled) {
+                    DolphinEventDebugger.trace(this, action, "DolphinStateEngine", "STATE_UPDATED")
+                } else {
+                    DolphinEventDebugger.trace(this, action, "CallbackHandler", "DELEGATED_TO_ONACTION")
+                    onAction?.invoke(action, text)
                 }
             }
         }
