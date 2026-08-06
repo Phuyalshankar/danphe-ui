@@ -482,7 +482,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 if (bin[1] === 0x12 || bin[1] === 0x13 || bin[1] === 0x14) {
                     bin[1] = 0x20;
                 }
-            } else if (props.scrollable || props.scroll || props.overflow === 'scroll' || props.scrollY || mobileTwClass.includes('scroll-y') || mobileTwClass.includes('scrollable')) {
+            } else if (props.scrollable || props.scroll || props.overflow === 'scroll' || props.overflowY === 'auto' || props.overflowY === 'scroll' || props.scrollY || mobileTwClass.includes('scroll-y') || mobileTwClass.includes('scrollable') || mobileTwClass.includes('overflow-y-auto') || mobileTwClass.includes('overflow-y-scroll')) {
                 sig |= 0x02;
                 // Upgrade Container or Column to Native ListView for scroll support
                 if (bin[1] === 0x12 || bin[1] === 0x13 || bin[1] === 0x14) {
