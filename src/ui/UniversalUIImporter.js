@@ -590,8 +590,11 @@ let compType = comp.props && comp.props.type ? comp.props.type
             }
 
             if (sig & 0x10) {
-                let animStr = props.animation || twProps.animation || (mobileTwClass.match(/animate-([a-z0-9-]+)/)?.[0]) || '';
-                stringPool.push(animStr);
+                let animStr = props.animation || twProps.animation || (mobileTwClass.match(/(animate|framer)-[a-z0-9-]+/)?.[0]) || '';
+                if (typeof animStr === 'object' && animStr !== null) {
+                    animStr = animStr.name || animStr.type || animStr.anim || '';
+                }
+                stringPool.push(String(animStr || ''));
             }
 
             switch (typeCode) {
