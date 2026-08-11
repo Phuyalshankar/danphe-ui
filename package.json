@@ -22,12 +22,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_USERNAME/dolphin-native-2.git"
+    "url": "git+https://github.com/Phuyalshankar/dolphin-native-2.git"
   },
   "bugs": {
-    "url": "https://github.com/YOUR_USERNAME/dolphin-native-2/issues"
+    "url": "https://github.com/Phuyalshankar/dolphin-native-2/issues"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/dolphin-native-2#readme",
+  "homepage": "https://github.com/Phuyalshankar/dolphin-native-2#readme",
   "exports": {
     ".": {
       "types": "./src/index.d.ts",
