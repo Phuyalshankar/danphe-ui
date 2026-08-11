@@ -15,6 +15,7 @@ class SelectBuilder : ComponentBuilder {
         val stateKeyOrAction = factory.nextStr()
         val label = factory.nextStr()
         val optionsCsv = factory.nextStr()
+        val initialValueStr = factory.nextStr() // Consume 4th string to maintain strict string pool alignment
 
         val view = FormSelect.createSelect(
             ctx = ctx,

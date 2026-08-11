@@ -1,6 +1,5 @@
 package io.dolphin.runtime
 
-
 import android.content.Context
 import android.view.View
 
@@ -25,6 +24,7 @@ object DolphinPluginRegistry {
 
     init {
         register(VideoPlayerPlugin())
+        register(Mp3PlayerPlugin())
         register(CalendarPlugin())
     }
 

@@ -73,7 +73,9 @@ object DolphinStateEngine {
         "lastTransferStatus" to "Idle",
         "transferSpeed" to "0.0 MB/s",
         "currentScreen" to "Home",
-        "activeTab" to "Home"
+        "activeTab" to "Home",
+        "needleAngle" to "0deg",
+        "gaugeVal" to "50%"
     )
 
     init {
@@ -166,8 +168,12 @@ object DolphinStateEngine {
 
     // ─── Universal Action Handler ──────────────────────────────────────────────────
 
-    fun handleAction(action: String): Boolean {
+    fun handleAction(action: String, isFromDevServer: Boolean = false): Boolean {
         if (action.isBlank()) return false
+        
+        if (action.startsWith("state:") && isFromDevServer) {
+            return false // Skip echo
+        }
 
         // Global Theme Toggle
         if (action == "toggle_theme") {
@@ -233,6 +239,23 @@ object DolphinStateEngine {
             return true
         }
 
+        // ── Gauge Meter Needle Actions ──
+        if (cleanAct == "setNeedleLow" || cleanAct == "set_needle_low") {
+            updateState("needleAngle", "-60deg")
+            updateState("gaugeVal", "25%")
+            return true
+        }
+        if (cleanAct == "setNeedleMid" || cleanAct == "set_needle_mid") {
+            updateState("needleAngle", "0deg")
+            updateState("gaugeVal", "50%")
+            return true
+        }
+        if (cleanAct == "setNeedleHigh" || cleanAct == "set_needle_high") {
+            updateState("needleAngle", "60deg")
+            updateState("gaugeVal", "95%")
+            return true
+        }
+
         // ── Reset All ──
         if (cleanAct == "resetAll" || cleanAct == "reset_all") {
             initial.forEach { (key, value) -> updateState(key, value) }
@@ -284,9 +307,21 @@ object DolphinStateEngine {
         updateState(key, value)
     }
 
+    private val listeners = mutableListOf<(key: String, value: Any) -> Unit>()
+
+    fun addListener(listener: (key: String, value: Any) -> Unit) {
+        synchronized(listeners) {
+            listeners.add(listener)
+        }
+    }
+
     fun updateState(key: String, value: Any) {
         val normalized: Any = StateHelpers.normalizeValue(value)
         state[key] = normalized
+
+        synchronized(listeners) {
+            listeners.forEach { it(key, normalized) }
+        }
 
         // Global Theme Support
         if (key == "theme") {

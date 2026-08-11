@@ -11,7 +11,8 @@ object TailwindColorResolver {
     fun resolveHex(colorStr: String): String {
         if (colorStr.startsWith("#")) return colorStr
 
-        val parts = colorStr.trim().toLowerCase().split("-")
+        val cleanStr = colorStr.trim().toLowerCase().replace("bg-", "").replace("text-", "")
+        val parts = cleanStr.split("-")
         val base = parts.getOrNull(0) ?: ""
         val shadeNum = parts.getOrNull(1)?.toIntOrNull() ?: 500
 

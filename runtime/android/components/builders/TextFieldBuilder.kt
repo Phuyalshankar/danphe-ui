@@ -1,7 +1,5 @@
 package io.dolphin.runtime
 
-
-
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -24,7 +22,7 @@ class TextFieldBuilder : ComponentBuilder {
         val variant = factory.nextStr()
         val iconStr = factory.nextStr()
 
-        Log.d("TextFieldBuilder", "Building Floating Label Field: stateKey='$stateKey', label='$label', hint='$hint', variant='$variant'")
+        Log.d("TextFieldBuilder", "Building Field: stateKey='$stateKey', label='$label', hint='$hint', typeStr='$typeStr', variant='$variant'")
 
         val isDark = DolphinStateEngine.themeLevel > 128
         val sig = data[15].toInt() and 0xFF
@@ -38,23 +36,66 @@ class TextFieldBuilder : ComponentBuilder {
         val textShade = data[12].toInt() and 0x1F
         val customTextColor = if (textCode != 0 && textCode != 10) ColorParser.parseColor(textCode, textShade * 8) else 0
 
+        val gravByte = data[0].toInt() and 0x0F
+        val isCenterAlign = gravByte == 0x02
+
+        val isTextArea = typeStr.contains("textarea", ignoreCase = true) || label.contains("textarea", ignoreCase = true) || hint.contains("textarea", ignoreCase = true)
+        val isPlain = variant == "plain" || variant == "raw" || variant == "custom" || (label.isEmpty() && variant != "outlined" && variant != "filled" && variant != "standard") || isTextArea
+
+        // ── Direct Standalone EditText for Plain Inputs & Textareas (No TextInputLayout Overlay) ──
+        if (isPlain) {
+            val editText = FormInputField.createEditText(
+                ctx = ctx,
+                inputTypeStr = if (isTextArea) "textarea" else typeStr,
+                hintText = hint,
+                stateKey = stateKey,
+                textColor = if (customTextColor != 0) customTextColor else (if (isDark) Color.WHITE else Color.parseColor("#0f172a")),
+                onAction = null
+            ).apply {
+                tag = "PlainTextField"
+
+                val pt = data[4].toInt() and 0xFF
+                val pr = data[5].toInt() and 0xFF
+                val pb = data[6].toInt() and 0xFF
+                val pl = data[7].toInt() and 0xFF
+
+                val padL = if (pl > 0) factory.dp(pl) else factory.dp(14)
+                val padR = if (pr > 0) factory.dp(pr) else factory.dp(14)
+                val padT = if (pt > 0) factory.dp(pt) else factory.dp(14)
+                val padB = if (pb > 0) factory.dp(pb) else factory.dp(14)
+                setPadding(padL, padT, padR, padB)
+
+                val mt = data[8].toInt() and 0xFF
+                val mr = data[9].toInt() and 0xFF
+                val mb = data[10].toInt() and 0xFF
+                val ml = data[11].toInt() and 0xFF
+
+                val topMargin = if (mt > 0) factory.dp(mt) else factory.dp(6)
+                val bottomMargin = if (mb > 0) factory.dp(mb) else factory.dp(6)
+
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    if (isTextArea) factory.dp(100) else ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(factory.dp(ml), topMargin, factory.dp(mr), bottomMargin)
+                }
+            }
+            return editText
+        }
+
+        // ── Material TextInputLayout Container (For Explicit Floating Labels) ──
         val displayHint = when {
             label.isNotEmpty() -> label
             hint.isNotEmpty() -> hint
             else -> "Field"
         }
 
-        val gravByte = data[0].toInt() and 0x0F
-        val isCenterAlign = gravByte == 0x02
-
-        // Material TextInputLayout Container with Floating Label
         val inputLayout = TextInputLayout(ctx).apply {
             tag = "TextFieldContainer"
             this.hint = displayHint
             isHintEnabled = true
             isExpandedHintEnabled = true
 
-            // ── CRITICAL: Set boxBackgroundMode BEFORE setBoxCornerRadii ──
             if (variant == "filled") {
                 boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_FILLED
             } else if (variant == "standard") {
@@ -76,7 +117,6 @@ class TextFieldBuilder : ComponentBuilder {
             } else if (variant == "standard") {
                 boxBackgroundColor = Color.TRANSPARENT
             } else {
-                // outlined
                 val strokeColor = ColorTokens.getInputBorder(isDark)
                 setBoxStrokeColorStateList(ColorStateList.valueOf(strokeColor))
                 boxStrokeWidth = factory.dp(1)
@@ -90,7 +130,7 @@ class TextFieldBuilder : ComponentBuilder {
             defaultHintTextColor = ColorStateList.valueOf(labelColor)
             setHintTextColor(ColorStateList.valueOf(focusedLabelColor))
 
-            // ── Left (Start) & Right (End) Icon Parsing ──
+            // Icon Parsing
             if (iconStr.isNotEmpty()) {
                 val parts = iconStr.split("|")
                 val iconL = parts.getOrNull(0) ?: ""
@@ -113,15 +153,6 @@ class TextFieldBuilder : ComponentBuilder {
                         setEndIconTintList(ColorStateList.valueOf(labelColor))
                     }
                 }
-            } else {
-                val autoLeft = if (label.contains("name", ignoreCase = true) || hint.contains("name", ignoreCase = true)) "user" else if (label.contains("email", ignoreCase = true) || hint.contains("email", ignoreCase = true)) "email" else ""
-                if (autoLeft.isNotEmpty()) {
-                    val iconRes = factory.getSystemIcon(autoLeft)
-                    if (iconRes != 0) {
-                        setStartIconDrawable(iconRes)
-                        setStartIconTintList(ColorStateList.valueOf(labelColor))
-                    }
-                }
             }
 
             val isPassword = typeStr.contains("password", ignoreCase = true) || label.contains("password", ignoreCase = true) || hint.contains("password", ignoreCase = true)
@@ -136,13 +167,11 @@ class TextFieldBuilder : ComponentBuilder {
             )
         }
 
-        // TextInputEditText Child (Native Floating Label Inset Padding)
         val editText = TextInputEditText(inputLayout.context).apply {
             background = null
             val textColor = if (customTextColor != 0) customTextColor else (if (isDark) Color.WHITE else Color.parseColor("#0f172a"))
             setTextColor(textColor)
             textSize = 16f
-
             gravity = if (isCenterAlign) android.view.Gravity.CENTER else (android.view.Gravity.CENTER_VERTICAL or android.view.Gravity.START)
 
             val pt = data[4].toInt() and 0xFF
@@ -150,17 +179,38 @@ class TextFieldBuilder : ComponentBuilder {
             val pb = data[6].toInt() and 0xFF
             val pl = data[7].toInt() and 0xFF
 
-            val padL = if (pl > 0) factory.dp(pl) else (if (variant == "standard") factory.dp(0) else factory.dp(12))
-            val padR = if (pr > 0) factory.dp(pr) else (if (variant == "standard") factory.dp(0) else factory.dp(12))
-            val padT = if (pt > 0) factory.dp(pt) else (if (variant == "filled") factory.dp(16) else factory.dp(12))
-            val padB = if (pb > 0) factory.dp(pb) else (if (variant == "filled") factory.dp(8) else factory.dp(12))
+            val padL = if (pl > 0) factory.dp(pl) else factory.dp(12)
+            val padR = if (pr > 0) factory.dp(pr) else factory.dp(12)
+            val padT = if (pt > 0) factory.dp(pt) else factory.dp(12)
+            val padB = if (pb > 0) factory.dp(pb) else factory.dp(12)
             setPadding(padL, padT, padR, padB)
 
             inputType = when (typeStr) {
                 "password" -> android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                 "email" -> android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
                 "number" -> android.text.InputType.TYPE_CLASS_NUMBER
+                "phone", "tel" -> android.text.InputType.TYPE_CLASS_PHONE
                 else -> android.text.InputType.TYPE_CLASS_TEXT
+            }
+
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+
+            setOnTouchListener { v, event ->
+                var p = v.parent
+                while (p != null) {
+                    p.requestDisallowInterceptTouchEvent(event.action == android.view.MotionEvent.ACTION_DOWN || event.action == android.view.MotionEvent.ACTION_MOVE)
+                    p = p.parent
+                }
+                if (event.action == android.view.MotionEvent.ACTION_UP) {
+                    v.post {
+                        v.requestFocus()
+                        val imm = v.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                        imm?.showSoftInput(v, android.view.inputmethod.InputMethodManager.SHOW_FORCED)
+                    }
+                }
+                false
             }
 
             if (stateKey.isNotEmpty()) {

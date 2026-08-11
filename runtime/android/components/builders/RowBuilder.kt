@@ -19,7 +19,7 @@ class RowBuilder : ComponentBuilder {
         val sig = data[data.size - 1].toInt() and 0xFF
         val justifyBetween = (sig and 0x20) != 0
 
-        val count = data[13].toInt() and 0x0F
+        val count = data[13].toInt() and 0xFF
         val gap = (data[12].toInt() shr 4) and 0x0F
         val gapPx = factory.dp(gap * 4)
 
@@ -40,6 +40,9 @@ class RowBuilder : ComponentBuilder {
 
         Log.d("RowBuilder", "Building Row with $count children, gapPx=$gapPx")
 
+        val children = mutableListOf<View>()
+        var hasFlexChild = false
+
         repeat(count) { i ->
             val child = factory.buildComp()
             if (child != null) {
@@ -47,18 +50,25 @@ class RowBuilder : ComponentBuilder {
                 if (clp.width == ViewGroup.LayoutParams.MATCH_PARENT || clp.weight > 0) {
                     clp.weight = 1f
                     clp.width = 0
+                    clp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                    hasFlexChild = true
                 }
                 if (gapPx > 0 && i > 0) clp.leftMargin = gapPx
-                if (justifyBetween && i > 0) {
-                    val spacer = View(ctx).apply {
-                        layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
-                    }
-                    layout.addView(spacer)
-                }
-                layout.addView(child, clp as ViewGroup.LayoutParams)
+                child.layoutParams = clp
+                children.add(child)
             } else {
                 Log.w("RowBuilder", "Child #$i of Row returned null")
             }
+        }
+
+        children.forEachIndexed { i, child ->
+            if (justifyBetween && i > 0 && !hasFlexChild) {
+                val spacer = View(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+                }
+                layout.addView(spacer)
+            }
+            layout.addView(child)
         }
 
         layout.enforceNow()

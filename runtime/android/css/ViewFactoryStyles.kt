@@ -31,6 +31,29 @@ fun isViewInsideScrollView(v: View): Boolean {
     return false
 }
 
+private fun getParentBackgroundColor(v: View): Int {
+    var p: android.view.ViewParent? = v.parent
+    var depth = 0
+    while (p is View && depth < 3) {
+        val parentView = p as View
+        val bg = parentView.background
+        if (bg is android.graphics.drawable.ColorDrawable) {
+            val color = bg.color
+            if (color != 0 && (color and 0xFF000000.toInt()) != 0) {
+                return color
+            }
+        } else if (parentView is com.google.android.material.card.MaterialCardView) {
+            val cardBg = parentView.cardBackgroundColor.defaultColor
+            if (cardBg != 0 && cardBg != Color.TRANSPARENT) {
+                return cardBg
+            }
+        }
+        p = parentView.parent
+        depth++
+    }
+    return 0
+}
+
 fun ViewFactory.applyTextStyles(v: TextView, bin: ByteArray) {
     if (v is EditText) return
     val colorCode = bin[13].toInt() and 0xFF
@@ -80,6 +103,23 @@ fun ViewFactory.applySize(v: View, sizeStr: String) {
     val h = parts[1].toIntOrNull() ?: 0
     val elevation = if (parts.size > 2) parts[2].toIntOrNull() ?: -1 else -1
     val fontSize = if (parts.size > 3) parts[3].toIntOrNull() ?: 0 else 0
+    val opacity = if (parts.size > 4) parts[4].toFloatOrNull() ?: 1.0f else 1.0f
+    val glassStyle = if (parts.size > 5) parts[5] else ""
+    val glowStyle = if (parts.size > 6) parts[6] else ""
+
+    if (opacity < 1.0f) {
+        v.alpha = opacity
+    } else {
+        v.alpha = 1.0f
+    }
+
+    if (glassStyle.isNotEmpty()) {
+        GlassmorphismApplier.apply(v, glassStyle)
+    }
+
+    if (glowStyle.isNotEmpty()) {
+        GlowApplier.apply(v, glowStyle)
+    }
 
     if (fontSize > 0 && v is TextView) {
         v.textSize = fontSize.toFloat()
@@ -131,7 +171,7 @@ fun ViewFactory.applyStyles(v: View, bin: ByteArray) {
 
     var lp = v.layoutParams
     if (lp == null) {
-        val isFullWidthView = v is LinearLayout || v is MaterialCardView || v is EditText || v is FrameLayout
+        val isFullWidthView = v is LinearLayout || v is MaterialCardView || v is EditText || v is FrameLayout || v is TitanCanvas || v.javaClass.simpleName.contains("Canvas")
         val w = if (isFullWidthView) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
         lp = LinearLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
@@ -148,22 +188,9 @@ fun ViewFactory.applyStyles(v: View, bin: ByteArray) {
 
     val flex = (bin[0].toInt() shr 4) and 0x0F
     if (flex > 0 && lp is LinearLayout.LayoutParams) {
-        val parentScrollView = isViewInsideScrollView(v)
-        if (!isInScrollView && !parentScrollView && !v.isAttachedToWindow) {
-            lp.weight = flex.toFloat()
-            val isVerticalParent = (v.parent as? LinearLayout)?.orientation == LinearLayout.VERTICAL
-            if (isVerticalParent) {
-                lp.height = 0
-                if (lp.width <= 0) lp.width = ViewGroup.LayoutParams.MATCH_PARENT
-            } else {
-                lp.width = 0
-            }
-        } else if (parentScrollView || isInScrollView) {
-            lp.weight = 0f
-            if (lp.height == 0) {
-                lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
-            }
-        }
+        lp.weight = flex.toFloat()
+        if (lp.width <= 0) lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+        if (lp.height <= 0) lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
     }
 
     val base = ColorParser.parseColor(bin[3].toInt() and 0xFF, bin[2].toInt() and 0xFF)
@@ -206,16 +233,6 @@ fun ViewFactory.applyStyles(v: View, bin: ByteArray) {
             v.strokeColor = strokeClr
         }
 
-        // ✅ Shadow: read from sig bits [6:5] — 00=none, 01=sm(2dp), 10=md(4dp), 11=lg(8dp)
-        val shadowBits = (sig shr 5) and 0x03
-        val elevDp = when (shadowBits) {
-            1 -> 2f
-            2 -> 4f
-            3 -> 8f
-            else -> if (v.cardElevation > 0f) v.cardElevation else 0f
-        }
-        v.cardElevation = dp(elevDp.toInt()).toFloat()
-        v.maxCardElevation = dp((elevDp + 2).toInt()).toFloat()
         v.useCompatPadding = true
         v.preventCornerOverlap = true
         if (v.contentPaddingLeft == 0 && v.contentPaddingTop == 0) {
@@ -430,10 +447,15 @@ fun ViewFactory.applyCustomBorder(v: View?, borderStr: String) {
     var bColorVal = if (DolphinStateEngine.themeLevel > 128) Color.parseColor("#475569") else Color.parseColor("#e2e8f0")
 
     val parts = borderStr.split("|")
+    var bStyle = "solid"
     if (parts.isNotEmpty()) {
         val widthMatch = Regex("(\\d+)").find(parts[0])
         if (widthMatch != null) {
             bWidthDp = widthMatch.value.toInt()
+        }
+        if (parts.size > 1) {
+            val sStr = parts[1].trim()
+            if (sStr.isNotEmpty()) bStyle = sStr
         }
         if (parts.size > 2) {
             val cStr = parts[2].trim()
@@ -453,6 +475,25 @@ fun ViewFactory.applyCustomBorder(v: View?, borderStr: String) {
                 } catch (e: Exception) {}
             }
         }
+    }
+
+    val isBottomOnly = borderStr.contains("bottom") || borderStr.contains("border-b") || borderStr.contains("_b") || borderStr.contains("|b|") || borderStr.contains("b|")
+    if (isBottomOnly) {
+        val gd = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(Color.TRANSPARENT)
+            setStroke(dp(bWidthDp), bColorVal)
+        }
+        val inset = android.graphics.drawable.InsetDrawable(
+            gd,
+            -dp(bWidthDp * 4),
+            -dp(bWidthDp * 4),
+            -dp(bWidthDp * 4),
+            0
+        )
+        v.background = inset
+        v.setWillNotDraw(false)
+        return
     }
 
     val cardParent = v.parent as? MaterialCardView ?: (v as? MaterialCardView)
@@ -479,7 +520,13 @@ fun ViewFactory.applyCustomBorder(v: View?, borderStr: String) {
             setColor(Color.TRANSPARENT)
             v.background = this
         }
-        gd.setStroke(dp(bWidthDp), bColorVal)
+        if (bStyle == "dashed") {
+            gd.setStroke(dp(bWidthDp), bColorVal, dp(4).toFloat(), dp(4).toFloat())
+        } else if (bStyle == "dotted") {
+            gd.setStroke(dp(bWidthDp), bColorVal, dp(2).toFloat(), dp(2).toFloat())
+        } else {
+            gd.setStroke(dp(bWidthDp), bColorVal)
+        }
         v.setWillNotDraw(false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             v.clipToOutline = true

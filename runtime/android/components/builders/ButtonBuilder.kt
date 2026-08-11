@@ -57,8 +57,11 @@ class ButtonBuilder : ComponentBuilder {
                                 .show()
                         }
                         factory.onAction?.invoke(action, displayTitle)
+                    } else if (action.startsWith("state:")) {
+                        val stateKey = action.substringAfter("state:")
+                        val current = DolphinStateEngine.get(stateKey)?.toString()?.toIntOrNull() ?: 0
+                        DolphinStateEngine.set(stateKey, (current + 1).toString())
                     } else {
-                        DolphinStateEngine.handleAction(action)
                         DolphinEventDebugger.trace(this, action, "DolphinRuntime", "DISPATCHED")
                         factory.onAction?.invoke(action, displayTitle)
                     }

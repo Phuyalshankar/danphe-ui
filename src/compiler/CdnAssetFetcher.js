@@ -132,7 +132,51 @@ class CdnAssetFetcher {
             console.log('  ✨ [CDN Asset Cache] All assets cached locally!\n');
         }
 
+        // ── Download Kotlin (.kt) Plugins defined in dolphin.config.js ──
+        await CdnAssetFetcher.ensureKtPluginsDownloaded(projectRoot, force);
+
         return localPaths;
+    }
+
+    /**
+     * Download Kotlin (.kt) Plugins specified in dolphin.config.js to assets/plugins/
+     * @param {string} projectRoot 
+     * @param {boolean} force 
+     */
+    static async ensureKtPluginsDownloaded(projectRoot, force = false) {
+        const pluginsDir = path.join(projectRoot, 'assets', 'plugins');
+        fs.mkdirSync(pluginsDir, { recursive: true });
+
+        const configPath = path.join(projectRoot, 'dolphin.config.js');
+        if (!fs.existsSync(configPath)) return;
+
+        try {
+            delete require.cache[require.resolve(configPath)];
+            const config = require(configPath);
+            const pluginUrls = config.ktPlugins || config.plugins || [];
+
+            for (const url of pluginUrls) {
+                if (typeof url === 'string' && (url.endsWith('.kt') || url.includes('.kt?'))) {
+                    const fileName = path.basename(url.split('?')[0]);
+                    const dest = path.join(pluginsDir, fileName);
+
+                    if (!force && fs.existsSync(dest) && fs.statSync(dest).size > 50) {
+                        continue; // Cache hit
+                    }
+
+                    try {
+                        console.log(`  🔌 [KtPlugin CDN] Downloading Kotlin plugin: ${fileName} …`);
+                        const ktText = await CdnAssetFetcher.fetchText(url);
+                        fs.writeFileSync(dest, ktText, 'utf8');
+                        console.log(`     ✅ Saved to assets/plugins/${fileName} (${(ktText.length / 1024).toFixed(1)} KB)`);
+                    } catch (err) {
+                        console.warn(`     ⚠️ Failed to download Kt plugin ${url}: ${err.message}`);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn(`⚠️ Error processing Kt plugins from dolphin.config.js: ${e.message}`);
+        }
     }
 
     /**

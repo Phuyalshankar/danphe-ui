@@ -23,7 +23,8 @@ class HtmlTagParser {
             case 'div': case 'section': return 0x13;
             case 'span': case 'p': case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6': case 'label': return 0x16;
             case 'img': return 0x17;
-            case 'input': return 0x18;
+            case 'input': case 'textarea': return 0x18;
+            case 'switch': return 0x1A;
             case 'select': return 0x1C;
             default: return 0x13; // Default container
         }

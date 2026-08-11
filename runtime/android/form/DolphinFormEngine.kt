@@ -229,15 +229,28 @@ object DolphinFormEngine {
             }
             
             // ── Input Type ──
-            this.inputType = when (inputType) {
+            val isTextArea = inputType.lowercase() == "textarea" || inputType.lowercase() == "multiline"
+            this.inputType = when (inputType.lowercase()) {
                 "email" -> android.text.InputType.TYPE_CLASS_TEXT or
                         android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
                 "password" -> android.text.InputType.TYPE_CLASS_TEXT or
                         android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
                 "number" -> android.text.InputType.TYPE_CLASS_NUMBER or
                         android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-                "phone" -> android.text.InputType.TYPE_CLASS_PHONE
+                "phone", "tel" -> android.text.InputType.TYPE_CLASS_PHONE
+                "textarea", "multiline" -> android.text.InputType.TYPE_CLASS_TEXT or
+                        android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 else -> android.text.InputType.TYPE_CLASS_TEXT
+            }
+            if (isTextArea) {
+                this.isSingleLine = false
+                this.minLines = 3
+                this.maxLines = 10
+                this.gravity = android.view.Gravity.TOP or android.view.Gravity.START
+                this.isFocusable = true
+                this.isFocusableInTouchMode = true
+                this.isEnabled = true
+                this.movementMethod = android.text.method.ScrollingMovementMethod()
             }
             
             // ─── State Binding ──────────────────────────────────────────────────
@@ -272,6 +285,28 @@ object DolphinFormEngine {
                     setText("")
                 }
             }
+        }
+        
+        editText.isFocusable = true
+        editText.isFocusableInTouchMode = true
+        editText.isEnabled = true
+        editText.isClickable = true
+        
+        val isTextArea = inputType.lowercase() == "textarea" || inputType.lowercase() == "multiline"
+        editText.setOnTouchListener { v, event ->
+            if (isTextArea) {
+                if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                    v.parent?.requestDisallowInterceptTouchEvent(true)
+                } else if (event.action == android.view.MotionEvent.ACTION_UP || event.action == android.view.MotionEvent.ACTION_CANCEL) {
+                    v.parent?.requestDisallowInterceptTouchEvent(false)
+                }
+            }
+            if (event.action == android.view.MotionEvent.ACTION_UP) {
+                v.requestFocus()
+                val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                imm?.showSoftInput(v, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            }
+            false // DO NOT CONSUME EVENT! Allow native scrolling and cursor placement
         }
         
         textInputLayout.addView(editText)

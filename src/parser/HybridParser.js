@@ -418,9 +418,10 @@ class HybridParser {
         const cssProps = this._extractCSSProps(mobileCls);
 
         const DOLPHIN_TYPES = new Set([
-            'AppBar','Button','Card','Container','Column','Row','Text',
+            'Screen','Row','Column','Container','Card','Button','Text',
             'Image','Icon','TextField','Slider','Switch','Checkbox','Select',
-            'Radio','FileUpload','ListView','GridView','Modal','TabBar','tab-bar','tabbar'
+            'Radio','FileUpload','ListView','GridView','Modal','TabBar','tab-bar','tabbar',
+            'videoplayer', 'VideoPlayer', 'mp3player', 'Mp3Player', 'cameraview', 'CameraView', 'calendar'
         ]);
         const isTabBarType = props.type === 'TabBar' || props.type === 'tab-bar' || props.type === 'tabbar';
         const propsType = props.type && (DOLPHIN_TYPES.has(props.type) || isTabBarType || (typeof props.type === 'string' && props.type.startsWith('0x'))) ? props.type : null;

@@ -49,7 +49,21 @@ class TabBuilder : ComponentBuilder {
         tabDataList = extractTabData(data, factory)
         activeTabKey = getActiveTab()
         
-        // ✅ Container — always fresh on screen rebuild
+        // ✅ Root HorizontalScrollView wrapper — spans 100% full screen width
+        val scrollView = android.widget.HorizontalScrollView(ctx).apply {
+            isFillViewport = true
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = factory.dp(4)
+                bottomMargin = factory.dp(4)
+            }
+        }
+
+        // ✅ Inner Container — stretches to 100% full parent width
         val container = LinearLayout(ctx).apply {
             id = TABBAR_ID
             tag = TABBAR_TYPE
@@ -59,25 +73,27 @@ class TabBuilder : ComponentBuilder {
             clipToPadding = false
             clipChildren = false
             
-            layoutParams = LinearLayout.LayoutParams(
+            layoutParams = android.widget.FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = factory.dp(12)
+            )
+            minimumHeight = factory.dp(44)
+        }
+
+        // ✅ Apply JSX styles (padding, background, border, radius)
+        factory.applyStyles(container, data)
+
+        // ✅ Default container bounds if not in JSX
+        if (container.background == null) {
+            val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                setColor(Color.parseColor("#0f172a"))
+                setStroke(factory.dp(1), Color.parseColor("#334155"))
+                cornerRadius = factory.dp(14).toFloat()
             }
-            minimumHeight = factory.dp(52)
+            container.background = bgDrawable
+            container.elevation = factory.dp(4).toFloat()
         }
-
-        // ✅ Apply background only (skip padding — TabBar manages its own)
-        val hasBg = (data[3].toInt() and 0xFF) != 0
-        if (!hasBg) {
-            container.setBackgroundColor(Color.parseColor("#0f172a"))
-        } else {
-            factory.applyStyles(container, data)
-        }
-
-        // ✅ Always enforce compact TabBar padding (8dp H, 6dp V)
-        container.setPadding(factory.dp(8), factory.dp(6), factory.dp(8), factory.dp(6))
 
         // ✅ Build tabs
         tabButtons.clear()
@@ -88,11 +104,13 @@ class TabBuilder : ComponentBuilder {
             tabButtons.add(btn)
         }
 
+        scrollView.addView(container)
+
         tabbarInstance = container
         isInitialized = true
 
-        Log.d(TAG, "✅ Tabbar built with ${tabButtons.size} tabs")
-        return container
+        Log.d(TAG, "✅ Tabbar built with ${tabButtons.size} tabs inside HorizontalScrollView")
+        return scrollView
     }
     
     // ─── CREATE TAB BUTTON ─────────────────────────────────────────
@@ -106,19 +124,23 @@ class TabBuilder : ComponentBuilder {
         return MaterialButton(ctx).apply {
             text = if (tab.icon.isNotEmpty()) "${tab.icon} ${tab.label}" else tab.label
             isAllCaps = false
-            textSize = 12f
+            textSize = 11.5f
+            setSingleLine(true)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
             cornerRadius = factory.dp(10)
             insetTop = 0
             insetBottom = 0
+            height = factory.dp(36)
             minHeight = factory.dp(36)
-            setPadding(factory.dp(6), factory.dp(8), factory.dp(6), factory.dp(8))
+            minWidth = factory.dp(80)
+            setPadding(factory.dp(16), 0, factory.dp(16), 0)
             
             layoutParams = LinearLayout.LayoutParams(
-                0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                1f
+                factory.dp(36)
             ).apply {
-                marginEnd = factory.dp(4)
+                marginEnd = factory.dp(6)
             }
             
             val bgColor = if (isActive) "#2563eb" else "#1e293b"
@@ -140,8 +162,7 @@ class TabBuilder : ComponentBuilder {
     private fun updateTabbar(data: ByteArray, factory: ViewFactory) {
         val tabbar = tabbarInstance ?: return
         
-        // Always enforce compact TabBar padding
-        tabbar.setPadding(factory.dp(8), factory.dp(6), factory.dp(8), factory.dp(6))
+        tabbar.setPadding(factory.dp(8), factory.dp(2), factory.dp(8), factory.dp(2))
         
         val newTabData = extractTabData(data, factory)
         if (newTabData != tabDataList && newTabData.isNotEmpty()) {

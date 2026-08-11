@@ -666,9 +666,10 @@ fun ViewFactory.createSlider(bin: ByteArray): View {
         addView(tv)
         
         val sb = SeekBar(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             max = 255
-            val currentState = DolphinStateEngine.get(actionOrState)
-            progress = if (currentState != null) currentState.toString().toFloat().toInt() else initialValue
+            val currentStateStr = DolphinStateEngine.get(actionOrState)?.toString() ?: ""
+            progress = currentStateStr.toFloatOrNull()?.toInt() ?: initialValue
 
             try {
                 val accent = Color.parseColor("#3b82f6")
@@ -753,7 +754,7 @@ fun ViewFactory.createRadioButton(bin: ByteArray): View {
     val label = nextStr()
     val initialChecked = (bin[14].toInt() and 0xFF) == 1
 
-    return com.google.android.material.radiobutton.MaterialRadioButton(ctx).apply {
+    val rb = com.google.android.material.radiobutton.MaterialRadioButton(ctx).apply {
         text = label
         buttonTintList = ColorStateList.valueOf(Color.parseColor("#3b82f6"))
         
@@ -761,13 +762,10 @@ fun ViewFactory.createRadioButton(bin: ByteArray): View {
         setTextColor(if (level > 128) Color.WHITE else Color.parseColor("#374151"))
         
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        isFocusable = true
-        isFocusableInTouchMode = true
         
         val currentState = DolphinStateEngine.get(actionOrState)
         isChecked = if (currentState != null) currentState.toString().toBoolean() else initialChecked
         
-        applyStyles(this, bin)
         setOnClickListener {
             isChecked = true
             DolphinStateEngine.handleAction("$actionOrState:=true")
@@ -775,6 +773,13 @@ fun ViewFactory.createRadioButton(bin: ByteArray): View {
         }
         if (actionOrState.isNotEmpty()) DolphinStateEngine.declareIfAbsent(actionOrState, isChecked)
     }
+    
+    val container = LinearLayout(ctx).apply {
+        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        addView(rb)
+        applyStyles(this, bin)
+    }
+    return container
 }
 
 fun ViewFactory.createSelect(bin: ByteArray): View {
@@ -923,6 +928,12 @@ fun ViewFactory.createHardwareView(bin: ByteArray, type: String): View {
     val config = nextStr()
 
     when (type) {
+        "camera", "camera-preview", "cam-preview", "camera-front", "camera-back" -> {
+            val facing = if (type == "camera-front" || config.contains("front")) "front" else "back"
+            return DolphinCamera.createEmbeddedCameraView(ctx, facing).apply {
+                applyStyles(this, bin)
+            }
+        }
         "haptics" -> {
             DolphinHaptics.vibrate(ctx, config)
         }

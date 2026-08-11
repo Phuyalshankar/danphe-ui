@@ -14,8 +14,9 @@ class TextBuilder : ComponentBuilder {
     override fun build(ctx: Context, data: ByteArray, factory: ViewFactory): View {
         val rawContent = factory.nextStr()
 
-        // Safety Filter: If string pool ever gets out of sync and passes raw size string (e.g. 0|0|0|0), clear it
-        val content = if (rawContent.matches(Regex("^\\d+\\|\\d+\\|\\d+\\|\\d+$"))) "" else rawContent
+        // Safety Filter: If string pool ever passes raw metadata/size string (e.g. 0|0|0, 0|0|0|0), clear it
+        val isMetadataPipe = rawContent.contains("|") && !rawContent.startsWith("stateKey:") && !rawContent.contains("[stateKey:") && rawContent.split("|").all { part -> part.trim().all { ch -> ch.isDigit() } }
+        val content = if (isMetadataPipe) "" else rawContent
 
         Log.d("TextBuilder", "Building Text: '$content'")
 

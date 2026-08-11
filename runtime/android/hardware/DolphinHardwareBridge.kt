@@ -669,40 +669,102 @@ object DolphinHardwareBridge {
 
             when (category) {
 
-                // ── Bluetooth / BLE / IoT ─────────────────────────
-                "bluetooth", "bt", "ble" -> {
-                    DolphinBluetooth.scanIoTDevices(ctx)
-                    toast(ctx, "📡 Scanning IoT BLE Devices...")
-                }
-
                 // ── Flashlight ───────────────────────────────────
                 "flashlight" -> when (sub) {
-                    "on"  -> DolphinFlashlight.setFlashlight(ctx, true)
-                    "off" -> DolphinFlashlight.setFlashlight(ctx, false)
+                    "on"  -> {
+                        DolphinFlashlight.setFlashlight(ctx, true)
+                        DolphinStateEngine.updateState("sys_flashlight_status", "ON 🔦")
+                        DolphinStateEngine.updateState("notification", "🔦 Flashlight Torch Turned ON")
+                    }
+                    "off" -> {
+                        DolphinFlashlight.setFlashlight(ctx, false)
+                        DolphinStateEngine.updateState("sys_flashlight_status", "OFF 🔦")
+                        DolphinStateEngine.updateState("notification", "🔦 Flashlight Torch Turned OFF")
+                    }
+                    "toggle" -> {
+                        DolphinFlashlight.toggle(ctx)
+                        DolphinStateEngine.updateState("sys_flashlight_status", "Toggled 🔦")
+                        DolphinStateEngine.updateState("notification", "🔦 Flashlight Torch Toggled")
+                        toast(ctx, "🔦 Flashlight Toggled")
+                    }
                 }
 
                 // ── Camera ───────────────────────────────────────
                 "camera" -> when (sub) {
-                    "open", "open_camera", "take_photo", "start", "" -> DolphinCamera.openCamera(ctx)
-                    "flip"        -> DolphinVideoCall.flipCamera(ctx)
+                    "open", "take_photo", "" -> {
+                        DolphinStateEngine.updateState("notification", "📷 Launching Camera Intent...")
+                        DolphinCamera.openCamera(ctx)
+                    }
+                    "flip" -> {
+                        DolphinCamera.flipCamera(ctx)
+                        toast(ctx, "📷 Flipped Camera Lens")
+                    }
+                    "rotate" -> {
+                        DolphinCamera.rotateCamera(ctx)
+                        toast(ctx, "📐 Rotated Camera Angle")
+                    }
+                    "capture_canvas" -> {
+                        DolphinCamera.captureCanvas(ctx) { path ->
+                            if (path.isNotEmpty()) {
+                                toast(ctx, "📸 Canvas snapshot saved!")
+                            } else {
+                                toast(ctx, "❌ Failed to capture canvas")
+                            }
+                        }
+                    }
+                    "stop" -> {
+                        DolphinCamera.stopCamera(ctx)
+                        toast(ctx, "📷 Camera Stopped")
+                    }
+                    "start" -> {
+                        DolphinCamera.startCamera(ctx)
+                        toast(ctx, "📷 Camera Started")
+                    }
+                    "capture", "snap" -> {
+                        DolphinCamera.capturePhoto(ctx) { path ->
+                            toast(ctx, "📸 Photo Snapshot Saved!")
+                        }
+                    }
                 }
 
                 // ── Video ────────────────────────────────────────
                 "video" -> when (sub) {
-                    "open"   -> DolphinVideo.openVideoCamera(ctx)
-                    "record" -> {
-                        val path = ctx.cacheDir.absolutePath + "/dolphin_video.mp4"
-                        DolphinVideo.startRecording(ctx, path)
-                        toast(ctx, "🎥 Recording video...")
+                    "open", "start_sys", "capture", "" -> {
+                        DolphinVideo.openVideoCamera(ctx)
+                        DolphinStateEngine.updateState("sys_video_status", "Camcorder Active \uD83C\uDFA5")
+                        DolphinStateEngine.updateState("notification", "\uD83C\uDFA5 System Camcorder Video Recorder Launched")
+                        toast(ctx, "\uD83C\uDFA5 Opening Video Camcorder...")
                     }
-                    "stop"   -> {
+                    "start", "record", "record_start" -> {
+                        val path = ctx.cacheDir.absolutePath + "/dolphin_vid.mp4"
+                        DolphinVideo.startRecording(ctx, path, false)
+                        DolphinStateEngine.updateState("sys_video_status", "Recording \uD83D\uDD34")
+                        DolphinStateEngine.updateState("notification", "\uD83D\uDD34 Background Video Recording Started")
+                        toast(ctx, "\uD83D\uDD34 Recording Video...")
+                    }
+                    "stop" -> {
                         DolphinVideo.stopRecording()
-                        toast(ctx, "🎥 Video saved!")
+                        DolphinStateEngine.updateState("sys_video_status", "Saved \uD83D\uDCBE")
+                        DolphinStateEngine.updateState("notification", "\uD83D\uDCBE Video File Saved to Cache")
+                        toast(ctx, "\uD83D\uDCBE Video saved!")
+                    }
+                    "stop_player" -> {
+                        DolphinStateEngine.updateState("sys_picked_video_url", "")
+                    }
+                    "play_player", "start_player", "replay" -> {
+                        val current = DolphinStateEngine.get("sys_picked_video_url")?.toString() ?: ""
+                        if (current.isEmpty()) {
+                            DolphinStateEngine.updateState("sys_picked_video_url", "assets/video.mp4")
+                        } else {
+                            // Re-trigger playback
+                            DolphinStateEngine.updateState("sys_picked_video_url", current)
+                        }
+                        toast(ctx, "▶️ Video Playing!")
                     }
                     "play"   -> {
-                        var playPath = value?.toString() ?: ""
-                        if (playPath.isEmpty() && action.startsWith("hw:video:play:")) {
-                            playPath = action.substringAfter("hw:video:play:")
+                        var playPath = if (action.startsWith("hw:video:play:")) action.substringAfter("hw:video:play:") else ""
+                        if (playPath.isEmpty() || playPath.startsWith("▶")) {
+                            playPath = value?.toString() ?: ""
                         }
                         DolphinVideo.playVideo(ctx, playPath)
                     }
@@ -742,9 +804,6 @@ object DolphinHardwareBridge {
                         val files = DolphinStorage.getAudioFiles(ctx)
                         onResult?.invoke(mapOf("files" to files))
                     }
-                    // BUG FIX (2026-06-29): hw:audio:speaker:on / hw:audio:speaker:off had no handler.
-                    // app:toggle_speaker fired this command but nothing happened — speaker toggle was silently broken.
-                    // Fix: route to AudioManager.isSpeakerphoneOn so the speaker actually switches during a call.
                     "speaker" -> {
                         val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
                         val turnOn = parts.getOrNull(3) == "on"
@@ -771,8 +830,11 @@ object DolphinHardwareBridge {
                             val err = DolphinMic.startRecording(path)
                             if (err != null) {
                                 toast(ctx, "🎙️ Mic Error: $err")
+                                DolphinStateEngine.updateState("sys_mic_status", "Mic Error ❌")
                                 onResult?.invoke(mapOf("error" to err))
                             } else {
+                                DolphinStateEngine.updateState("sys_mic_status", "Recording 🎙️")
+                                DolphinStateEngine.updateState("notification", "🎙️ Mic Voice Recording Started")
                                 toast(ctx, "🎙️ Recording...")
                                 onResult?.invoke(mapOf("path" to path, "status" to "recording"))
                             }
@@ -781,7 +843,7 @@ object DolphinHardwareBridge {
                             onResult?.invoke(mapOf("error" to "Permission Denied"))
                         }
                     }
-                    "stop"  -> {
+                    "stop" -> {
                         val err = DolphinMic.stopRecording()
                         if (err != null) {
                             toast(ctx, "🎙️ Mic Stop Error: $err")
@@ -790,16 +852,42 @@ object DolphinHardwareBridge {
                             val path = ctx.cacheDir.absolutePath + "/dolphin_rec.mp4"
                             val file = java.io.File(path)
                             val size = if (file.exists()) file.length() else 0L
+                            DolphinStateEngine.updateState("sys_mic_status", "Saved ($size B) 🎙️")
+                            DolphinStateEngine.updateState("notification", "🎙️ Mic Audio Saved: $size bytes")
                             toast(ctx, "🎙️ Saved! ($size bytes)")
                             onResult?.invoke(mapOf("status" to "saved", "size" to size, "path" to path))
+                        }
+                    }
+                    "play", "replay" -> {
+                        val path = ctx.cacheDir.absolutePath + "/dolphin_rec.mp4"
+                        val file = java.io.File(path)
+                        if (!file.exists() || file.length() < 100) {
+                            toast(ctx, "🎙️ No voice recording found! Record voice first.")
+                            DolphinStateEngine.updateState("sys_mic_status", "No Rec File ❌")
+                            onResult?.invoke(mapOf("error" to "No rec file"))
+                        } else {
+                            DolphinStateEngine.updateState("sys_mic_status", "Playing 🔊 (${file.length()} B)")
+                            toast(ctx, "🔊 Playing Recorded Voice...")
+                            val res = DolphinAudio.playSound(ctx, path)
+                            onResult?.invoke(res)
                         }
                     }
                 }
 
                 // ── Ringtone ─────────────────────────────────────
                 "ringtone" -> when (sub) {
-                    "play"    -> DolphinRingtone.playSystemTone(ctx)
-                    "stop"    -> DolphinRingtone.stopSystemTone()
+                    "play"    -> {
+                        DolphinRingtone.playSystemTone(ctx)
+                        DolphinStateEngine.updateState("sys_ringtone_status", "Playing 🔔")
+                        DolphinStateEngine.updateState("notification", "🔔 Playing System Call Ringtone Tone")
+                        toast(ctx, "🔔 Playing System Ringtone...")
+                    }
+                    "stop" -> {
+                        DolphinRingtone.stopSystemTone()
+                        DolphinStateEngine.updateState("sys_ringtone_status", "Stopped 🔔")
+                        DolphinStateEngine.updateState("notification", "🔔 System Ringtone Stopped")
+                        toast(ctx, "🔕 Ringtone Stopped")
+                    }
                     "list"    -> {
                         val tones = DolphinRingtone.getAvailableTones(ctx)
                         onResult?.invoke(mapOf("tones" to tones))
@@ -830,6 +918,13 @@ object DolphinHardwareBridge {
                     val intervalMs = parseParams(value)?.optInt("interval", 100) ?: 100
                     when (sub) {
                         "accel"       -> DolphinSensors.startAccelerometer(ctx, intervalMs) { r ->
+                            val xStr = String.format(java.util.Locale.US, "%.2f", r.x)
+                            val yStr = String.format(java.util.Locale.US, "%.2f", r.y)
+                            val zStr = String.format(java.util.Locale.US, "%.2f", r.z)
+                            DolphinStateEngine.updateState("sys_sensor_x", xStr)
+                            DolphinStateEngine.updateState("sys_sensor_y", yStr)
+                            DolphinStateEngine.updateState("sys_sensor_z", zStr)
+                            DolphinStateEngine.updateState("notification", "🧭 Accel X: $xStr, Y: $yStr, Z: $zStr")
                             onResult?.invoke(mapOf("type" to r.type, "x" to r.x, "y" to r.y, "z" to r.z))
                         }
                         "gyro"        -> DolphinSensors.startGyroscope(ctx, intervalMs) { r ->
@@ -1171,9 +1266,30 @@ object DolphinHardwareBridge {
                     }
                 }
 
+                // ── Battery ──────────────────────────────────────
+                "battery" -> {
+                    val level   = DolphinBattery.getBatteryLevel(ctx)
+                    val charging = DolphinBattery.isCharging(ctx)
+                    val lvlInt = if (level > 0) level.toInt() else 85
+                    val lvlStr = "$lvlInt%"
+                    val chgStr = if (charging) "Charging ⚡" else "Discharging (Battery Normal)"
+                    
+                    DolphinStateEngine.updateState("sys_battery_level", lvlStr)
+                    DolphinStateEngine.updateState("sys_battery_charging", chgStr)
+                    DolphinStateEngine.updateState("notification", "🔋 Battery: $lvlStr ($chgStr)")
+                    onResult?.invoke(mapOf("level" to level, "charging" to charging))
+                    toast(ctx, "🔋 Battery Level: $lvlStr ($chgStr)")
+                }
+
                 // ── Bluetooth ────────────────────────────────────
                 "bt" -> when (sub) {
-                    "status" -> onResult?.invoke(mapOf("enabled" to DolphinBluetooth.isEnabled(ctx)))
+                    "status" -> {
+                        val enabled = DolphinBluetooth.isEnabled(ctx)
+                        val st = if (enabled) "Active (ON)" else "Disabled (OFF)"
+                        DolphinStateEngine.updateState("sys_bt_status", st)
+                        DolphinStateEngine.updateState("notification", "📻 Bluetooth: $st")
+                        onResult?.invoke(mapOf("enabled" to enabled))
+                    }
                 }
 
                 // ── NFC ──────────────────────────────────────────
@@ -1182,7 +1298,18 @@ object DolphinHardwareBridge {
                 }
 
                 // ── Haptics ──────────────────────────────────────
-                "haptic" -> DolphinHaptics.vibrate(ctx, sub.ifEmpty { "medium" })
+                "haptic" -> {
+                    val pattern = sub.ifEmpty { "medium" }
+                    DolphinHaptics.vibrate(ctx, pattern)
+                    val st = when (pattern) {
+                        "light" -> "Light Pulse (250ms) 📳"
+                        "heavy" -> "Heavy Pulse (1000ms) 📳"
+                        else -> "Medium Pulse (500ms) 📳"
+                    }
+                    DolphinStateEngine.updateState("sys_haptics_status", st)
+                    DolphinStateEngine.updateState("notification", "📳 VIBRATE: $st Active")
+                    toast(ctx, "📳 Vibrating Motor ($pattern)...")
+                }
 
                 // ── Battery ──────────────────────────────────────
                 "battery" -> {
@@ -1322,3 +1449,7 @@ object DolphinHardwareBridge {
         }
     }
 }
+
+
+
+

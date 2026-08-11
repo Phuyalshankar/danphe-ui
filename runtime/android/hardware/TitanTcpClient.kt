@@ -250,6 +250,10 @@ object TitanTcpClient {
             return
         }
         if (cmdType == CMD_VIDEO_FRAME) {
+            // Give priority to attached listeners (like TitanNativeCanvas for GPU decoding)
+            onMessageReceived?.invoke(cmdType, senderExt, payload)
+            
+            // Fallback to video call rendering if needed
             android.os.Handler(android.os.Looper.getMainLooper()).post {
                 DolphinVideoCall.renderRemoteFrameRaw(payload)
             }

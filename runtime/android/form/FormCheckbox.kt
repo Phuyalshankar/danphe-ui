@@ -24,8 +24,12 @@ object FormCheckbox {
         val level = DolphinStateEngine.themeLevel
         val isDark = level > 128
 
+        val parts = label.split("__HIDETEXT__")
+        val valStr = parts[0]
+        val hideText = parts.size > 1
+
         return MaterialCheckBox(ctx).apply {
-            text = label
+            text = if (hideText) "" else valStr
             this.isChecked = isChecked
             setTextColor(if (isDark) Color.WHITE else Color.parseColor("#0f172a"))
             buttonTintList = ColorStateList.valueOf(if (isDark) Color.parseColor("#3b82f6") else Color.parseColor("#2563eb"))

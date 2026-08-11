@@ -25,6 +25,12 @@ open class GapAwareLinearLayout @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
+    init {
+        clipChildren = false
+        clipToPadding = false
+        descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+    }
+
     companion object {
         private const val TAG = "GapAwareLayout"
         private var isLockEnabled = true
@@ -51,24 +57,33 @@ open class GapAwareLinearLayout @JvmOverloads constructor(
         this.verticalGapPx = vertical
     }
 
-    /**
-     * 🆕 Store weight when adding child (flex-1 support)
-     */
-    override fun addView(child: View, index: Int, params: ViewGroup.LayoutParams) {
+    override fun addView(child: View?, index: Int, params: ViewGroup.LayoutParams?) {
         super.addView(child, index, params)
-        
-        if (params is LayoutParams && params.weight > 0) {
+        if (child != null && params is LayoutParams && params.weight > 0) {
             childWeights[child.hashCode()] = params.weight
-            Log.d(TAG, "🔒 Stored weight: ${params.weight} for child ${child.hashCode()}")
         }
     }
 
-    /**
-     * 🔒 CRITICAL: Override onLayout
-     * Do NOT mutate LayoutParams inside onLayout to avoid cumulative margin escalation!
-     */
-    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        super.onLayout(changed, l, t, r, b)
+    override fun addView(child: View?, params: ViewGroup.LayoutParams?) {
+        super.addView(child, params)
+        if (child != null && params is LayoutParams && params.weight > 0) {
+            childWeights[child.hashCode()] = params.weight
+        }
+    }
+
+    override fun addView(child: View?) {
+        super.addView(child)
+        if (child != null && child.layoutParams is LayoutParams) {
+            val lp = child.layoutParams as LayoutParams
+            if (lp.weight > 0) {
+                childWeights[child.hashCode()] = lp.weight
+            }
+        }
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        enforceNow()
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
     /**

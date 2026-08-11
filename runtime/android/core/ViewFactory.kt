@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
@@ -35,11 +36,16 @@ class ViewFactory(val ctx: Context) {
         registerBuilder(CheckboxBuilder())
         registerBuilder(SelectBuilder())
         registerBuilder(RadioButtonBuilder())
+        registerBuilder(SliderBuilder())
         registerBuilder(GridBuilder())
         registerBuilder(TabBuilder())
         registerBuilder(NavBuilder())
         registerBuilder(HeaderBuilder())
         registerBuilder(DrawerBuilder())
+        registerBuilder(CameraViewBuilder())
+        registerBuilder(ImageBuilder())
+        registerBuilder(WebViewBuilder())       // 0x60 — WebRTC / Jitsi / NVR Web Grid
+        registerBuilder(NativeCanvasBuilder())  // 0x61 — Pure Native Canvas NVR Engine (Hikvision Grade)
 
         Log.d("ViewFactory", "✅ ${componentBuilders.size} ComponentBuilders registered")
     }
@@ -106,26 +112,13 @@ class ViewFactory(val ctx: Context) {
 
         applyEmbeddedInitialState()
 
-        val wasInScroll = isInScrollView
         return try {
-            isInScrollView = true
             val root = buildComp() ?: View(ctx)
-            
-            root.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            
-            val scrollView = DolphinScrollView(ctx).apply {
-                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                isFillViewport = true
-                setBackgroundColor(Color.TRANSPARENT)
-                addView(root)
-            }
-
-            scrollView
+            root.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            root
         } catch (e: Exception) {
             Log.e("DolphinView", "Build Error", e)
             TextView(ctx).apply { text = "Error: ${e.message}"; setTextColor(Color.RED) }
-        } finally {
-            isInScrollView = wasInScroll
         }
     }
 
@@ -193,13 +186,16 @@ class ViewFactory(val ctx: Context) {
                 }
                 else -> {
                     when (type) {
+                        0x1E -> createListView(bin)
                         0x22 -> createSimpleGrid(bin)
-                        0x20, 0x21 -> createColumn(bin, isCard = false)
+                        0x20 -> createHorizontalListView(bin)
+                        0x21 -> createColumn(bin, isCard = false)
                         0x40 -> createFileUpload(bin)
                         0x32 -> createHardwareView(bin, "location")
                         0x34 -> createHardwareView(bin, "haptics")
                         0x35 -> createHardwareView(bin, "battery")
                         0x36 -> createHardwareView(bin, "sensors")
+                        0x50 -> CameraViewBuilder().build(ctx, bin, this)
                         else -> createColumn(bin, isCard = false)
                     }
                 }
@@ -274,18 +270,14 @@ class ViewFactory(val ctx: Context) {
         }
 
         if (gradStr.isNotEmpty()) {
-            val targetView = if (view is MaterialCardView && view.childCount > 0) {
-                val inner = view.getChildAt(0)
-                inner.setPadding(view.contentPaddingLeft, view.contentPaddingTop, view.contentPaddingRight, view.contentPaddingBottom)
-                view.setContentPadding(0, 0, 0, 0)
-                inner
-            } else view
-
+            if (view is com.google.android.material.card.MaterialCardView) {
+                view.setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
+            }
             if (view is com.google.android.material.button.MaterialButton) {
                 view.backgroundTintList = null
             }
 
-            GradientRenderer.apply(targetView, gradStr, bin[14].toInt() and 0xFF) { name, shade ->
+            GradientRenderer.apply(view, gradStr, bin[14].toInt() and 0xFF) { name, shade ->
                 parseColor(mapColorNameToCode(name), shade)
             }
         }
@@ -362,28 +354,37 @@ class ViewFactory(val ctx: Context) {
                     val titleStr = nextStr()
                     updatedText = titleStr
                 }
-                0x17 -> { // Checkbox (0x17) — 2 strings
+                0x17 -> { // Image (0x17) — 1 string
+                    val url = nextStr()
+                }
+                0x1B -> { // Checkbox (0x1B) — 2 strings
                     val stateKey = nextStr()
                     val label = nextStr()
                     if (label.isNotEmpty()) updatedText = label
                 }
-                0x1B -> { // RadioButton (0x1B) — 2 strings
+                0x1F -> { // RadioButton (0x1F) — 2 strings
                     val stateKey = nextStr()
                     val label = nextStr()
                     if (label.isNotEmpty()) updatedText = label
                 }
-                0x15 -> { // Switch (0x15) — 2 strings
+                0x1A -> { // Switch (0x1A) — 2 strings
                     val stateKey = nextStr()
                     val label = nextStr()
                     if (label.isNotEmpty()) updatedText = label
                 }
-                0x19 -> { // Select (0x19) — 3 strings
+                0x19 -> { // Slider (0x19) — 2 strings
+                    val stateKey = nextStr()
+                    val label = nextStr()
+                    if (label.isNotEmpty()) updatedText = label
+                }
+                0x1C -> { // Select (0x1C) — 4 strings
                     val stateKey = nextStr()
                     val label = nextStr()
                     val options = nextStr()
+                    val initialValue = nextStr()
                     if (label.isNotEmpty()) updatedText = label
                 }
-                0x18 -> { // TextField (0x18) — 6 strings
+                0x18 -> { // TextField / Textarea (0x18) — 6 strings
                     val stateKey = nextStr()
                     val label = nextStr()
                     val hint = nextStr()
@@ -406,7 +407,7 @@ class ViewFactory(val ctx: Context) {
                 }
                 if (view is TextView) {
                     applyTextStyles(view, bin)
-                    if (updatedText != null && !updatedText.startsWith("stateKey:")) {
+                    if (view !is EditText && updatedText != null && !updatedText.startsWith("stateKey:")) {
                         view.text = updatedText
                     }
                 } else if (view is ViewGroup) {

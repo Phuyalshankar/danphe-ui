@@ -76,12 +76,17 @@ async function cmdDev(args) {
     let appInstance   = bundleResult.appInstance;
 
     const port = config.dev?.port || 7788;
+    const httpPort = config.dev?.httpPort || 7787;
+    const titanPort = config.dev?.titanPort || 9092;
     setupAdbReverse(port);
+    setupAdbReverse(httpPort);
+    setupAdbReverse(titanPort);
 
     const server = new DevServer({
         host:     config.dev?.host || '0.0.0.0',
         port,
-        httpPort: config.dev?.httpPort || 7787,
+        httpPort,
+        titanPort,
         watchDir: cwd,
     });
     global.dolphinDevServer = server;

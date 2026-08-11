@@ -625,6 +625,8 @@ function parseClass(cls, darkMode = false) {
     if (cls === 'border-dashed') { styles.borderStyle = 'dashed'; return styles; }
     if (cls === 'border-dotted') { styles.borderStyle = 'dotted'; return styles; }
     if (cls === 'border-double') { styles.borderStyle = 'double'; return styles; }
+    if (cls === 'border-inset') { styles.borderStyle = 'inset'; return styles; }
+    if (cls === 'border-outset') { styles.borderStyle = 'outset'; return styles; }
     if (cls === 'border-hidden') { styles.borderStyle = 'hidden'; return styles; }
 
     if (cls === 'overflow-hidden') { styles.overflow = 'hidden'; return styles; }
@@ -807,7 +809,7 @@ function parseTW(tw) {
             else if (p === 'border-none') { props.border = false; props.borderWidth = '0px'; }
             else if (p.startsWith('border-')) {
                 const colorPart = p.slice(7);
-                if (colorPart !== 'solid' && colorPart !== 'dashed' && colorPart !== 'dotted') {
+                if (colorPart !== 'solid' && colorPart !== 'dashed' && colorPart !== 'dotted' && colorPart !== 'inset' && colorPart !== 'outset') {
                     props.borderColor = colorPart;
                 } else {
                     props.borderStyle = colorPart;

@@ -26,6 +26,8 @@ object FormRadioGroup {
 
         val group = RadioGroup(ctx).apply {
             orientation = RadioGroup.VERTICAL
+            clipChildren = false
+            clipToPadding = false
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -34,23 +36,32 @@ object FormRadioGroup {
 
         val options = optionsCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }
         options.forEachIndexed { idx, opt ->
-            val radio = RadioButton(ctx).apply {
+            val parts = opt.split("__HIDETEXT__")
+            val valStr = parts[0]
+            val hideText = parts.size > 1
+
+            val radio = com.google.android.material.radiobutton.MaterialRadioButton(ctx).apply {
                 id = idx + 1000
-                text = opt
+                text = if (hideText) "" else valStr
+                minWidth = 0
+                minHeight = 0
+                minimumWidth = 0
+                minimumHeight = 0
+                setPadding(0, 0, 0, 0)
                 setTextColor(if (isDark) Color.WHITE else Color.parseColor("#0f172a"))
                 buttonTintList = ColorStateList.valueOf(if (isDark) Color.parseColor("#3b82f6") else Color.parseColor("#2563eb"))
             }
             group.addView(radio)
-        }
 
-        group.setOnCheckedChangeListener { _, checkedId ->
-            val selectedIdx = checkedId - 1000
-            val selectedVal = options.getOrNull(selectedIdx) ?: ""
-            if (stateKey.isNotEmpty()) {
-                DolphinStateEngine.set(stateKey, selectedVal)
-            }
-            if (action.isNotEmpty()) {
-                onAction?.invoke(action, selectedVal)
+            radio.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) {
+                    if (stateKey.isNotEmpty()) {
+                        DolphinStateEngine.set(stateKey, valStr)
+                    }
+                    if (action.isNotEmpty()) {
+                        onAction?.invoke(action, valStr)
+                    }
+                }
             }
         }
 

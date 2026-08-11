@@ -20,40 +20,61 @@ object DolphinAudio {
         try {
             stopSound()
 
-            if (urlOrPath.isEmpty()) {
-                Log.e(TAG, "playSound: empty path")
-                return mapOf("error" to "Empty audio path")
+            var targetPath = urlOrPath.trim()
+            if (targetPath.isEmpty() || targetPath == "cached" || targetPath == "rec") {
+                targetPath = File(ctx.cacheDir, "dolphin_rec.mp4").absolutePath
             }
 
             val mp: MediaPlayer
-
             val size: Long
-            if (urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://")) {
-                // Remote URL: manual setup
-                size = -1L
-                mp = MediaPlayer().apply {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_MEDIA)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                            .build()
-                    )
-                    setDataSource(urlOrPath)
-                    prepare()
+
+            if (targetPath.startsWith("http://") || targetPath.startsWith("https://")) {
+                val cacheFile = File(ctx.cacheDir, "cached_audio_${Math.abs(targetPath.hashCode())}.mp3")
+                if (!cacheFile.exists() || cacheFile.length() < 100) {
+                    try {
+                        Log.i(TAG, "Downloading audio stream to cache: $targetPath")
+                        val connection = java.net.URL(targetPath).openConnection()
+                        connection.connectTimeout = 5000
+                        connection.readTimeout = 10000
+                        connection.getInputStream().use { input ->
+                            java.io.FileOutputStream(cacheFile).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to download audio stream: ${e.message}")
+                    }
+                }
+
+                if (cacheFile.exists() && cacheFile.length() > 0) {
+                    size = cacheFile.length()
+                    mp = MediaPlayer.create(ctx, Uri.fromFile(cacheFile))
+                        ?: return mapOf("error" to "Failed to create MediaPlayer for cached stream")
+                } else {
+                    size = -1L
+                    mp = MediaPlayer().apply {
+                        setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_MEDIA)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build()
+                        )
+                        setDataSource(targetPath)
+                        prepare()
+                    }
                 }
             } else {
-                // Local file: use Uri + MediaPlayer.create (most reliable)
-                val cleanPath = urlOrPath.removePrefix("file://")
+                // Local file: use Uri + MediaPlayer.create
+                val cleanPath = targetPath.removePrefix("file://")
                 val file = File(cleanPath)
                 if (!file.exists()) {
-                    Log.e(TAG, "File not found: $cleanPath")
+                    Log.e(TAG, "Audio file not found: $cleanPath")
                     return mapOf("error" to "File not found: $cleanPath")
                 }
                 size = file.length()
-                Log.d(TAG, "File exists: $cleanPath  size=$size bytes")
+                Log.d(TAG, "File exists: $cleanPath size=$size bytes")
 
                 val uri = Uri.fromFile(file)
-                // MediaPlayer.create handles prepare() internally
                 mp = MediaPlayer.create(ctx, uri)
                     ?: return mapOf("error" to "MediaPlayer.create returned null for: $cleanPath")
             }
@@ -70,8 +91,8 @@ object DolphinAudio {
 
             mp.start()
             mediaPlayer = mp
-            Log.d(TAG, "✅ Playback started: $urlOrPath")
-            return mapOf("status" to "playing", "path" to urlOrPath, "size" to size)
+            Log.d(TAG, "✅ Playback started: $targetPath")
+            return mapOf("status" to "playing", "path" to targetPath, "size" to size)
 
         } catch (e: Throwable) {
             Log.e(TAG, "❌ playSound failed: ${e.message}", e)
@@ -102,4 +123,3 @@ object DolphinAudio {
         }
     }
 }
-

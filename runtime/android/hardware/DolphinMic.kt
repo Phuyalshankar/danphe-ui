@@ -10,6 +10,10 @@ object DolphinMic {
     fun startRecording(outputPath: String): String? {
         try {
             stopRecording() // Clean up any existing recording first
+            val file = java.io.File(outputPath)
+            file.parentFile?.mkdirs()
+            if (file.exists()) file.delete()
+
             recorder = MediaRecorder().apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
@@ -22,22 +26,28 @@ object DolphinMic {
             return null // success
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to start recording: ${e.message}", e)
+            recorder?.release()
+            recorder = null
             return e.message ?: "Unknown MediaRecorder error"
         }
     }
 
     fun stopRecording(): String? {
-        try {
-            recorder?.apply {
-                stop()
-                release()
+        val rec = recorder ?: return null
+        return try {
+            try {
+                rec.stop()
+            } catch (e: Throwable) {
+                Log.w(TAG, "MediaRecorder stop failed (short recording?): ${e.message}")
             }
+            rec.release()
             recorder = null
             Log.d(TAG, "Recording stopped")
-            return null // success
+            null // success
         } catch (e: Throwable) {
-            Log.e(TAG, "Failed to stop recording: ${e.message}", e)
-            return e.message ?: "Failed to stop MediaRecorder"
+            Log.e(TAG, "Failed to release MediaRecorder: ${e.message}", e)
+            recorder = null
+            e.message ?: "Failed to stop MediaRecorder"
         }
     }
 }

@@ -50,7 +50,7 @@ class HotPatchClient(
     @Volatile private var host: String = initialHost
         set(value) {
             field = value
-            if (value.isNotEmpty() && value != "127.0.0.1" && value != "0.0.0.0") {
+            if (value.isNotEmpty() && value != "0.0.0.0") {
                 activeHost = value
             }
         }
@@ -100,7 +100,7 @@ class HotPatchClient(
                     reconnectCount = 0
                     
                     val connectedIp = sock.inetAddress?.hostAddress ?: host
-                    if (connectedIp.isNotEmpty() && connectedIp != "127.0.0.1" && connectedIp != "0.0.0.0") {
+                    if (connectedIp.isNotEmpty() && connectedIp != "0.0.0.0") {
                         activeHost = connectedIp
                     }
                     Log.i(TAG, "✅ Linked to Server successfully: $activeHost")
@@ -266,6 +266,35 @@ class HotPatchClient(
                 listener.onOpenDrawer(drawerName)
                 sendAck("OPEN_DRAWER:$drawerName")
             }
+            Cmd.ACTION -> {
+                val actionLen = if (payload.isNotEmpty()) payload[0].toInt() and 0xFF else 0
+                val action = if (actionLen > 0 && actionLen <= payload.size - 1) {
+                    String(payload, 1, actionLen, Charsets.UTF_8)
+                } else {
+                    String(payload, Charsets.UTF_8)
+                }
+                Log.i(TAG, "⚡ ACTION [$action]")
+                
+                val lastSent = recentlySentActions[action] ?: 0L
+                if (System.currentTimeMillis() - lastSent < 1000) {
+                    Log.d(TAG, "Ignoring echoed action from dev server: $action")
+                    sendAck("ACTION:$action")
+                    return
+                }
+
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    val context = DolphinRuntime.instance?.context
+                    if (action.startsWith("hw.") || action.startsWith("hw:")) {
+                        val finalAction = action.replace('.', ':')
+                        if (context != null) {
+                            DolphinHardwareBridge.handleHardwareAction(context, finalAction, null) { _ -> }
+                        }
+                    } else {
+                        DolphinStateEngine.handleAction(action, isFromDevServer = true)
+                    }
+                }
+                sendAck("ACTION:$action")
+            }
             Cmd.PING -> {
                 sendPong()
             }
@@ -294,6 +323,8 @@ class HotPatchClient(
         sendRaw(parser.buildPong(ByteArray(0)))
     }
     
+    private val recentlySentActions = mutableMapOf<String, Long>()
+
     fun sendAction(action: String, value: Any?) {
         val actionBytes = action.toByteArray(Charsets.UTF_8)
         val valueStr = value?.toString() ?: ""
@@ -304,6 +335,8 @@ class HotPatchClient(
         System.arraycopy(actionBytes, 0, payload, 1, actionBytes.size)
         System.arraycopy(valueBytes, 0, payload, 1 + actionBytes.size, valueBytes.size)
         
+        recentlySentActions[action] = System.currentTimeMillis()
+
         val header = ByteArray(5)
         header[0] = Cmd.ACTION.toByte()
         header[1] = (payload.size and 0xFF).toByte()

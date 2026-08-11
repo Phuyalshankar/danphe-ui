@@ -28,7 +28,23 @@ object FormInputField {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            val isMultiline = inputTypeStr.lowercase() == "textarea" || inputTypeStr.lowercase() == "multiline"
+            gravity = if (isMultiline) (Gravity.TOP or Gravity.START) else (Gravity.CENTER_VERTICAL or Gravity.START)
+            if (isMultiline) {
+                isSingleLine = false
+                setHorizontallyScrolling(false)
+                minLines = 3
+                maxLines = 10
+            }
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            isEnabled = true
+            isCursorVisible = true
+
+            setOnClickListener(null)
+            setOnFocusChangeListener(null)
+
             setTextColor(textColor)
             setHint(hintText)
 
@@ -36,8 +52,10 @@ object FormInputField {
             inputType = when (inputTypeStr.lowercase()) {
                 "password" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
                 "email" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-                "number", "phone" -> InputType.TYPE_CLASS_NUMBER
+                "number" -> InputType.TYPE_CLASS_NUMBER
+                "phone", "tel" -> InputType.TYPE_CLASS_PHONE
                 "decimal" -> InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+                "textarea", "multiline" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 else -> InputType.TYPE_CLASS_TEXT
             }
 

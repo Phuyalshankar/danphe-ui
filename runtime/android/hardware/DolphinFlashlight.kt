@@ -1,12 +1,23 @@
 package io.dolphin.runtime
 
+
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.util.Log
 
 object DolphinFlashlight {
+    private var isTorchOn = false
+
+    fun toggle(ctx: Context) {
+        setFlashlight(ctx, !isTorchOn)
+    }
+
     fun setFlashlight(ctx: Context, state: Boolean) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) {
+            Log.e("DolphinFlashlight", "Flashlight requires Android M (API 23) or higher")
+            return
+        }
         try {
             val cameraManager = ctx.getSystemService(Context.CAMERA_SERVICE) as CameraManager
             var selectedId: String? = null
@@ -31,6 +42,7 @@ object DolphinFlashlight {
 
             if (selectedId != null) {
                 cameraManager.setTorchMode(selectedId, state)
+                isTorchOn = state
                 Log.d("DolphinFlashlight", "Flashlight ($selectedId) turned ${if(state) "ON" else "OFF"}")
             } else {
                 Log.e("DolphinFlashlight", "No camera with flashlight found")

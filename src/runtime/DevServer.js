@@ -7,6 +7,13 @@ const { EventEmitter } = require('events');
 const net = require('net');
 const dgram = require('dgram');
 
+let titanFramework = null;
+try {
+    titanFramework = require('@dolphin/titan-framework');
+} catch (e) {
+    // optional
+}
+
 
 class DolphinServer extends EventEmitter {
     constructor(options) {
@@ -194,11 +201,21 @@ class DevServer extends EventEmitter {
         this.host = options.host || '0.0.0.0';
         this.port = options.port || 9091;
         this.httpPort = options.httpPort || 9090;
+        this.titanPort = options.titanPort || 9092;
         this.watchDir = options.watchDir || process.cwd();
         
         this.server = new DolphinServer({ host: this.host, port: this.port });
         this.httpServer = null;
         
+        this.titanApp = null;
+        if (titanFramework && typeof titanFramework.createTitanApp === 'function') {
+            try {
+                this.titanApp = titanFramework.createTitanApp(this.titanPort, this.httpPort + 10);
+            } catch (e) {
+                console.warn('⚠️ Could not initialize TitanApp:', e.message);
+            }
+        }
+
         this._bundle = null;
         this._patchCount = 0;
         this._ackCount = 0;
@@ -278,6 +295,16 @@ class DevServer extends EventEmitter {
     async start() {
         this.server.start();
         this._startUDPDiscovery();
+        
+        if (this.titanApp && typeof this.titanApp.listen === 'function') {
+            try {
+                this.titanApp.listen(() => {
+                    console.log(`🚀 Titan Binary Server listening on TCP Port ${this.titanPort}`);
+                });
+            } catch (e) {
+                console.warn('⚠️ TitanApp start notice:', e.message);
+            }
+        }
         
         // Device events from module
         this.server.on('deviceConnected', (device) => {
@@ -381,14 +408,33 @@ class DevServer extends EventEmitter {
 
         this.httpServer = http.createServer((req, res) => {
             if (req.method === 'OPTIONS') { cors(res); res.writeHead(204); res.end(); return; }
-            if (!req.url.startsWith('/api/dolphin/server')) {
+            if (!req.url.startsWith('/dolphin/server')) {
                 console.log(`   🌐 HTTP: ${req.method} ${req.url}`);
             }
-            const url = req.url.split('?')[0];
+            let url = req.url.split('?')[0];
+            if (url.length > 1 && url.endsWith('/')) url = url.slice(0, -1);
             
             if (url === '/hexdump' || url === '/inspect') {
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(this._renderHexdump());
+                return;
+            }
+            if (url === '/sse' || (url === '/events' && req.headers.accept && req.headers.accept.includes('text/event-stream'))) {
+                cors(res);
+                res.writeHead(200, {
+                    'Content-Type': 'text/event-stream; charset=utf-8',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Connection': 'keep-alive'
+                });
+                res.write('data: {"type":"connected"}\n\n');
+                if (!this.sseClients) this.sseClients = [];
+                this.sseClients.push(res);
+                req.on('close', () => {
+                    if (this.sseClients) {
+                        const idx = this.sseClients.indexOf(res);
+                        if (idx >= 0) this.sseClients.splice(idx, 1);
+                    }
+                });
                 return;
             }
             if (url === '/events') {
@@ -397,7 +443,7 @@ class DevServer extends EventEmitter {
                 res.end(this._renderEventsPage());
                 return;
             }
-            if (url === '/api/dolphin/events') {
+            if (url === '/dolphin/events') {
                 cors(res);
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                 const logPath = path.join(this.watchDir, 'logs', 'device_logcat.txt');
@@ -416,7 +462,7 @@ class DevServer extends EventEmitter {
                 res.end(this._renderLogcatPage());
                 return;
             }
-            if (url === '/api/dolphin/logcat') {
+            if (url === '/dolphin/logcat') {
                 cors(res);
                 res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
                 const logPath = path.join(this.watchDir, 'logs', 'device_logcat.txt');
@@ -428,7 +474,58 @@ class DevServer extends EventEmitter {
                 return;
             }
 
-            const isWebRoute = (url === '/' || url === '/app' || url === '/web' || url === '/about' || url === '/products' || url === '/contact') || (!url.includes('.') && !url.startsWith('/api/') && !url.startsWith('/events') && !url.startsWith('/dist') && !url.startsWith('/download') && url !== '/dashboard' && url !== '/admin' && url !== '/hexdump' && url !== '/inspect' && url !== '/logcat' && url !== '/download-apk');
+            if (url.startsWith('/nvr/video/')) {
+                cors(res);
+                const parts = url.split('/');
+                const camId = parts[parts.length - 1] || 'cam_01';
+                const num = parseInt(camId.replace('cam_', ''), 10) || 1;
+                const baseFiles = ['cam1.mp4', 'cam2.mp4', 'cam3.mp4', 'cam4.mp4'];
+                const selectedFile = baseFiles[(num - 1) % 4];
+                
+                const candidatePaths = [
+                    path.join(process.cwd(), 'public', 'videos', selectedFile),
+                    path.join(process.cwd(), '..', 'backend', 'public', 'videos', selectedFile),
+                    path.join('d:\\nvr\\backend\\public\\videos', selectedFile),
+                ];
+                const videoPath = candidatePaths.find(p => fs.existsSync(p));
+                
+                if (videoPath) {
+                    const stat = fs.statSync(videoPath);
+                    const fileSize = stat.size;
+                    const rangeHeader = req.headers['range'];
+                    
+                    if (rangeHeader) {
+                        const rangeParts = rangeHeader.replace(/bytes=/, '').split('-');
+                        const start = parseInt(rangeParts[0], 10) || 0;
+                        const end = rangeParts[1] ? parseInt(rangeParts[1], 10) : Math.min(start + 1024 * 1024 - 1, fileSize - 1);
+                        const chunkSize = end - start + 1;
+                        
+                        res.writeHead(206, {
+                            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                            'Accept-Ranges': 'bytes',
+                            'Content-Length': chunkSize,
+                            'Content-Type': 'video/mp4',
+                            'Access-Control-Allow-Origin': '*',
+                            'Cache-Control': 'no-cache'
+                        });
+                        fs.createReadStream(videoPath, { start, end }).pipe(res);
+                    } else {
+                        res.writeHead(200, {
+                            'Content-Length': fileSize,
+                            'Content-Type': 'video/mp4',
+                            'Accept-Ranges': 'bytes',
+                            'Access-Control-Allow-Origin': '*'
+                        });
+                        fs.createReadStream(videoPath).pipe(res);
+                    }
+                } else {
+                    res.writeHead(404);
+                    res.end('Video file not found');
+                }
+                return;
+            }
+
+            const isWebRoute = (url === '/' || url === '/app' || url === '/web' || url === '/about' || url === '/products' || url === '/contact') || (!url.includes('.') && !url.startsWith('/dolphin/') && !url.startsWith('/action') && !url.startsWith('/intercom/') && !url.startsWith('/video/') && !url.startsWith('/events') && !url.startsWith('/dist') && !url.startsWith('/download') && url !== '/dashboard' && url !== '/admin' && url !== '/hexdump' && url !== '/inspect' && url !== '/logcat' && url !== '/download-apk' && !url.startsWith('/nvr/'));
 
             if (isWebRoute) {
                 const DolphinWebEngine = require('../web/DolphinWebEngine');
@@ -443,7 +540,8 @@ class DevServer extends EventEmitter {
                     const pageFiles = fs.readdirSync(pagesDir).filter(f => f.endsWith('.jsx') || f.endsWith('.js'));
                     if (pageFiles.length > 0) {
                         try {
-                            const cleanPath = (url === '/' || url === '/app' || url === '/web') ? 'home' : url.replace(/^\//, '').toLowerCase();
+                            const rawPath = url.split('?')[0].replace(/\.html$/i, '').replace(/\/$/, '');
+                            const cleanPath = (rawPath === '' || rawPath === '/' || rawPath === '/app' || rawPath === '/web') ? 'home' : rawPath.replace(/^\//, '').toLowerCase();
                             const matchedFile = pageFiles.find(f => {
                                 const base = f.replace(/\.(jsx|js)$/i, '').toLowerCase();
                                 return base === cleanPath || base === `${cleanPath}screen` || base === cleanPath.replace(/screen$/, '');
@@ -468,7 +566,7 @@ class DevServer extends EventEmitter {
                                 <script>
                                   window.addEventListener('load', function() {
                                     setTimeout(function() {
-                                      const es = new EventSource('/events');
+                                      const es = new EventSource('/sse');
                                       es.onmessage = function(e) {
                                         try {
                                           const data = JSON.parse(e.data);
@@ -499,17 +597,21 @@ class DevServer extends EventEmitter {
                     return;
                 }
             } else if (url === '/dashboard' || url === '/admin') {
-                res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.end(this._renderDashboard());
+                const html = this._renderDashboard();
+                res.writeHead(200, { 
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Content-Length': Buffer.byteLength(html)
+                });
+                res.end(html);
             } else if (url === '/hexdump' || url === '/inspect') {
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(this._renderHexdump());
-            } else if (url === '/api/dolphin/snapshot') {
+            } else if (url === '/dolphin/snapshot') {
                 cors(res);
                 this._savedSnapshot = this._bundle ? Buffer.from(this._bundle) : null;
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ success: true, size: this._savedSnapshot ? this._savedSnapshot.length : 0 }));
-            } else if (url === '/api/dolphin/server') {
+            } else if (url === '/dolphin/server') {
                 cors(res);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 const localIP = this._getLocalIP();
@@ -592,13 +694,19 @@ class DevServer extends EventEmitter {
                 if (apkInfo && fs.existsSync(apkInfo.path)) {
                     res.writeHead(200, {
                         'Content-Type': 'application/vnd.android.package-archive',
-                        'Content-Disposition': `attachment; filename="${apkInfo.file}"`
+                        'Content-Length': apkInfo.stat.size,
+                        'Content-Disposition': `attachment; filename="${apkInfo.file}"`,
+                        'Accept-Ranges': 'bytes',
+                        'Cache-Control': 'no-cache, no-store',
+                        'Access-Control-Allow-Origin': '*',
+                        'Connection': 'keep-alive',
                     });
-                    fs.createReadStream(apkInfo.path).pipe(res);
+                    fs.createReadStream(apkInfo.path, { highWaterMark: 4 * 1024 * 1024 }).pipe(res);
                 } else {
                     res.writeHead(404);
                     res.end('APK not built yet. Run dolphin android build');
                 }
+
             } else if (url === '/web' || url === '/app') {
                 const DolphinWebEngine = require('../web/DolphinWebEngine');
                 const CdnAssetFetcher2  = require('../compiler/CdnAssetFetcher');
@@ -626,7 +734,7 @@ class DevServer extends EventEmitter {
                                 <script>
                                   window.addEventListener('load', function() {
                                     setTimeout(function() {
-                                      const es = new EventSource('/events');
+                                      const es = new EventSource('/sse');
                                       es.onmessage = function(e) {
                                         try {
                                           const data = JSON.parse(e.data);
@@ -654,7 +762,7 @@ class DevServer extends EventEmitter {
                     res.writeHead(404, { 'Content-Type': 'text/plain' });
                     res.end('Live Web App not available');
                 }
-            } else if (url === '/api/action' && req.method === 'POST') {
+            } else if (url === '/action' && req.method === 'POST') {
                 let body = '';
                 req.on('data', chunk => { body += chunk.toString(); });
                 req.on('end', () => {
@@ -727,9 +835,13 @@ class DevServer extends EventEmitter {
                     res.writeHead(200, {
                         'Content-Type': 'application/vnd.android.package-archive',
                         'Content-Length': apkInfo.stat.size,
-                        'Content-Disposition': `attachment; filename="${apkInfo.file}"`
+                        'Content-Disposition': `attachment; filename="${apkInfo.file}"`,
+                        'Accept-Ranges': 'bytes',
+                        'Cache-Control': 'no-cache, no-store',
+                        'Access-Control-Allow-Origin': '*',
+                        'Connection': 'keep-alive'
                     });
-                    fs.createReadStream(apkInfo.path).pipe(res);
+                    fs.createReadStream(apkInfo.path, { highWaterMark: 4 * 1024 * 1024 }).pipe(res);
                 } else {
                     res.writeHead(404, { 'Content-Type': 'text/plain' });
                     res.end('APK file not found. Please run: dolphin build --android');
@@ -791,7 +903,7 @@ class DevServer extends EventEmitter {
             // ── Intercom Signaling & Audio Relay ─────────────────────────────
             // FIX: Added real audio chunk relay so Android devices can actually
             //      send and receive PCM audio during intercom calls.
-            } else if (url === '/api/intercom/register' && req.method === 'POST') {
+            } else if (url === '/intercom/register' && req.method === 'POST') {
                 readBody(req, (body) => {
                     try {
                         const { deviceId } = JSON.parse(body);
@@ -803,7 +915,7 @@ class DevServer extends EventEmitter {
                     } catch(e) { res.writeHead(400); res.end(JSON.stringify({ success: false, error: e.message })); }
                 });
 
-            } else if (url === '/api/intercom/invite' && req.method === 'POST') {
+            } else if (url === '/intercom/invite' && req.method === 'POST') {
                 readBody(req, (body) => {
                     try {
                         const { from, to, message } = JSON.parse(body);
@@ -815,7 +927,7 @@ class DevServer extends EventEmitter {
                     } catch(e) { res.writeHead(400); res.end(JSON.stringify({ success: false, error: e.message })); }
                 });
 
-            } else if (url === '/api/intercom/accept' && req.method === 'POST') {
+            } else if (url === '/intercom/accept' && req.method === 'POST') {
                 readBody(req, (body) => {
                     try {
                         const { from, to } = JSON.parse(body);
@@ -825,7 +937,7 @@ class DevServer extends EventEmitter {
                     } catch(e) { res.writeHead(400); res.end(JSON.stringify({ success: false, error: e.message })); }
                 });
 
-            } else if (url === '/api/intercom/end' && req.method === 'POST') {
+            } else if (url === '/intercom/end' && req.method === 'POST') {
                 readBody(req, (body) => {
                     try {
                         const { from, to } = JSON.parse(body);
@@ -838,7 +950,7 @@ class DevServer extends EventEmitter {
                     } catch(e) { res.writeHead(400); res.end(JSON.stringify({ success: false, error: e.message })); }
                 });
 
-            } else if (url === '/api/intercom/audio/push' && req.method === 'POST') {
+            } else if (url === '/intercom/audio/push' && req.method === 'POST') {
                 // Android device pushes PCM audio chunk → we queue it for the peer to pull
                 const senderId   = req.headers['x-device-id'] || '';
                 const targetId   = req.headers['x-target-id'] || '';
@@ -855,7 +967,7 @@ class DevServer extends EventEmitter {
                     cors(res); res.writeHead(204); res.end();
                 });
 
-            } else if (url === '/api/intercom/audio/pull' && req.method === 'GET') {
+            } else if (url === '/intercom/audio/pull' && req.method === 'GET') {
                 // Android device polls for PCM audio queued by its peer
                 const myId     = req.headers['x-device-id'] || '';
                 const peerId   = req.headers['x-target-id'] || '';
@@ -883,7 +995,7 @@ class DevServer extends EventEmitter {
             //   /api/video/frame/push   POST  sender pushes JPEG frame (image/jpeg)
             //   /api/video/frame/pull   GET   receiver pulls latest JPEG frame
 
-            } else if (url.startsWith('/api/video/')) {
+            } else if (url.startsWith('/video/')) {
                 // Lazy-init video state
                 if (!this._videoSessions) {
                     // Map: deviceId → { latestFrame: Buffer|null, pendingCall: {from} | null }
@@ -901,7 +1013,7 @@ class DevServer extends EventEmitter {
                     req.on('end', () => cb(Buffer.concat(chunks)));
                 };
 
-                if (url === '/api/video/offer' && req.method === 'POST') {
+                if (url === '/video/offer' && req.method === 'POST') {
                     readBody(req, (body) => {
                         const { from, to } = body;
                         const toSession = ensure(to);
@@ -910,7 +1022,7 @@ class DevServer extends EventEmitter {
                         res.end(JSON.stringify({ success: true, msg: `Offer from ${from} queued for ${to}` }));
                     });
 
-                } else if (url === '/api/video/answer' && req.method === 'POST') {
+                } else if (url === '/video/answer' && req.method === 'POST') {
                     readBody(req, (body) => {
                         const { from, to } = body;
                         // Clear the pending call from the answerer's queue
@@ -919,7 +1031,7 @@ class DevServer extends EventEmitter {
                         res.end(JSON.stringify({ success: true, msg: `${from} answered call from ${to}` }));
                     });
 
-                } else if (url === '/api/video/hangup' && req.method === 'POST') {
+                } else if (url === '/video/hangup' && req.method === 'POST') {
                     readBody(req, (body) => {
                         const { from, to } = body;
                         // Clear frames and pending calls for both parties
@@ -929,7 +1041,7 @@ class DevServer extends EventEmitter {
                         res.end(JSON.stringify({ success: true }));
                     });
 
-                } else if (url.startsWith('/api/video/poll') && req.method === 'GET') {
+                } else if (url.startsWith('/video/poll') && req.method === 'GET') {
                     const qs      = new URLSearchParams(url.split('?')[1] || '');
                     const deviceId = qs.get('deviceId') || '';
                     const session  = vs.has(deviceId) ? vs.get(deviceId) : null;
@@ -941,7 +1053,7 @@ class DevServer extends EventEmitter {
                         res.end(JSON.stringify({ hasCall: false }));
                     }
 
-                } else if (url.startsWith('/api/video/frame/push') && req.method === 'POST') {
+                } else if (url.startsWith('/video/frame/push') && req.method === 'POST') {
                     // Receive JPEG frame from sender — store as latest frame for target
                     const qs  = new URLSearchParams(url.split('?')[1] || '');
                     const from = qs.get('from') || '';
@@ -955,7 +1067,7 @@ class DevServer extends EventEmitter {
                         cors(res); res.writeHead(204); res.end();
                     });
 
-                } else if (url.startsWith('/api/video/frame/pull') && req.method === 'GET') {
+                } else if (url.startsWith('/video/frame/pull') && req.method === 'GET') {
                     // Serve the latest JPEG frame to receiver
                     const qs   = new URLSearchParams(url.split('?')[1] || '');
                     const to   = qs.get('to') || '';
@@ -1009,19 +1121,10 @@ class DevServer extends EventEmitter {
 
         const candidateDirs = [
             path.join(process.cwd(), 'dist'),
-            path.resolve(this.watchDir, '..', 'test-apk', 'dist'),
-            path.resolve(process.cwd(), '..', 'test-apk', 'dist')
+            path.join(this.watchDir, 'dist'),
+            path.resolve(this.watchDir, '..', 'dist'),
+            path.resolve(process.cwd(), '..', 'dist')
         ];
-
-        try {
-            const parentDir = path.dirname(this.watchDir);
-            if (fs.existsSync(parentDir)) {
-                const subDirs = fs.readdirSync(parentDir);
-                subDirs.forEach(sub => {
-                    candidateDirs.push(path.join(parentDir, sub, 'dist'));
-                });
-            }
-        } catch(e) {}
 
         const allApks = [];
         for (const dir of candidateDirs) {
@@ -1061,8 +1164,6 @@ class DevServer extends EventEmitter {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dolphin Backend | Live Dashboard & APK Download</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
     :root {
       --bg-color: #0f172a;
       --card-bg: rgba(30, 41, 59, 0.7);
@@ -1420,7 +1521,7 @@ class DevServer extends EventEmitter {
 
     async function fetchServerStatus() {
       try {
-        const res = await fetch('/api/dolphin/server');
+        const res = await fetch('/dolphin/server');
         if (res.ok) {
           const data = await res.json();
           document.getElementById('server-indicator').className = 'status-indicator status-online';
@@ -1469,9 +1570,9 @@ class DevServer extends EventEmitter {
       }
     }
 
-    // Refresh every 2 seconds for live monitoring
+    // Refresh every 10 seconds for live monitoring
     fetchServerStatus();
-    setInterval(fetchServerStatus, 2000);
+    setInterval(fetchServerStatus, 10000);
   </script>
 </body>
 </html>`;
@@ -1743,7 +1844,7 @@ class DevServer extends EventEmitter {
 
     <script>
         function saveSnapshot() {
-            fetch('/api/dolphin/snapshot')
+            fetch('/dolphin/snapshot')
                 .then(res => res.json())
                 .then(d => alert('✅ Baseline snapshot saved (' + d.size + ' bytes)! You can now edit files and compare!'));
         }
@@ -1818,7 +1919,7 @@ class DevServer extends EventEmitter {
 
     <script>
         function fetchLogs() {
-            fetch('/api/dolphin/logcat')
+            fetch('/dolphin/logcat')
                 .then(r => r.text())
                 .then(txt => {
                     const el = document.getElementById('log-content');
@@ -1870,7 +1971,7 @@ class DevServer extends EventEmitter {
 
     <script>
         function fetchEvents() {
-            fetch('/api/dolphin/events')
+            fetch('/dolphin/events')
                 .then(r => r.json())
                 .then(data => {
                     const container = document.getElementById('events-container');

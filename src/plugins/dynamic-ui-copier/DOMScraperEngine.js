@@ -7,6 +7,10 @@
  * (DolphinCSS, Bootstrap, Tailwind, MUI, Ant Design) and converts them into Titan AST Nodes.
  */
 
+const { errorPipeline } = require('../../errors/ErrorPipeline');
+
+errorPipeline.registerFile('DOMScraperEngine.js', __filename);
+
 class DOMScraperEngine {
     constructor(options = {}) {
         this.maxNodes = options.maxNodes || 5000;
@@ -48,26 +52,35 @@ class DOMScraperEngine {
      * Scrapes all rendered elements inside a container element using `window.getComputedStyle()`.
      */
     async scrapeContainer(containerElement) {
-        if (!containerElement) {
-            throw new Error('DOMScraperEngine: Target container element is null or undefined.');
-        }
-
-        await this.waitForCDNStyles(containerElement);
-
-        this.nodes = [];
-        const containerRect = containerElement.getBoundingClientRect();
-        const allElements = containerElement.querySelectorAll('*');
-
-        for (let i = 0; i < allElements.length; i++) {
-            if (this.nodes.length >= this.maxNodes) break;
-            const el = allElements[i];
-            const nodeAST = this._extractNodeAST(el, containerElement, containerRect, i);
-            if (nodeAST) {
-                this.nodes.push(nodeAST);
+        try {
+            if (!containerElement) {
+                throw new Error('DOMScraperEngine: Target container element is null or undefined.');
             }
-        }
 
-        return this.nodes;
+            await this.waitForCDNStyles(containerElement);
+
+            this.nodes = [];
+            const containerRect = containerElement.getBoundingClientRect();
+            const allElements = containerElement.querySelectorAll('*');
+
+            for (let i = 0; i < allElements.length; i++) {
+                if (this.nodes.length >= this.maxNodes) break;
+                const el = allElements[i];
+                const nodeAST = this._extractNodeAST(el, containerElement, containerRect, i);
+                if (nodeAST) {
+                    this.nodes.push(nodeAST);
+                }
+            }
+
+            return this.nodes;
+        } catch (error) {
+            errorPipeline.capture(error, {
+                file: 'DOMScraperEngine.js',
+                function: 'scrapeContainer',
+                severity: 'error'
+            });
+            throw error;
+        }
     }
 
     /**

@@ -85,7 +85,7 @@ fun ViewFactory.createListView(bin: ByteArray): View {
         }
         layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         
-        val count = bin[13].toInt() and 0x0F
+        val count = bin[13].toInt() and 0xFF
         val gap = (bin[12].toInt() shr 4) and 0x0F
         
         val wasInScroll = isInScrollView
@@ -284,6 +284,9 @@ fun ViewFactory.createHorizontalListView(bin: ByteArray): View {
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         isFillViewport = true
         isHorizontalScrollBarEnabled = false
+        overScrollMode = View.OVER_SCROLL_NEVER
+        clipChildren = false
+        clipToPadding = false
         
         if (action.isNotEmpty()) {
             isClickable = true
@@ -297,15 +300,18 @@ fun ViewFactory.createHorizontalListView(bin: ByteArray): View {
         layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         applyStyles(this, bin)
         
-        val count = bin[13].toInt() and 0x0F
+        val count = bin[13].toInt() and 0xFF
         val gap = (bin[12].toInt() shr 4) and 0x0F
         
         repeat(count) { i ->
             buildComp()?.let { child ->
-                val clp = getOrCreateLinearLayoutParams(child, ViewGroup.LayoutParams.WRAP_CONTENT)
-                clp.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                val clp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 if (gap > 0 && i > 0) clp.leftMargin = dp(gap * 4)
                 child.layoutParams = clp
+                if (child is android.widget.TextView) {
+                    child.setSingleLine(true)
+                    child.maxLines = 1
+                }
                 addView(child)
             }
         }
@@ -328,6 +334,8 @@ fun ViewFactory.createViewPager(bin: ByteArray): View {
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
         isFillViewport = true
         isHorizontalScrollBarEnabled = false
+        clipChildren = false
+        clipToPadding = false
         
         if (action.isNotEmpty()) {
             isClickable = true

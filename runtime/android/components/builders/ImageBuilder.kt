@@ -25,7 +25,10 @@ class ImageBuilder : ComponentBuilder {
             scaleType = ImageView.ScaleType.CENTER_CROP
         }
 
-        if (url.isNotEmpty()) {
+        if (url.startsWith("[stateKey:") && url.endsWith("]")) {
+            val key = url.substring(10, url.length - 1)
+            DolphinStateEngine.bind(key, imageView, DolphinStateEngine.Property.IMAGE)
+        } else if (url.isNotEmpty()) {
             DolphinStateEngine.imageLoader?.invoke(imageView, url)
         }
 

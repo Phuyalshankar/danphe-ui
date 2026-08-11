@@ -196,14 +196,34 @@ object StateBinder {
 
                 DolphinStateEngine.Property.ROTATION -> {
                     val rot = StateHelpers.toNumber(value).toFloat()
-                    if (StateHelpers.shouldAnimate(property, anim)) {
-                        view.animate()
-                            .rotation(rot)
-                            .setDuration(anim!!.durationMs)
-                            .setInterpolator(StateHelpers.interpolatorFor(anim.ease))
-                            .start()
+                    val applyRotation: () -> Unit = {
+                        val w = if (view.width > 0) view.width.toFloat() else view.measuredWidth.toFloat()
+                        val h = if (view.height > 0) view.height.toFloat() else view.measuredHeight.toFloat()
+                        if (w > 0f && h > 0f) {
+                            view.pivotX = w / 2f
+                            view.pivotY = h / 2f
+                        }
+                        if (StateHelpers.shouldAnimate(property, anim)) {
+                            view.animate()
+                                .rotation(rot)
+                                .setDuration(anim!!.durationMs)
+                                .setInterpolator(StateHelpers.interpolatorFor(anim.ease))
+                                .start()
+                        } else {
+                            view.rotation = rot
+                        }
+                    }
+
+                    if (view.width > 0 && view.height > 0) {
+                        applyRotation()
                     } else {
-                        view.rotation = rot
+                        view.post(applyRotation)
+                        view.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
+                            override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
+                                v.removeOnLayoutChangeListener(this)
+                                applyRotation()
+                            }
+                        })
                     }
                 }
 

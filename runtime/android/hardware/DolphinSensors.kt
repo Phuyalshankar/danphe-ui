@@ -67,24 +67,24 @@ object DolphinSensors {
         activeListeners.keys.toList().forEach { stop(it) }
     }
 
-    // ── Accelerometer ────────────────────────────────────────
-    fun startAccelerometer(ctx: Context, intervalMs: Int = 100, onData: (SensorReading) -> Unit) =
+    // ── Accelerometer (Battery-efficient 250ms rate) ────────
+    fun startAccelerometer(ctx: Context, intervalMs: Int = 250, onData: (SensorReading) -> Unit) =
         register(ctx, "accelerometer", Sensor.TYPE_ACCELEROMETER, msToDelay(intervalMs), onData)
 
-    // ── Gyroscope ────────────────────────────────────────────
-    fun startGyroscope(ctx: Context, intervalMs: Int = 100, onData: (SensorReading) -> Unit) =
+    // ── Gyroscope (Battery-efficient 250ms rate) ────────────
+    fun startGyroscope(ctx: Context, intervalMs: Int = 250, onData: (SensorReading) -> Unit) =
         register(ctx, "gyroscope", Sensor.TYPE_GYROSCOPE, msToDelay(intervalMs), onData)
 
     // ── Magnetometer / Compass ───────────────────────────────
-    fun startCompass(ctx: Context, intervalMs: Int = 100, onData: (SensorReading) -> Unit) =
+    fun startCompass(ctx: Context, intervalMs: Int = 250, onData: (SensorReading) -> Unit) =
         register(ctx, "compass", Sensor.TYPE_MAGNETIC_FIELD, msToDelay(intervalMs), onData)
 
     // ── Linear Acceleration (no gravity) ─────────────────────
-    fun startLinearAcceleration(ctx: Context, intervalMs: Int = 100, onData: (SensorReading) -> Unit) =
+    fun startLinearAcceleration(ctx: Context, intervalMs: Int = 250, onData: (SensorReading) -> Unit) =
         register(ctx, "linear_acceleration", Sensor.TYPE_LINEAR_ACCELERATION, msToDelay(intervalMs), onData)
 
     // ── Gravity ──────────────────────────────────────────────
-    fun startGravity(ctx: Context, intervalMs: Int = 100, onData: (SensorReading) -> Unit) =
+    fun startGravity(ctx: Context, intervalMs: Int = 250, onData: (SensorReading) -> Unit) =
         register(ctx, "gravity", Sensor.TYPE_GRAVITY, msToDelay(intervalMs), onData)
 
     // ── Barometer (Pressure) ─────────────────────────────────
@@ -100,7 +100,7 @@ object DolphinSensors {
         register(ctx, "proximity", Sensor.TYPE_PROXIMITY, SensorManager.SENSOR_DELAY_NORMAL, onData)
 
     // ── Rotation Vector ──────────────────────────────────────
-    fun startRotationVector(ctx: Context, intervalMs: Int = 100, onData: (SensorReading) -> Unit) =
+    fun startRotationVector(ctx: Context, intervalMs: Int = 250, onData: (SensorReading) -> Unit) =
         register(ctx, "rotation", Sensor.TYPE_ROTATION_VECTOR, msToDelay(intervalMs), onData)
 
     // ── Step Counter ─────────────────────────────────────────
@@ -180,9 +180,8 @@ object DolphinSensors {
     }
 
     private fun msToDelay(ms: Int): Int = when {
-        ms <= 20  -> SensorManager.SENSOR_DELAY_FASTEST
-        ms <= 60  -> SensorManager.SENSOR_DELAY_GAME
-        ms <= 200 -> SensorManager.SENSOR_DELAY_UI
+        ms <= 50  -> SensorManager.SENSOR_DELAY_GAME
+        ms <= 250 -> SensorManager.SENSOR_DELAY_UI
         else      -> SensorManager.SENSOR_DELAY_NORMAL
     }
 

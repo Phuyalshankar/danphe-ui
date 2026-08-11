@@ -53,8 +53,11 @@ class CardBuilder : ComponentBuilder {
                     DolphinEventDebugger.trace(cardView, action, "AnimationEngine", "EXECUTED", "animStr=$animName")
                     AnimationEngine.apply(cardView, animName)
                     factory.onAction?.invoke(action, "Card")
+                } else if (action.startsWith("state:")) {
+                    val stateKey = action.substringAfter("state:")
+                    val current = DolphinStateEngine.get(stateKey)?.toString()?.toIntOrNull() ?: 0
+                    DolphinStateEngine.set(stateKey, (current + 1).toString())
                 } else {
-                    DolphinStateEngine.handleAction(action)
                     DolphinEventDebugger.trace(cardView, action, "DolphinRuntime", "DISPATCHED")
                     factory.onAction?.invoke(action, "Card")
                 }

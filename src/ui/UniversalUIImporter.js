@@ -1,6 +1,13 @@
 'use strict';
 
+const path = require('path');
+const fs = require('fs');
+const ComponentOpcodeMapper = require('./ComponentOpcodeMapper');
+const DOMScraperEngine = require('../plugins/dynamic-ui-copier/DOMScraperEngine');
+const { errorPipeline } = require('../errors/ErrorPipeline');
 const ub = require('../framework/ub');
+
+errorPipeline.registerFile('UniversalUIImporter.js', __filename);
 
 /**
  * 🌐 UniversalUIImporter - Titan 16-byte Protocol Mapper
@@ -21,6 +28,19 @@ class UniversalUIImporter {
     }
 
     importSchema(schema, options = {}) {
+        try {
+            return this._importSchemaInternal(schema, options);
+        } catch (error) {
+            errorPipeline.capture(error, {
+                file: 'UniversalUIImporter.js',
+                function: 'importSchema',
+                severity: 'error'
+            });
+            throw error; // Re-throw to fail loudly
+        }
+    }
+
+    _importSchemaInternal(schema, options = {}) {
         const binaries = [];
         const stringPool = [];
 
@@ -71,8 +91,24 @@ let compType = comp.props && comp.props.type ? comp.props.type
                       : (normAttributes.classname ? normAttributes.classname
                       : (comp.tw || comp.className || ''));
                       
-            // Strip bracketed web-only classes [...] so Mobile Compiler ignores them completely
-            const tw = typeof rawTw === 'string' ? rawTw.replace(/\[.*?\]/g, '').trim() : rawTw;
+            const explicitProps = comp.props ? { ...comp.props } : { ...comp, ...normAttributes };
+            // PLATFORM FILTERING: skip target="web" elements in Mobile Compiler
+            const _target = explicitProps.target || comp.target || explicitProps.platform || comp.platform || '';
+            if (_target === 'web' || _target === 'browser') {
+                return;
+            }
+
+            // Support bracketed [...] responsive CSS classes for TV & Web targets
+            let cleanTw = rawTw;
+            if (typeof rawTw === 'string' && rawTw.includes('[')) {
+                const isTvTarget = (_target === 'tv' || _target === 'desktop' || _target === 'large');
+                if (isTvTarget) {
+                    cleanTw = rawTw.replace(/\[(.*?)\]/g, '$1').replace(/\s+/g, ' ').trim();
+                } else {
+                    cleanTw = rawTw.replace(/\[.*?\]/g, '').trim();
+                }
+            }
+            const tw = cleanTw;
 
             // ── Auto-extract text color from className (e.g. text-red-100, text-white) ──
             const extractTextColorFromClass = (className) => {
@@ -82,13 +118,58 @@ let compType = comp.props && comp.props.type ? comp.props.type
             };
             const inheritedTextColor = extractTextColorFromClass(tw);
 
-            const explicitProps = comp.props ? { ...comp.props } : { ...comp, ...normAttributes };
-            // PLATFORM FILTERING: skip target="web" elements in Mobile Compiler
-            const _target = explicitProps.target || comp.target || explicitProps.platform || comp.platform || '';
-            if (_target === 'web' || _target === 'browser') {
-                return;
+            // --- PSEUDO ELEMENTS EXTRACTION ---
+            let beforeClasses = [];
+            let afterClasses = [];
+            let remainingTw = [];
+            let beforeText = null;
+            let afterText = null;
+            
+            if (typeof tw === 'string') {
+                tw.split(/\s+/).forEach(cls => {
+                    if (cls.startsWith('before:')) {
+                        let bare = cls.replace('before:', '');
+                        if (bare.startsWith("content-['") && bare.endsWith("']")) {
+                            beforeText = bare.substring(10, bare.length - 2);
+                        } else {
+                            beforeClasses.push(bare);
+                        }
+                    } else if (cls.startsWith('after:')) {
+                        let bare = cls.replace('after:', '');
+                        if (bare.startsWith("content-['") && bare.endsWith("']")) {
+                            afterText = bare.substring(10, bare.length - 2);
+                        } else {
+                            afterClasses.push(bare);
+                        }
+                    } else {
+                        remainingTw.push(cls);
+                    }
+                });
             }
-            const twProps = ub.parseTW(tw);
+            const twProps = ub.parseTW(remainingTw.join(' '));
+            
+            // Setup virtual pseudo nodes
+            if (beforeClasses.length > 0 || beforeText !== null) {
+                if (!comp.children) comp.children = [];
+                let bProps = { className: 'absolute ' + beforeClasses.join(' ') };
+                if (beforeText) bProps.text = beforeText;
+                comp.children.unshift({
+                    type: 'element',
+                    tag: beforeText ? 'Text' : 'Container',
+                    props: bProps
+                });
+            }
+            if (afterClasses.length > 0 || afterText !== null) {
+                if (!comp.children) comp.children = [];
+                let aProps = { className: 'absolute ' + afterClasses.join(' ') };
+                if (afterText) aProps.text = afterText;
+                comp.children.push({
+                    type: 'element',
+                    tag: afterText ? 'Text' : 'Container',
+                    props: aProps
+                });
+            }
+
             const styleProps = explicitProps.style || {};
 
             // PRIORITY: styleProps > explicitProps > twProps
@@ -112,9 +193,16 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 // Do not let a generic 'Container' override a specific 'Row' or 'Column' from Tailwind
                 if (compType === 'Container' && (twProps.type === 'Row' || twProps.type === 'Column')) {
                     // Keep props.type as Row or Column
+                } else if (compType === 'input' && (twProps.type === 'radio' || explicitProps.type === 'radio' || twProps.type === 'checkbox' || explicitProps.type === 'checkbox')) {
+                    // Leave props.type as radio or checkbox so it maps to 0x1F or 0x1B
+                    if (!props.type) props.type = explicitProps.type || twProps.type;
                 } else {
                     props.type = compType;
                 }
+            }
+            // WebView: pull src from normAttributes or explicitProps if not yet on props
+            if ((compType === 'WebView' || compType === 'webview') && !props.src) {
+                props.src = explicitProps.src || normAttributes.src || normAttributes.url || explicitProps.url || '';
             }
             if (props.id === 'ContactsScreen' || props.id === 'ChatListScreen' || props.type === 'Screen') {
                 console.log(`[UniversalUIImporter] Compiling Screen: ${props.id}, type: ${props.type}, className: ${tw}, justify: ${props.justify}`);
@@ -201,7 +289,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     if (cType === 'label' || String(cProps.className || '').includes('label')) {
                         labelText = extractNodeText(c);
                     } else if (cType === 'input' || cType === 'textarea' || String(cProps.className || '').includes('input')) {
-                        inputType = cProps.type || 'text';
+                        inputType = cProps.type || cProps.inputType || (cType === 'textarea' ? 'textarea' : 'text');
                         placeholderText = cProps.placeholder || cProps.hint || '';
                         if (!stateKey) stateKey = cProps.id || cProps.name || cProps.stateKey || '';
                     }
@@ -263,7 +351,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
             }
             bin[1] = typeCode & 0xFF;
 
-            const isTextType = (typeCode === 0x1D || typeCode === 0x16 || typeCode === 0x10 || typeCode === 0x23);
+            const isTextType = (typeCode === 0x1D || typeCode === 0x16 || typeCode === 0x10 || typeCode === 0x23 || typeCode === 0x1A);
 
             // Inherit text color if not explicitly defined on text element
             if (isTextType && !props.color && !props.textColor && inheritedColor) {
@@ -444,9 +532,12 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 }
             }
 
+            const mobileTwClass = String(tw || '').replace(/\[.*?\]/g, '');
+
             // Byte 13: Text Color / Child Count
             if (isTextType) {
-                let textColor = props.color || props.textColor || twProps.color || twProps.textColor;
+                let textMatch = (mobileTwClass.match(/\btext-([a-z]+-\d+|white|black|transparent)\b/i)?.[1]);
+                let textColor = props.color || props.textColor || twProps.color || twProps.textColor || textMatch;
                 if (textColor && textColor !== 'transparent') {
                     const shadeVal = props.colorShade || props.shade;
                     if (shadeVal && !String(textColor).includes('-')) {
@@ -472,7 +563,6 @@ let compType = comp.props && comp.props.type ? comp.props.type
 
             // Byte 15: Signature / Animation / Gradient Bits
             // Bit 0: Gradient | Bit 4: Animation ACTIVE (0x10) | Bit 7: Loop
-            const mobileTwClass = String(tw || '').replace(/\[.*?\]/g, '');
             const hasAnim = Boolean(props.animation || twProps.animation || mobileTwClass.includes('animate-') || mobileTwClass.includes('framer-'));
             let sig = hasAnim ? 0x10 : 0;
 
@@ -489,7 +579,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     bin[1] = 0x1E;
                 }
             }
-            if (props.gradient) sig |= 0x01;
+            if (props.gradient || props.bgGradient || mobileTwClass.includes('gradient') || mobileTwClass.includes('danphe') || mobileTwClass.includes('aurora')) sig |= 0x01;
             
             // Bit 2: Explicit Border flag — ignore 'none', '0', '0px'
             const hasValidBorder = (b, bw, bc, twStr) => {
@@ -524,9 +614,6 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 if (w.includes('%') || w.includes('vw') || w === 'full') w = -1;
                 else w = parseInt(w.replace(/[^0-9-]/g, '')) || 0;
             }
-            if (typeCode === 0x18 && w === 0) {
-                w = -1; // Default Input/TextField to 100% width (MATCH_PARENT)
-            }
             let h = props.height !== undefined ? props.height : (twProps.height !== undefined ? twProps.height : 0);
             if (!h && (String(tw).includes('h-full') || String(tw).includes('h-screen') || String(tw).includes('h-100') || String(tw).includes('min-h-screen') || String(tw).includes('min-h-full'))) {
                 h = -1;
@@ -535,13 +622,35 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 if (h.includes('%') || h.includes('vh') || h === 'full') h = -1;
                 else h = parseInt(h.replace(/[^0-9-]/g, '')) || 0;
             }
+            let rawW = w;
+            let rawH = h;
+            if (typeCode === 0x1A) {
+                if (w > 0 && w < 200) w = -1; // Switch container stays 100% width
+                if (h > 0 && h < 100) h = 0;  // Switch container stays WRAP_CONTENT height
+            }
             const elevation = props.elevation || (String(tw).includes('shadow-sm') ? 2 : (String(tw).includes('shadow-lg') ? 8 : (String(tw).includes('shadow-xl') ? 12 : (String(tw).includes('shadow-2xl') ? 16 : (String(tw).includes('shadow') ? 4 : 0)))));
             const size = props.size || 0;
-            stringPool.push(`${Math.round(w)}|${Math.round(h)}|${Math.round(elevation)}|${Math.round(size)}`);
+            
+            // Extract opacity
+            let opacityVal = props.opacity !== undefined ? props.opacity : undefined;
+            if (opacityVal === undefined) {
+                const opMatch = String(tw).match(/opacity-(\d+)/);
+                if (opMatch) {
+                    opacityVal = parseInt(opMatch[1]) / 100;
+                } else {
+                    opacityVal = 1.0;
+                }
+            }
+            
+            // Extract Glass and Glow
+            let glassStyle = props.glass || (String(tw).match(/\bglass(-[a-z0-9-]+)?\b/)?.[0]) || '';
+            let glowStyle = props.glow || (String(tw).match(/\bglow(-[a-z0-9-]+)?\b/)?.[0]) || '';
+            
+            stringPool.push(`${Math.round(w)}|${Math.round(h)}|${Math.round(elevation)}|${Math.round(size)}|${opacityVal}|${glassStyle}|${glowStyle}`);
 
             // Advanced Feature Strings (Gradient, Animation) pushed after size
             if (sig & 0x01) {
-                const rawGrad = props.gradient || '';
+                const rawGrad = props.gradient || props.bgGradient || (mobileTwClass.match(/\b(danphe|aurora|gradient-[a-z0-9-]+)\b/i)?.[0]) || '';
                 stringPool.push(ub.normalizeGradient(rawGrad));
             }
 
@@ -665,9 +774,27 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 case 0x1E: // ListView: action
                     stringPool.push(props.action || props.onClick || '');
                     break;
-                case 0x1A: // Switch: action/stateKey, label
+                case 0x50: // CameraView: cameraId, action
+                    stringPool.push(props.cameraId || props.facing || 'back');
+                    stringPool.push(props.action || '');
+                    break;
+                  case 0x51: // Mp3Player: action, src
+                  case 0x52: // VideoPlayer: action, src
+                      console.log('VIDEOPLAYER PROPS:', props);
+                      stringPool.push(props.action || '');
+                      stringPool.push(props.src || props.url || props.source || '');
+                      break;
+                case 0x60: // WebView: src URL
+                case 0x61: // NativeCanvas: server URL / src
+                    stringPool.push(props.src || props.url || props.source || normAttributes.src || normAttributes.url || explicitProps.src || explicitProps.url || '');
+                    break;
+                case 0x1A: // Switch: action/stateKey, label, trackSize, trackColor
                     stringPool.push(props.stateKey || props.action || '');
                     stringPool.push(props.label || '');
+                    const twW = (rawW > 0 ? rawW : (props.trackWidth || props.trackW || props.width || 0));
+                    const twH = (rawH > 0 ? rawH : (props.trackHeight || props.trackH || props.height || 0));
+                    stringPool.push(`${twW}|${twH}`);
+                    stringPool.push(props.trackColor || props.activeColor || props.onColor || props.bg || twProps.bg || props.backgroundColor || '');
                     break;
                 case 0x19: // Slider: action/stateKey, label
                     stringPool.push(props.stateKey || props.action || '');
@@ -675,8 +802,13 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     break;
                 case 0x1B: // Checkbox: action/stateKey, label
                 case 0x1F: // Radio: action/stateKey, label
+                case 0x19: // Slider: action/stateKey, label
                     stringPool.push(props.stateKey || props.action || '');
-                    stringPool.push(props.label || '');
+                    let radioLabel = props.label || '';
+                    if (!radioLabel && props.value) {
+                        radioLabel = props.value + "__HIDETEXT__";
+                    }
+                    stringPool.push(radioLabel);
                     break;
 
                 case 0x40: // File Upload: action, label
@@ -701,12 +833,6 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     stringPool.push(props.stateKey || props.action || '');
                     stringPool.push(props.config || '');
                     break;
-                case 0x50: // VideoPlayer: action, url
-                    const action = props.action || '';
-                    const videoSrc = props.src || props.url || '';
-                    stringPool.push(action);
-                    stringPool.push(videoSrc);
-                    break;
 
                 case 0x17: // Image: src
                     const imgSrc = typeof props.src === 'object' ? (props.src.uri || props.src.default || '') : (typeof props.source === 'object' ? (props.source.uri || props.source.default || '') : (props.src || props.source || props.url || ''));
@@ -719,15 +845,22 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 case 0x18: // TextField: stateKey, label, hint, type, variant, icon
                     stringPool.push(props.stateKey || props.statekey || props.name || props.id || '');
                     stringPool.push(props.label || '');
-                    stringPool.push(props.hint || props.placeholder || '');
-                    stringPool.push(props.inputType || props.type || 'text');
-                    stringPool.push(props.variant || props.varient || (String(props.className || tw || '').includes('filled') ? 'filled' : (String(props.className || tw || '').includes('standard') ? 'standard' : 'outlined')));
-                    let iconL = props.icon || props.iconLeft || props.startIcon || '';
-                    let iconR = props.iconRight || props.endIcon || '';
-                    let iconColorL = ub.resolveColorToHex(props.iconColor || props.iconColorLeft || props.startIconColor || '');
-                    let iconColorR = ub.resolveColorToHex(props.iconColorRight || props.endIconColor || '');
-                    let iconSize = props.iconSize || '';
-                    stringPool.push(`${iconL}|${iconR}|${iconColorL}|${iconColorR}|${iconSize}`);
+                    stringPool.push(props.placeholder || props.hint || '');
+                    const isTextareaTag = compType === 'textarea' || (comp && comp.tag && String(comp.tag).toLowerCase() === 'textarea');
+                    stringPool.push(props.type || props.inputType || (isTextareaTag ? 'textarea' : 'text'));
+                    let defaultVariant = 'plain';
+                    if (props.label || props.variant === 'outlined' || String(props.className || tw || '').includes('outlined')) {
+                        defaultVariant = 'outlined';
+                    } else if (props.variant === 'filled' || String(props.className || tw || '').includes('filled')) {
+                        defaultVariant = 'filled';
+                    } else if (props.variant === 'standard' || String(props.className || tw || '').includes('standard')) {
+                        defaultVariant = 'standard';
+                    } else if (props.variant) {
+                        defaultVariant = props.variant;
+                    }
+                    stringPool.push(defaultVariant);
+                    const inputIcon = props.icon || props.iconName || twProps.icon || (String(props.className || tw || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/i) || [])[1] || '';
+                    stringPool.push(inputIcon);
                     break;
 
                 default:
@@ -886,9 +1019,25 @@ let compType = comp.props && comp.props.type ? comp.props.type
             'Text': 0x16,
             'Image': 0x17,
             'Icon': 0x23,
+            'input': 0x18,
+            'textarea': 0x18,
             'TextField': 0x18,
             'Slider': 0x19,
-            'VideoPlayer': 0x50, // Custom Plugin
+            'CameraView': 0x50,
+            'cameraview': 0x50,
+            'camera': 0x50,
+            'video': 0x52,
+            'videoplayer': 0x52,
+            'VideoPlayer': 0x52,
+            'Mp3Player': 0x51,
+            'mp3player': 0x51,
+            'AudioPlayer': 0x51,
+            'audioplayer': 0x51,
+            'WebView': 0x60,
+            'webview': 0x60,
+            'web': 0x60,
+            'NativeCanvas': 0x61,
+            'nativecanvas': 0x61,
             'Switch': 0x1A,
             'Checkbox': 0x1B,
             'Select': 0x1C,
@@ -921,7 +1070,6 @@ let compType = comp.props && comp.props.type ? comp.props.type
             'td': 0x13, // Treat td as Cell Column
             'a': 0x12,
             'img': 0x17,
-            'video': 0x50,
             'button': 0x10,
 
             'input': 0x18,

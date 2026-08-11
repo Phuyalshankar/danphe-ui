@@ -81,7 +81,10 @@ object StateHelpers {
 
     fun toNumber(value: Any): Double = when (value) {
         is Number -> value.toDouble()
-        is String -> value.toDoubleOrNull() ?: 0.0
+        is String -> {
+            val cleaned = value.replace("deg", "").replace("px", "").replace("%", "").replace("dp", "").replace("rem", "").replace("pt", "").trim()
+            cleaned.toDoubleOrNull() ?: 0.0
+        }
         is Boolean -> if (value) 1.0 else 0.0
         else -> 0.0
     }

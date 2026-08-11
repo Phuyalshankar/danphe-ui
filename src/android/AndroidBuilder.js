@@ -304,9 +304,6 @@ android {
         buildConfigField "boolean", "DOLPHIN_HOTPATCH_ENABLED", "${this.enableHotpatch ? 'true' : 'false'}"
         buildConfigField "String", "DOLPHIN_DEV_HOST", "\\"\${getLocalIPv4()}\\""
         buildConfigField "int", "DOLPHIN_DEV_PORT", "${this.devPort}"
-        ndk {
-            abiFilters "arm64-v8a"
-        }
     }
     buildTypes {
         release { minifyEnabled false; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
@@ -365,6 +362,10 @@ set APP_HOME=%~dp0
 `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
@@ -380,6 +381,8 @@ set APP_HOME=%~dp0
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.flash" android:required="false"/>
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+    <uses-feature android:name="android.software.leanback" android:required="false"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
@@ -401,10 +404,12 @@ set APP_HOME=%~dp0
             android:launchMode="singleInstance"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
+            android:windowSoftInputMode="adjustResize|stateUnspecified"
             android:configChanges="orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.DIAL"/>
@@ -562,11 +567,27 @@ ${(this.customPluginClasses || []).map(cls => `        try {
 
         runtime = DolphinRuntime(this)
 
-        // Request notification permission on Android 13+
+        // Request essential runtime hardware permissions on startup (Camera, Audio, Location, Contacts, Notifications)
+        val requiredPermissions = mutableListOf(
+            android.Manifest.permission.CAMERA,
+            android.Manifest.permission.RECORD_AUDIO,
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+            android.Manifest.permission.READ_CONTACTS,
+            android.Manifest.permission.READ_EXTERNAL_STORAGE,
+            android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
         if (Build.VERSION.SDK_INT >= 33) {
-            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
-            }
+            requiredPermissions.add(android.Manifest.permission.READ_MEDIA_IMAGES)
+            requiredPermissions.add(android.Manifest.permission.READ_MEDIA_VIDEO)
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            requiredPermissions.add(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+        val missingPermissions = requiredPermissions.filter {
+            checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+        if (missingPermissions.isNotEmpty()) {
+            requestPermissions(missingPermissions.toTypedArray(), 101)
         }
 
         // Auto-start DolphinBackgroundService on startup
@@ -1009,6 +1030,29 @@ ${(this.customPluginClasses || []).map(cls => `        try {
             val result = mapOf("files" to filesList)
             io.dolphin.runtime.DolphinHardwareBridge.pendingResultCallback?.invoke(result)
             io.dolphin.runtime.DolphinHardwareBridge.pendingResultCallback = null
+
+            val firstUri = uriList.firstOrNull()
+            val firstFile = filesList.firstOrNull()?.get("path")?.toString() ?: ""
+            if (firstUri != null) {
+                val targetUriStr = if (firstFile.isNotEmpty()) "file://$firstFile" else firstUri.toString()
+                val rawName = getFileName(this, firstUri) ?: firstFile
+                val fileName = rawName.lowercase()
+                val mimeType = (contentResolver.getType(firstUri) ?: "").lowercase()
+                Log.i("MainActivity", "📂 Picked file: rawName=$rawName, mimeType=$mimeType, targetUri=$targetUriStr")
+
+                val isVideo = mimeType.startsWith("video/") || fileName.endsWith(".mp4") || fileName.endsWith(".mkv") || fileName.endsWith(".webm") || fileName.endsWith(".3gp") || fileName.endsWith(".avi") || targetUriStr.contains("video")
+                val isAudio = mimeType.startsWith("audio/") || fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".aac") || fileName.endsWith(".m4a") || fileName.endsWith(".flac") || targetUriStr.contains("audio")
+
+                if (isVideo || (!isAudio && !fileName.endsWith(".mp3"))) {
+                    io.dolphin.runtime.DolphinStateEngine.updateState("sys_picked_video_url", targetUriStr)
+                    Toast.makeText(this, "🎬 Video Loaded into Video Canvas!", Toast.LENGTH_SHORT).show()
+                } else if (isAudio) {
+                    io.dolphin.runtime.DolphinStateEngine.updateState("sys_picked_audio_name", rawName)
+                    io.dolphin.runtime.DolphinStateEngine.updateState("sys_picked_audio_url", firstFile.ifEmpty { firstUri.toString() })
+                    io.dolphin.runtime.DolphinAudio.playSound(this, firstFile.ifEmpty { firstUri.toString() })
+                    Toast.makeText(this, "🎵 Audio Loaded into MP3 Canvas!", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -1024,7 +1068,34 @@ ${(this.customPluginClasses || []).map(cls => `        try {
         } catch (e: Exception) { null }
     }
 
-    override fun onDestroy() { super.onDestroy(); runtime.disconnectDevServer() }
+    override fun onPause() {
+        super.onPause()
+        Log.i("MainActivity", "⏸️ App going to background: Releasing hardware sensors & GPS listeners to conserve battery")
+        try {
+            io.dolphin.runtime.DolphinSensors.stopAll()
+            io.dolphin.runtime.DolphinLocation.stopWatching()
+            io.dolphin.runtime.DolphinAudio.stopSound()
+            io.dolphin.runtime.DolphinRingtone.stopSystemTone()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error in onPause cleanup: \${e.message}")
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.i("MainActivity", "▶️ App resumed")
+    }
+
+    override fun onDestroy() { 
+        super.onDestroy()
+        try {
+            io.dolphin.runtime.DolphinSensors.stopAll()
+            io.dolphin.runtime.DolphinLocation.stopWatching()
+            io.dolphin.runtime.DolphinAudio.stopSound()
+            io.dolphin.runtime.DolphinRingtone.stopSystemTone()
+            runtime.disconnectDevServer() 
+        } catch (e: Exception) {}
+    }
 }
 `);
 
@@ -1091,6 +1162,8 @@ ${this.splash ? `    <style name="Theme.Splash" parent="Theme.MaterialComponents
             });
         };
         copyDirRecursive(DOLPHIN_RUNTIME_DIR);
+
+
 
         // Copy user external plugins
         if (this.userPluginsDir && fs.existsSync(this.userPluginsDir)) {
