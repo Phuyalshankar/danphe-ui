@@ -1,8 +1,87 @@
 # 🐬 Dolphin Native 2
 
+[![GitHub](https://img.shields.io/badge/GitHub-Phuyalshankar%2Fdolphin--native--2-blue?logo=github)](https://github.com/Phuyalshankar/dolphin-native-2)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![Android](https://img.shields.io/badge/platform-Android-green.svg)](https://www.android.com/)
+
 **Zero-WebView, 100% Native Mobile & Embedded Framework**
 
 Dolphin Native 2 compiles React JSX + Tailwind CSS directly into **24-Byte Titan Binary Opcodes** (.dolp) and executes natively on Android devices without any WebView or JavaScript runtime overhead.
+
+---
+
+## 📦 Installation
+
+### Global Installation (Recommended for CLI)
+
+```bash
+npm install -g git+https://github.com/Phuyalshankar/dolphin-native-2.git
+```
+
+After installation, verify:
+```bash
+dolphin-mobile --version
+```
+
+### Project Installation
+
+Add to your project:
+```bash
+npm install git+https://github.com/Phuyalshankar/dolphin-native-2.git
+```
+
+Or add to `package.json`:
+```json
+{
+  "dependencies": {
+    "dolphin-native": "git+https://github.com/Phuyalshankar/dolphin-native-2.git"
+  }
+}
+```
+
+Then run:
+```bash
+npm install
+```
+
+### Requirements
+
+- **Node.js** >= 18.0.0
+- **Android SDK** (for APK builds)
+- **ADB** (for device installation)
+- **Java JDK** 11 or higher (for Android builds)
+
+### Installation Troubleshooting
+
+**If you get permission errors:**
+```bash
+# On Windows (Run as Administrator)
+npm install -g git+https://github.com/Phuyalshankar/dolphin-native-2.git
+
+# On Linux/Mac
+sudo npm install -g git+https://github.com/Phuyalshankar/dolphin-native-2.git
+```
+
+**If CLI commands not found:**
+```bash
+# Check npm global bin path
+npm bin -g
+
+# Add to PATH if needed (Windows)
+# Add: C:\Users\YourName\AppData\Roaming\npm
+
+# Linux/Mac
+export PATH="$(npm bin -g):$PATH"
+```
+
+**Test installation:**
+```bash
+dolphin-mobile --help
+node -e "console.log(require('dolphin-native'))"
+```
+
+---
 
 ## 🎯 Perfect For
 
@@ -32,36 +111,74 @@ Battery:           Minimal drain (native views)
 
 ## 🚀 Quick Start
 
-### Installation
+### 1. Install Dolphin Native CLI
 
 ```bash
-npm install -g dolphin-native
+npm install -g git+https://github.com/Phuyalshankar/dolphin-native-2.git
 ```
 
-### Create New Project
+### 2. Create New Project
 
 ```bash
-dolphin create my-app
-cd my-app
+mkdir my-dolphin-app
+cd my-dolphin-app
+npm init -y
+npm install git+https://github.com/Phuyalshankar/dolphin-native-2.git
 ```
 
-### Development with Hot Reload
+### 3. Create Entry File
+
+Create `index.js`:
+```javascript
+const { DolphinApp } = require('dolphin-native');
+
+const app = new DolphinApp();
+
+app.screen('home', () => `
+  <screen className="flex flex-col items-center justify-center h-screen bg-blue-500">
+    <text className="text-white text-6xl font-bold mb-8">
+      Hello Dolphin!
+    </text>
+    
+    <button 
+      className="bg-white text-blue-600 px-8 py-4 rounded-lg text-xl font-bold"
+      action="showAlert">
+      Click Me
+    </button>
+  </screen>
+`);
+
+app.action('showAlert', () => {
+  console.log('Button clicked!');
+});
+
+app.start();
+```
+
+### 4. Development with Hot Reload
 
 ```bash
 dolphin-mobile dev
 ```
 
-### Build APK
+This will:
+- Start dev server on port `7788`
+- Show QR code for device connection
+- Enable live hot-reload
+
+### 5. Build APK
 
 ```bash
 dolphin-mobile android build --hotpatch
 ```
 
-### Install on Device
+### 6. Install on Device
 
 ```bash
 adb install -r dist/MyApp-1.0.0.apk
 ```
+
+---
 
 ## 📖 Example Code
 
@@ -256,11 +373,27 @@ Dolphin Native 2 supports **HotPatch** - live binary updates over TCP:
 - Kiosk systems (ATM, restaurant ordering)
 - Industrial IoT control panels
 
-## ⚠️ Known Limitations
+## ⚠️ Known Limitations & Roadmap
 
-- **Android Only** (iOS support planned for future)
-- Canvas video rendering optimization in progress (CCTV/NVR video playback)
-- npm installation refinement ongoing
+### Current Limitations:
+- **Android Only** - iOS support planned for future release
+- **Canvas Video Rendering** - CCTV/NVR video playback optimization in progress (use native VideoView for high-performance video)
+- **npm Package** - Currently install via GitHub URL (npm publish coming soon)
+
+### In Progress:
+- 🔄 Canvas-based video rendering optimization
+- 🔄 npm package refinement
+- 🔄 Enhanced debugging tools
+- 🔄 Component library expansion
+
+### Future Roadmap:
+- 📅 iOS support (Swift runtime)
+- 📅 Desktop support (Electron-like)
+- 📅 Component marketplace
+- 📅 Visual UI builder
+- 📅 Production monitoring tools
+
+---
 
 ## 🔧 Requirements
 
@@ -279,6 +412,52 @@ Contributions welcome! This framework is perfect for:
 - Performance-focused mobile apps
 - IoT device interfaces
 - Emerging market applications
+
+### How to Contribute:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+### Development Setup:
+
+```bash
+git clone https://github.com/Phuyalshankar/dolphin-native-2.git
+cd dolphin-native-2
+npm install
+npm link  # For local testing
+```
+
+### Areas Needing Help:
+- 📱 iOS runtime development
+- 🎨 Additional UI components
+- 📚 Documentation improvements
+- 🐛 Bug fixes and testing
+- 🎥 Canvas video optimization
+
+---
+
+---
+
+## 💬 Support & Community
+
+### Get Help:
+- 📖 [Documentation](./ai.md)
+- 🐛 [Report Issues](https://github.com/Phuyalshankar/dolphin-native-2/issues)
+- 💡 [Feature Requests](https://github.com/Phuyalshankar/dolphin-native-2/issues/new)
+
+### Connect:
+- ⭐ Star this repository if you find it useful!
+- 🔔 Watch for updates
+- 🍴 Fork and contribute
+
+---
+
+## 📄 License
+
+MIT License
 
 ---
 
