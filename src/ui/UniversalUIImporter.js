@@ -758,7 +758,21 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     break;
 
                 case 0x10: // Button: action, text, icon
-                    stringPool.push(props.action || props.onClick || '');
+                    // ✅ FIX: Handle onClick lambda functions
+                    let btnAction = props.action || '';
+                    if (!btnAction && props.onClick) {
+                        if (typeof props.onClick === 'function') {
+                            // Lambda function detected - register it globally
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            if (typeof global !== 'undefined' && global.dolphinApp) {
+                                global.dolphinApp.action(actionId, props.onClick);
+                            }
+                            btnAction = actionId;
+                        } else if (typeof props.onClick === 'string') {
+                            btnAction = props.onClick;
+                        }
+                    }
+                    stringPool.push(btnAction);
                     stringPool.push(props.text || flattenText(childArr).trim() || '');
                     const btnIcon = props.icon || props.iconName || props.iconLeft || props.iconRight || twProps.icon || twProps.iconLeft || (String(props.className || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/i) || [])[1] || '';
                     stringPool.push(btnIcon);
@@ -772,7 +786,20 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 case 0x21: // Form: action   ← was missing!
                 case 0x22: // GridView: action ← was missing!
                 case 0x1E: // ListView: action
-                    stringPool.push(props.action || props.onClick || '');
+                    // ✅ FIX: Handle onClick lambda functions for containers
+                    let containerAction = props.action || '';
+                    if (!containerAction && props.onClick) {
+                        if (typeof props.onClick === 'function') {
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            if (typeof global !== 'undefined' && global.dolphinApp) {
+                                global.dolphinApp.action(actionId, props.onClick);
+                            }
+                            containerAction = actionId;
+                        } else if (typeof props.onClick === 'string') {
+                            containerAction = props.onClick;
+                        }
+                    }
+                    stringPool.push(containerAction);
                     break;
                 case 0x50: // CameraView: cameraId, action
                     stringPool.push(props.cameraId || props.facing || 'back');
@@ -786,6 +813,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
                       break;
                 case 0x60: // WebView: src URL
                 case 0x61: // NativeCanvas: server URL / src
+                case 0x62: // MatrixCanvas: base snapshot URL (grid mode)
                     stringPool.push(props.src || props.url || props.source || normAttributes.src || normAttributes.url || explicitProps.src || explicitProps.url || '');
                     break;
                 case 0x1A: // Switch: action/stateKey, label, trackSize, trackColor
@@ -1038,6 +1066,8 @@ let compType = comp.props && comp.props.type ? comp.props.type
             'web': 0x60,
             'NativeCanvas': 0x61,
             'nativecanvas': 0x61,
+            'MatrixCanvas': 0x62,
+            'matrixcanvas': 0x62,
             'Switch': 0x1A,
             'Checkbox': 0x1B,
             'Select': 0x1C,
