@@ -667,6 +667,214 @@ object DolphinHardwareBridge {
                 return true
             }
 
+            // ══════════════════════════════════════════════════════════════════
+            // ── TITAN TCP MODULE — All Backend Module Handlers ─────────────────
+            // ══════════════════════════════════════════════════════════════════
+            // Handles: Connection, Signaling (Call), Media, Chat, IoT/PLC, Health
+            // Action format: hw:tcp:<subcmd>[:<param1>[:<param2>]]
+            // State keys:    sys_tcp_status, sys_tcp_ext, sys_call_status,
+            //                sys_chat_msg, sys_iot_<pin>, sys_p2p_progress
+            // ══════════════════════════════════════════════════════════════════
+
+            if (action.startsWith("hw:tcp:")) {
+                val tcpParts = action.split(":")
+                // tcpParts[0]=hw, [1]=tcp, [2]=subcmd, [3..]=params
+                val tcpCmd = if (tcpParts.size > 2) tcpParts[2] else ""
+
+                when (tcpCmd) {
+
+                    // ── 1. Connection Lifecycle ────────────────────────────────
+                    // Usage: hw:tcp:connect:<host>:<port>:<ext>
+                    // State: sys_tcp_status = "● CONNECTING..." → "● ONLINE"
+                    "connect" -> {
+                        val devHost = DolphinRuntime.instance?.getDevServerHost() ?: ""
+                        val stateHost = DolphinStateEngine.get("tcp_host")?.toString() ?: ""
+                        val host = if (tcpParts.size > 3 && tcpParts[3].isNotEmpty()) tcpParts[3]
+                            else if (stateHost.isNotEmpty()) stateHost
+                            else devHost
+                        val port = if (tcpParts.size > 4) tcpParts[4].toIntOrNull() ?: 9092 else
+                            DolphinStateEngine.get("tcp_port")?.toString()?.toIntOrNull() ?: 9092
+                        val ext  = if (tcpParts.size > 5) tcpParts[5].toIntOrNull() ?: 101 else
+                            DolphinStateEngine.get("tcp_ext")?.toString()?.toIntOrNull() ?: 101
+                        DolphinStateEngine.set("sys_tcp_status", "● CONNECTING...")
+                        DolphinStateEngine.set("sys_tcp_ext", ext.toString())
+                        TitanTcpClient.connect(host, port, ext)
+                        Log.i(TAG, "⚡ hw:tcp:connect → $host:$port ext=$ext")
+                        return true
+                    }
+
+                    // ── 2. Disconnect ──────────────────────────────────────────
+                    // Usage: hw:tcp:disconnect
+                    "disconnect" -> {
+                        TitanTcpClient.disconnect()
+                        DolphinStateEngine.set("sys_tcp_status", "● DISCONNECTED")
+                        DolphinStateEngine.set("sys_call_status", "IDLE")
+                        Log.i(TAG, "🔌 hw:tcp:disconnect")
+                        return true
+                    }
+
+                    // ── 3. Signaling — Call Invite ─────────────────────────────
+                    // Usage: hw:tcp:invite:<targetExt>:<type>   type=video|audio
+                    // State: sys_call_status = "CALLING <ext>..."
+                    "invite", "call" -> {
+                        val targetExt = if (tcpParts.size > 3) tcpParts[3].toIntOrNull() ?: 0 else
+                            DolphinStateEngine.get("call_target_ext")?.toString()?.toIntOrNull() ?: 0
+                        val callType  = if (tcpParts.size > 4) tcpParts[4] else "audio"
+                        if (targetExt > 0) {
+                            val payload = """{"type":"$callType"}""".toByteArray(Charsets.UTF_8)
+                            TitanTcpClient.sendPacket(TitanTcpClient.CMD_INVITE, 0, targetExt, payload)
+                            TitanTcpClient.setCallPartner(targetExt)
+                            DolphinStateEngine.set("sys_call_status", "CALLING $targetExt...")
+                            Log.i(TAG, "📞 hw:tcp:invite → ext=$targetExt type=$callType")
+                        }
+                        return true
+                    }
+
+                    // ── 4. Signaling — Accept Call ─────────────────────────────
+                    // Usage: hw:tcp:accept
+                    "accept" -> {
+                        val partner = TitanTcpClient.getCallPartner()
+                        if (partner > 0) {
+                            TitanTcpClient.sendPacket(TitanTcpClient.CMD_ACCEPT, 0, partner, null)
+                            DolphinStateEngine.set("sys_call_status", "ACTIVE ↔ $partner")
+                            Log.i(TAG, "✅ hw:tcp:accept → ext=$partner")
+                        }
+                        return true
+                    }
+
+                    // ── 5. Signaling — Reject Call ─────────────────────────────
+                    // Usage: hw:tcp:reject
+                    "reject" -> {
+                        val partner = TitanTcpClient.getCallPartner()
+                        if (partner > 0) {
+                            TitanTcpClient.sendPacket(TitanTcpClient.CMD_REJECT, 0, partner, null)
+                            TitanTcpClient.setCallPartner(0)
+                            DolphinStateEngine.set("sys_call_status", "REJECTED")
+                            Log.i(TAG, "❌ hw:tcp:reject → ext=$partner")
+                        }
+                        return true
+                    }
+
+                    // ── 6. Signaling — Hangup ─────────────────────────────────
+                    // Usage: hw:tcp:hangup
+                    "hangup" -> {
+                        val partner = TitanTcpClient.getCallPartner()
+                        val target = if (partner > 0) partner else 0
+                        TitanTcpClient.sendPacket(TitanTcpClient.CMD_HANGUP, 0, target, null)
+                        TitanTcpClient.setCallPartner(0)
+                        DolphinStateEngine.set("sys_call_status", "IDLE")
+                        Log.i(TAG, "📵 hw:tcp:hangup → ext=$target")
+                        return true
+                    }
+
+                    // ── 7. Chat Message ────────────────────────────────────────
+                    // Usage: hw:tcp:chat:<targetExt>:<message>
+                    // State: sys_chat_msg = "Me: <message>"
+                    "chat" -> {
+                        val targetExt = if (tcpParts.size > 3) tcpParts[3].toIntOrNull() ?: 0 else
+                            DolphinStateEngine.get("chat_target_ext")?.toString()?.toIntOrNull() ?: 0
+                        val msg = if (tcpParts.size > 4) tcpParts.drop(4).joinToString(":") else
+                            value?.toString() ?: ""
+                        if (msg.isNotEmpty()) {
+                            val payload = msg.toByteArray(Charsets.UTF_8)
+                            TitanTcpClient.sendPacket(TitanTcpClient.CMD_CHAT_MESSAGE, 0, targetExt, payload)
+                            DolphinStateEngine.set("sys_chat_msg", "Me: $msg")
+                            Log.i(TAG, "💬 hw:tcp:chat → ext=$targetExt msg=$msg")
+                        }
+                        return true
+                    }
+
+                    // ── 8. IoT / PLC / Relay CUSTOM_ACTION ────────────────────
+                    // Usage: hw:tcp:iot:<action>:<pin>[:<val>]
+                    //   e.g. hw:tcp:iot:relay_on:1
+                    //        hw:tcp:iot:relay_off:2
+                    //        hw:tcp:iot:relay_toggle:1
+                    //        hw:tcp:iot:write:temp_setpoint:25
+                    //        hw:tcp:iot:read:sensor_1
+                    // State: sys_iot_<pin> = ON/OFF/value
+                    "iot" -> {
+                        val iotAction = if (tcpParts.size > 3) tcpParts[3] else "relay_on"
+                        val pin       = if (tcpParts.size > 4) tcpParts[4] else "1"
+                        val iotVal    = if (tcpParts.size > 5) tcpParts[5] else value?.toString() ?: "1"
+                        val targetExt = DolphinStateEngine.get("iot_target_ext")?.toString()?.toIntOrNull() ?: 0
+
+                        val curState = DolphinStateEngine.get("sys_iot_$pin")?.toString() ?: "0"
+                        val nextCmd = if (curState == "1" || curState == "1.0" || curState.equals("ON", true)) "relay_off" else "relay_on"
+
+                        val json = when (iotAction) {
+                            "relay_toggle" -> """{"action":"$nextCmd","pin":"$pin"}"""
+                            else -> """{"action":"$iotAction","pin":"$pin","value":"$iotVal"}"""
+                        }
+
+                        TitanTcpClient.sendPacket(
+                            0x40, // CMD_CUSTOM_ACTION
+                            0, targetExt,
+                            json.toByteArray(Charsets.UTF_8)
+                        )
+
+                        val stateVal = if (iotAction == "relay_toggle") {
+                            if (curState == "1" || curState == "1.0" || curState.equals("ON", true)) "0" else "1"
+                        } else if (iotAction.contains("on")) "1" else if (iotAction.contains("off")) "0" else iotVal
+
+                        DolphinStateEngine.set("sys_iot_$pin", stateVal)
+                        Log.i(TAG, "⚡ hw:tcp:iot $iotAction pin=$pin val=$iotVal → state=$stateVal")
+                        return true
+                    }
+
+                    // ── 9. Custom Action (Generic CUSTOM_ACTION 0x40) ──────────
+                    // Usage: hw:tcp:custom:<targetExt>  value = JSON string
+                    // Allows sending ANY JSON payload as CUSTOM_ACTION
+                    "custom" -> {
+                        val targetExt = if (tcpParts.size > 3) tcpParts[3].toIntOrNull() ?: 0 else 0
+                        val json = value?.toString() ?: "{}"
+                        TitanTcpClient.sendPacket(
+                            0x40, 0, targetExt,
+                            json.toByteArray(Charsets.UTF_8)
+                        )
+                        Log.i(TAG, "🔧 hw:tcp:custom → ext=$targetExt json=$json")
+                        return true
+                    }
+
+                    // ── 10. Manual Heartbeat / Health Check ───────────────────
+                    // Usage: hw:tcp:ping
+                    // State: sys_tcp_status = "● ONLINE (ping OK)"
+                    "ping", "heartbeat" -> {
+                        if (TitanTcpClient.isConnected()) {
+                            TitanTcpClient.sendPacket(TitanTcpClient.CMD_HEARTBEAT, 0, 0, null)
+                            DolphinStateEngine.set("sys_tcp_status", "● ONLINE ♥")
+                        } else {
+                            DolphinStateEngine.set("sys_tcp_status", "● DISCONNECTED")
+                        }
+                        return true
+                    }
+
+                    // ── 11. Connection Status Query ───────────────────────────
+                    // Usage: hw:tcp:status
+                    // State: sys_tcp_status updated immediately
+                    "status" -> {
+                        val st = if (TitanTcpClient.isConnected()) "● ONLINE" else "● DISCONNECTED"
+                        DolphinStateEngine.set("sys_tcp_status", st)
+                        onResult?.invoke(mapOf("connected" to TitanTcpClient.isConnected(), "status" to st))
+                        return true
+                    }
+
+                    // ── 12. P2P Server Start (listen mode) ────────────────────
+                    // Usage: hw:tcp:server:<port>:<ext>
+                    // State: sys_tcp_status = "● P2P SERVER :port"
+                    "server" -> {
+                        val port = if (tcpParts.size > 3) tcpParts[3].toIntOrNull() ?: 9092 else 9092
+                        val ext  = if (tcpParts.size > 4) tcpParts[4].toIntOrNull() ?: 101 else 101
+                        DolphinStateEngine.set("sys_tcp_status", "● P2P SERVER :$port")
+                        TitanTcpClient.startServer(port, ext)
+                        Log.i(TAG, "📡 hw:tcp:server → port=$port ext=$ext")
+                        return true
+                    }
+
+                } // end when(tcpCmd)
+
+                return true // fallback — unknown hw:tcp:* still consumed
+            } // end if(hw:tcp:)
+
             when (category) {
 
                 // ── Flashlight ───────────────────────────────────

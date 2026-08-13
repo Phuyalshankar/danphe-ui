@@ -220,7 +220,11 @@ class DolphinTitanBridge {
             }
         });
 
-        if (tag === 'BUTTON' || classes.includes('btn')) type = 'Button';
+        if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P', 'SPAN', 'LABEL'].includes(tag)) {
+            type = 'Text';
+        } else if (tag === 'BUTTON' || classes.includes('btn')) {
+            type = 'Button';
+        }
         else if (tag === 'INPUT') {
             const inputType = (props.type || 'text').toLowerCase();
             if (inputType === 'radio') type = 'Radio';
@@ -243,7 +247,6 @@ class DolphinTitanBridge {
         }
         else if (tag === 'IMG') type = 'Image';
         else if (tag === 'I') type = 'Icon';
-        else if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P', 'SPAN', 'LABEL'].includes(tag)) type = 'Text';
 
         const schema = { type, ...props };
 

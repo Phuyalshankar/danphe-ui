@@ -572,8 +572,18 @@ class HybridParser {
             }
             else if (c === 'text-white') { schema.color = 'white'; schema.shade = 128; schema.colorShade = 128; }
             else if (c === 'text-slate-900' || c === 'text-black') { schema.color = 'black'; schema.shade = 128; schema.colorShade = 128; }
-            else if (c === 'text-blue') schema.color = 'blue-150';
-            else if (c === 'text-muted') schema.color = 'gray-120';
+            else if (c.startsWith('text-')) {
+                const parts = c.split('-');
+                if (parts.length >= 3) {
+                    schema.color = parts[1];
+                    schema.colorShade = parseInt(parts[2]) || 128;
+                    schema.shade = schema.colorShade;
+                } else if (parts.length === 2) {
+                    schema.color = parts[1];
+                    schema.colorShade = 128;
+                    schema.shade = 128;
+                }
+            }
             else if (c === 'overflow-scroll' || c === 'overflow-y-scroll' || c === 'overflow-y-auto' || c === 'scroll-y' || c === 'scrollable') schema.scroll = true;
             else if (c === 'items-center') schema.items = 'center';
             else if (c === 'items-end') schema.items = 'end';
@@ -740,6 +750,13 @@ class HybridParser {
         // ─── 🆕 24-byte: Ensure width/height are set ───
         if (schema.width === undefined && twProps.width !== undefined) schema.width = twProps.width;
         if (schema.height === undefined && twProps.height !== undefined) schema.height = twProps.height;
+
+        // Preserve all event handlers (onClick, onChange, onSubmit, onPress, onLongPress, etc.)
+        Object.keys(props).forEach(key => {
+            if (key.startsWith('on') && (typeof props[key] === 'function' || typeof props[key] === 'string')) {
+                schema[key] = props[key];
+            }
+        });
 
         return schema;
     }

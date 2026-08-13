@@ -339,9 +339,7 @@ object DolphinStateEngine {
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             val snapshot = list.toList()
             snapshot.forEach { binding ->
-                if (binding.view.isAttachedToWindow) {
-                    StateBinder.apply(binding.view, binding.property, normalized, binding.colorCode, binding.anim)
-                }
+                StateBinder.apply(binding.view, binding.property, normalized, binding.colorCode, binding.anim)
             }
         }
     }

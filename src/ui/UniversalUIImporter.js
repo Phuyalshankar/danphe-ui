@@ -17,6 +17,8 @@ class UniversalUIImporter {
     constructor() {
         this.stringPool = [];
         this.cdns = [];
+        // ✅ Store lambda functions for later registration
+        this.pendingLambdas = new Map();
         console.log('🌐 Universal UI Importer Initialized');
     }
 
@@ -25,6 +27,18 @@ class UniversalUIImporter {
         if (this.cdns.length > 0) {
             console.log(`📡 Registered ${this.cdns.length} external UI CDNs`);
         }
+    }
+
+    // ✅ Register pending lambda functions to app
+    registerLambdas(app) {
+        if (this.pendingLambdas.size > 0) {
+            console.log(`⚡ Registering ${this.pendingLambdas.size} lambda onClick handlers...`);
+            for (const [actionId, lambdaFn] of this.pendingLambdas.entries()) {
+                app.action(actionId, lambdaFn);
+            }
+            console.log(`✅ Lambda handlers registered`);
+        }
+        return this.pendingLambdas.size;
     }
 
     importSchema(schema, options = {}) {
@@ -177,7 +191,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
             
             // Fix: If a Tailwind class explicitly set a layout type (like Row, Column, Card),
             // it should override generic HTML tags like 'div', 'span', or a Babel-injected 'Container'.
-            if (twProps.type && (explicitProps.type === 'div' || explicitProps.type === 'span' || explicitProps.type === 'Container' || !explicitProps.type)) {
+            if (twProps.type && (explicitProps.type === 'div' || explicitProps.type === 'Container' || !explicitProps.type)) {
                 props.type = twProps.type;
             }
             // Deep-merge bindings so className DSL + explicit `bindings={{...}}` can coexist.
@@ -758,18 +772,16 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     break;
 
                 case 0x10: // Button: action, text, icon
-                    // ✅ FIX: Handle onClick lambda functions
                     let btnAction = props.action || '';
-                    if (!btnAction && props.onClick) {
-                        if (typeof props.onClick === 'function') {
-                            // Lambda function detected - register it globally
+                    if (!btnAction) {
+                        const clickProp = props.onClick || props.onclick || props.onPress || props.onpress || props.onLongPress;
+                        if (typeof clickProp === 'function') {
+                            // Lambda function detected - store for later registration
                             const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                            if (typeof global !== 'undefined' && global.dolphinApp) {
-                                global.dolphinApp.action(actionId, props.onClick);
-                            }
+                            this.pendingLambdas.set(actionId, clickProp);
                             btnAction = actionId;
-                        } else if (typeof props.onClick === 'string') {
-                            btnAction = props.onClick;
+                        } else if (typeof clickProp === 'string') {
+                            btnAction = clickProp;
                         }
                     }
                     stringPool.push(btnAction);
@@ -781,22 +793,20 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 case 0x13: // Column: action
                 case 0x14: // Row: action
                 case 0x11: // Card: action
-                case 0x15: // Stack: action  ← was missing!
-                case 0x20: // Modal: action  ← was missing!
-                case 0x21: // Form: action   ← was missing!
-                case 0x22: // GridView: action ← was missing!
+                case 0x15: // Stack: action
+                case 0x20: // Modal: action
+                case 0x21: // Form: action
+                case 0x22: // GridView: action
                 case 0x1E: // ListView: action
-                    // ✅ FIX: Handle onClick lambda functions for containers
                     let containerAction = props.action || '';
-                    if (!containerAction && props.onClick) {
-                        if (typeof props.onClick === 'function') {
+                    if (!containerAction) {
+                        const handler = props.onClick || props.onclick || props.onPress || props.onpress || props.onLongPress || props.onSubmit;
+                        if (typeof handler === 'function') {
                             const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                            if (typeof global !== 'undefined' && global.dolphinApp) {
-                                global.dolphinApp.action(actionId, props.onClick);
-                            }
+                            this.pendingLambdas.set(actionId, handler);
                             containerAction = actionId;
-                        } else if (typeof props.onClick === 'string') {
-                            containerAction = props.onClick;
+                        } else if (typeof handler === 'string') {
+                            containerAction = handler;
                         }
                     }
                     stringPool.push(containerAction);
@@ -817,37 +827,69 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     stringPool.push(props.src || props.url || props.source || normAttributes.src || normAttributes.url || explicitProps.src || explicitProps.url || '');
                     break;
                 case 0x1A: // Switch: action/stateKey, label, trackSize, trackColor
-                    stringPool.push(props.stateKey || props.action || '');
-                    stringPool.push(props.label || '');
-                    const twW = (rawW > 0 ? rawW : (props.trackWidth || props.trackW || props.width || 0));
-                    const twH = (rawH > 0 ? rawH : (props.trackHeight || props.trackH || props.height || 0));
-                    stringPool.push(`${twW}|${twH}`);
-                    stringPool.push(props.trackColor || props.activeColor || props.onColor || props.bg || twProps.bg || props.backgroundColor || '');
+                    {
+                        const swHandler = props.onChange || props.onchange || props.onToggle || props.ontoggle || props.onClick;
+                        let swAction = props.stateKey || props.action || '';
+                        if (!swAction && typeof swHandler === 'function') {
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            this.pendingLambdas.set(actionId, swHandler);
+                            swAction = actionId;
+                        }
+                        stringPool.push(swAction);
+                        stringPool.push(props.label || '');
+                        const twW = (rawW > 0 ? rawW : (props.trackWidth || props.trackW || props.width || 0));
+                        const twH = (rawH > 0 ? rawH : (props.trackHeight || props.trackH || props.height || 0));
+                        stringPool.push(`${twW}|${twH}`);
+                        stringPool.push(props.trackColor || props.activeColor || props.onColor || props.bg || twProps.bg || props.backgroundColor || '');
+                    }
                     break;
                 case 0x19: // Slider: action/stateKey, label
-                    stringPool.push(props.stateKey || props.action || '');
-                    stringPool.push(props.label || '');
-                    break;
                 case 0x1B: // Checkbox: action/stateKey, label
                 case 0x1F: // Radio: action/stateKey, label
-                case 0x19: // Slider: action/stateKey, label
-                    stringPool.push(props.stateKey || props.action || '');
-                    let radioLabel = props.label || '';
-                    if (!radioLabel && props.value) {
-                        radioLabel = props.value + "__HIDETEXT__";
+                    {
+                        const inputHandler = props.onChange || props.onchange || props.onInput || props.onCheck || props.onSlide || props.onClick;
+                        let inputAction = props.stateKey || props.action || '';
+                        if (!inputAction && typeof inputHandler === 'function') {
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            this.pendingLambdas.set(actionId, inputHandler);
+                            inputAction = actionId;
+                        }
+                        stringPool.push(inputAction);
+                        let radioLabel = props.label || '';
+                        if (!radioLabel && props.value) {
+                            radioLabel = props.value + "__HIDETEXT__";
+                        }
+                        stringPool.push(radioLabel);
                     }
-                    stringPool.push(radioLabel);
                     break;
 
                 case 0x40: // File Upload: action, label
-                    stringPool.push(props.action || '');
-                    stringPool.push(props.label || '');
+                    {
+                        const fileHandler = props.onChange || props.onchange || props.onClick;
+                        let fileAction = props.action || '';
+                        if (!fileAction && typeof fileHandler === 'function') {
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            this.pendingLambdas.set(actionId, fileHandler);
+                            fileAction = actionId;
+                        }
+                        stringPool.push(fileAction);
+                        stringPool.push(props.label || '');
+                    }
                     break;
                 case 0x1C: // Select: action/stateKey, label, options, initialValue
-                    stringPool.push(props.stateKey || props.action || '');
-                    stringPool.push(props.label || '');
-                    stringPool.push(Array.isArray(props.options) ? props.options.join(',') : (props.options || ''));
-                    stringPool.push(props.value || '');
+                    {
+                        const selectHandler = props.onChange || props.onchange || props.onSelect || props.onClick;
+                        let selectAction = props.stateKey || props.action || '';
+                        if (!selectAction && typeof selectHandler === 'function') {
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            this.pendingLambdas.set(actionId, selectHandler);
+                            selectAction = actionId;
+                        }
+                        stringPool.push(selectAction);
+                        stringPool.push(props.label || '');
+                        stringPool.push(Array.isArray(props.options) ? props.options.join(',') : (props.options || ''));
+                        stringPool.push(props.value || '');
+                    }
                     break;
                 case 0x30: // Camera
                 case 0x31: // Microphone
@@ -905,7 +947,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
             // as separate Titan 16-byte blocks. This maintains strict binary alignment.
             const CONTAINER_TYPES = new Set([
                 'Screen', 'screen', 'div', 'Column', 'Row', 'Card', 'Container', 'ListView', 'GridView', 'Modal', 'Form', 'Stack',
-                'div', 'ul', 'li', 'ol', 'form', 'a', 'section', 'header', 'footer', 'main', 'span', 'p',
+                'div', 'ul', 'li', 'ol', 'form', 'a', 'section', 'header', 'footer', 'main',
                 'table', 'tbody', 'thead', 'tfoot', 'tr', 'th', 'td',
                 'column', 'row', 'card', 'container', 'listview', 'gridview', 'modal', 'form', 'stack'
             ]);
@@ -969,7 +1011,13 @@ let compType = comp.props && comp.props.type ? comp.props.type
 
             // Byte 13: Text Color / Child Count
             if (node.isText || node.isButton) {
-                bin[13] = ub.getColor(styles.color || '#000000');
+                const textColorVal = styles.color || props.color || props.textColor;
+                if (textColorVal) {
+                    bin[13] = ub.getColor(textColorVal);
+                    bin[12] = ub.getShade(textColorVal);
+                } else {
+                    bin[13] = 0; // 0 = Unset/Auto-contrast
+                }
             } else {
                 bin[13] = (node.children ? node.children.length : 0) & 0xFF;
             }

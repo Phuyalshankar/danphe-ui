@@ -148,3 +148,8 @@ module.exports.GestureRecognizer= _ui.GestureRecognizer;
 module.exports.Responsive       = _ui.Responsive;
 module.exports.ResponsiveContext = _ui.ResponsiveContext;
 module.exports.BREAKPOINTS      = _ui.BREAKPOINTS;
+
+// ── Titan TCP — All-Module Native Client ──────────────────────────────────────
+const _titan = require('./titan/TitanTcpModule');
+module.exports.Titan = _titan.Titan;
+module.exports.TitanCMD = _titan.CMD;

@@ -410,6 +410,9 @@ class DolphinApp {
      */
     screen(name, ui, options = {}) {
         this.framework.registerScreen(name, ui, options);
+        if (this.framework.importer && typeof this.framework.importer.registerLambdas === 'function') {
+            this.framework.importer.registerLambdas(this);
+        }
         return this;
     }
 
@@ -431,6 +434,9 @@ class DolphinApp {
      */
     component(name, schema) {
         this.framework.registerComponent(name, schema);
+        if (this.framework.importer && typeof this.framework.importer.registerLambdas === 'function') {
+            this.framework.importer.registerLambdas(this);
+        }
         return this;
     }
 

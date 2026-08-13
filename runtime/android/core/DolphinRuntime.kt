@@ -120,6 +120,8 @@ class DolphinRuntime(val context: Context) {
 
                 Log.d(TAG, "⚡ Action Triggered: $action (value: $value)")
                 val valueStr: String? = value?.toString()
+
+                hotPatch?.sendAction(action, valueStr ?: "")
                 
                 val isHardwareAction = DolphinHardwareBridge.handleHardwareAction(context, action, value) { result ->
                     try {
@@ -204,7 +206,6 @@ class DolphinRuntime(val context: Context) {
                     } else {
                         this.onAction?.invoke(action, valueStr)
                     }
-                    hotPatch?.sendAction(action, value)
                 }
             }
 

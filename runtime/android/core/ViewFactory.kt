@@ -45,7 +45,7 @@ class ViewFactory(val ctx: Context) {
         registerBuilder(CameraViewBuilder())
         registerBuilder(ImageBuilder())
         registerBuilder(WebViewBuilder())       // 0x60 — WebRTC / Jitsi / NVR Web Grid
-        registerBuilder(NativeCanvasBuilder())  // 0x61 — Pure Native Canvas NVR Engine (Hikvision Grade)
+        registerBuilder(DolphinCanvasBuilder(0x61))  // 0x61 — Pure Native Canvas NVR Engine (TCP/MJPEG)
 
         Log.d("ViewFactory", "✅ ${componentBuilders.size} ComponentBuilders registered")
     }

@@ -114,7 +114,8 @@ class DolphinServer extends EventEmitter {
      * Broadcast state update to a device
      */
     patchState(deviceId, key, value) {
-        const keyBuf = Buffer.from(key, 'utf8');
+        if (!key || key === 'undefined' || key === 'null' || key === 'value') return;
+        const keyBuf = Buffer.from(String(key), 'utf8');
         const valStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
         const valBuf = Buffer.from(valStr, 'utf8');
         const payload = Buffer.alloc(1 + keyBuf.length + valBuf.length);
@@ -227,6 +228,7 @@ class DevServer extends EventEmitter {
     }
 
     patchState(deviceId, key, value) {
+        if (!key || key === 'undefined' || key === 'null' || key === 'value') return;
         const keyBuf = Buffer.from(String(key), 'utf8');
         const valBuf = Buffer.from(String(value !== undefined && value !== null ? value : ''), 'utf8');
         const payload = Buffer.alloc(1 + keyBuf.length + valBuf.length);
@@ -570,8 +572,17 @@ class DevServer extends EventEmitter {
                                       es.onmessage = function(e) {
                                         try {
                                           const data = JSON.parse(e.data);
-                                          if (data.type === 'reload' || data.type === 'patch') {
+                                          if (data.type === 'reload') {
                                             location.reload();
+                                          } else if (data.type === 'patch' && data.key) {
+                                            const targets = document.querySelectorAll('[data-state-key="' + data.key + '"]');
+                                            targets.forEach(function(el) {
+                                              if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                                                el.value = data.value !== undefined ? data.value : '';
+                                              } else {
+                                                el.textContent = data.value !== undefined ? data.value : '';
+                                              }
+                                            });
                                           }
                                         } catch(err) {}
                                       };

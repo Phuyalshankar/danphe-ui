@@ -12,11 +12,14 @@ class TextBuilder : ComponentBuilder {
     override fun getName(): String = "Text"
 
     override fun build(ctx: Context, data: ByteArray, factory: ViewFactory): View {
-        val rawContent = factory.nextStr()
+        var rawContent = factory.nextStr()
 
-        // Safety Filter: If string pool ever passes raw metadata/size string (e.g. 0|0|0, 0|0|0|0), clear it
-        val isMetadataPipe = rawContent.contains("|") && !rawContent.startsWith("stateKey:") && !rawContent.contains("[stateKey:") && rawContent.split("|").all { part -> part.trim().all { ch -> ch.isDigit() } }
-        val content = if (isMetadataPipe) "" else rawContent
+        // Safety Filter: If string pool passes raw metadata/size string (e.g. 0|0|0|0), fetch the actual text content string
+        val isMetadataPipe = rawContent.contains("|") && !rawContent.startsWith("stateKey:") && !rawContent.contains("[stateKey:") && (rawContent.split("|").size >= 3)
+        if (isMetadataPipe) {
+            rawContent = factory.nextStr()
+        }
+        val content = rawContent
 
         Log.d("TextBuilder", "Building Text: '$content'")
 
@@ -42,7 +45,7 @@ class TextBuilder : ComponentBuilder {
 
             if (targetKey != null) {
                 val colorCode = data[13].toInt() and 0xFF
-                DolphinStateEngine.bind(key = targetKey, view = this, property = DolphinStateEngine.Property.TEXT, colorCode = colorCode)
+                DolphinStateEngine.bind(key = targetKey, view = this, property = DolphinStateEngine.Property.TEXT, initialValue = defaultText, colorCode = colorCode)
             }
         }
     }

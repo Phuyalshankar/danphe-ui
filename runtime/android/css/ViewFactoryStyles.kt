@@ -73,7 +73,9 @@ fun ViewFactory.applyTextStyles(v: TextView, bin: ByteArray) {
         if (hasBg) {
             v.setTextColor(Color.WHITE)
         } else {
-            val isDark = DolphinStateEngine.themeLevel > 128
+            val parentBg = getParentBackgroundColor(v)
+            val isParentDark = if (parentBg != 0) ColorUtils.calculateLuminance(parentBg) < 0.5 else true
+            val isDark = DolphinStateEngine.themeLevel > 128 || isParentDark
             v.setTextColor(if (isDark) Color.WHITE else Color.parseColor("#0f172a"))
         }
     }

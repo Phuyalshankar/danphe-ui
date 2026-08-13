@@ -38,7 +38,21 @@ object TitanTcpClient {
     const val CMD_HEARTBEAT = 0x30
     const val CMD_HEARTBEAT_ACK = 0x31
 
-    var onMessageReceived: ((cmdType: Int, senderExt: Int, payload: ByteArray) -> Unit)? = null
+    private val messageListeners = mutableListOf<(cmdType: Int, senderExt: Int, payload: ByteArray) -> Unit>()
+
+    fun addMessageListener(listener: (cmdType: Int, senderExt: Int, payload: ByteArray) -> Unit) {
+        synchronized(messageListeners) {
+            if (!messageListeners.contains(listener)) {
+                messageListeners.add(listener)
+            }
+        }
+    }
+
+    fun removeMessageListener(listener: (cmdType: Int, senderExt: Int, payload: ByteArray) -> Unit) {
+        synchronized(messageListeners) {
+            messageListeners.remove(listener)
+        }
+    }
 
     private var serverSocket: java.net.ServerSocket? = null
 
@@ -57,7 +71,7 @@ object TitanTcpClient {
                 outputStream = sock.getOutputStream()
                 isConnected.set(true)
                 Log.i(TAG, "P2P client connected: ${sock.remoteSocketAddress}")
-                DolphinStateEngine.set("titan_connected", true)
+                DolphinStateEngine.set("titan_connected", "● TCP ONLINE")
 
                 // Send register packet immediately (keeps protocol aligned)
                 sendPacket(CMD_REGISTER, myExt, 0, null)
@@ -94,7 +108,8 @@ object TitanTcpClient {
                 outputStream = sock.getOutputStream()
                 isConnected.set(true)
                 Log.i(TAG, "Connected to remote TCP successfully")
-                DolphinStateEngine.set("titan_connected", true)
+                DolphinStateEngine.set("titan_connected", "● TCP ONLINE")
+                DolphinStateEngine.set("sys_tcp_status", "● ONLINE")
 
                 // Send register packet immediately
                 sendPacket(CMD_REGISTER, myExt, 0, null)
@@ -110,6 +125,7 @@ object TitanTcpClient {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Connection failed: ${e.message}")
+                DolphinStateEngine.set("sys_tcp_status", "● DISCONNECTED")
                 disconnect()
             }
         }
@@ -119,7 +135,8 @@ object TitanTcpClient {
         if (!isConnected.getAndSet(false)) {
             try { serverSocket?.close() } catch (_: Exception) {}
             serverSocket = null
-            DolphinStateEngine.set("titan_connected", false)
+            DolphinStateEngine.set("titan_connected", "● DISCONNECTED")
+            DolphinStateEngine.set("sys_tcp_status", "● DISCONNECTED")
             return
         }
         try {
@@ -132,7 +149,8 @@ object TitanTcpClient {
         serverSocket = null
         outputStream = null
         activeCallPartnerExt = 0
-        DolphinStateEngine.set("titan_connected", false)
+        DolphinStateEngine.set("titan_connected", "● DISCONNECTED")
+        DolphinStateEngine.set("sys_tcp_status", "● DISCONNECTED")
         Log.i(TAG, "Disconnected from Titan TCP session")
     }
 
@@ -251,16 +269,17 @@ object TitanTcpClient {
         }
         if (cmdType == CMD_VIDEO_FRAME) {
             // Give priority to attached listeners (like TitanNativeCanvas for GPU decoding)
-            onMessageReceived?.invoke(cmdType, senderExt, payload)
-            
-            // Fallback to video call rendering if needed
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                DolphinVideoCall.renderRemoteFrameRaw(payload)
+            synchronized(messageListeners) {
+                messageListeners.forEach { it.invoke(cmdType, senderExt, payload) }
             }
+            
+            // Removed fallback to video call rendering to prevent UI thread freezing
             return
         }
 
         // Otherwise pass to bridge or custom listener
-        onMessageReceived?.invoke(cmdType, senderExt, payload)
+        synchronized(messageListeners) {
+            messageListeners.forEach { it.invoke(cmdType, senderExt, payload) }
+        }
     }
 }
