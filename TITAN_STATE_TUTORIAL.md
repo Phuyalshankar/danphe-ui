@@ -1,139 +1,120 @@
-# 📘 Beginner's Guide: Titan States & Actions
+# 📘 The Complete Beginner's Guide: All 42 Dolphin Native Actions
 
-Welcome! This is a simple, easy-to-understand guide for using Titan TCP states and actions in your Dolphin Native app. 
+Welcome! This is your ultimate dictionary for every single Action and State you can use in Dolphin Native. 
 
-Think of **Actions** as buttons you can click, and **States** as text that updates automatically on your screen.
-
----
-
-## ⚡ 1. Relay (IoT) Controls
-Turn things ON or OFF (like lights, doors, or motors).
-
-### 🛠️ Actions (What you can click)
-* `hw:tcp:iot:relay_toggle:1` - Swaps Relay 1 (If it's ON, makes it OFF. If OFF, makes it ON).
-* `hw:tcp:iot:relay_on:1` - Forces Relay 1 to turn ON.
-* `hw:tcp:iot:relay_off:1` - Forces Relay 1 to turn OFF.
-
-> [!TIP]
-> Just change the `1` to `2`, `3`, or `4` to control different relays!
-
-**Example Code:**
-```jsx
-{/* A button to Toggle Relay 1 */}
-<button 
-    action="hw:tcp:iot:relay_toggle:1" 
-    className="bg-amber-500 text-black p-4 rounded-lg">
-    💡 Toggle Light 1
-</button>
-```
-
-### 👁️ States (What you can see)
-* `[stateKey:sys_iot_1]` - Shows `1` if Relay 1 is ON, and `0` if it is OFF.
-* `[stateKey:sys_iot_last]` - Shows the last thing that happened (e.g., `Relay 1: relay_on`).
-
-**Example Code:**
-```jsx
-{/* Shows the current status of Relay 1 */}
-<div>
-    Status of Light 1 is: <span className="font-bold">[stateKey:sys_iot_1]</span>
-</div>
-```
+**Quick Rule:**
+* Put `action="..."` inside `<button>` to trigger an event.
+* Put `[stateKey:...]` inside any Text or `<span>` to show live data.
 
 ---
 
-## 🔌 2. Server Connection
-Connect your app to the NVR Backend Server.
+## 🌐 1. TCP & Titan Network (11 Actions)
+Connect to servers, manage streams, and send custom data.
 
 ### 🛠️ Actions
-* `hw:tcp:connect` - Connects to the server using the IP and Port you typed.
-* `hw:tcp:disconnect` - Disconnects from the server.
-
-**Example Code:**
-```jsx
-<button action="hw:tcp:connect" className="bg-green-500 p-2 rounded">
-    ⚡ Connect Now
-</button>
-
-<button action="hw:tcp:disconnect" className="bg-red-500 p-2 rounded">
-    🛑 Disconnect
-</button>
-```
-
-### 👁️ States
-* `[stateKey:sys_tcp_status]` - Shows if you are Connected or Disconnected.
-* `[stateKey:tcp_ip]` - Shows the IP address you are connecting to.
-* `[stateKey:tcp_port]` - Shows the Port you are connecting to.
-
-**Example Code:**
-```jsx
-<div>
-    Server Status: [stateKey:sys_tcp_status]
-</div>
-```
-
----
-
-## 📞 3. Intercom & Calling
-Make audio calls over your local network.
-
-### 🛠️ Actions
-* `hw:tcp:invite:102` - Call Extension 102.
+* `hw:tcp:connect` - Connect to the TCP server (using `tcp_ip` and `tcp_port` states).
+* `hw:tcp:disconnect` - Disconnect from the server.
+* `hw:tcp:ping` - Send a ping to check server health.
+* `hw:tcp:custom:101` - Send a custom JSON payload to extension 101.
+* `hw:tcp:invite:101` - Call Extension 101 (Intercom).
 * `hw:tcp:accept` - Answer an incoming call.
-* `hw:tcp:hangup` - Cut or reject a call.
+* `hw:tcp:hangup` - End or reject a call.
+* `hw:tcp:chat:Hello!` - Send a chat message.
+* `hw:tcp:iot:relay_toggle:1` - Toggles Relay #1 ON or OFF.
+* `hw:tcp:iot:relay_on:1` - Turns Relay #1 ON.
+* `hw:tcp:iot:relay_off:1` - Turns Relay #1 OFF.
 
 **Example Code:**
 ```jsx
-{/* Call the Reception (Ext 101) */}
-<button action="hw:tcp:invite:101" className="bg-blue-500 p-3 rounded">
-    📞 Call Reception
-</button>
-
-{/* Hang up the phone */}
-<button action="hw:tcp:hangup" className="bg-red-500 p-3 rounded">
-    📵 Hang Up
-</button>
-```
-
-### 👁️ States
-* `[stateKey:sys_call_status]` - Shows if the phone is `RINGING`, `IN_CALL`, or `IDLE`.
-
-**Example Code:**
-```jsx
-<div className="text-xl text-yellow-400">
-    Phone Status: [stateKey:sys_call_status]
-</div>
+<button action="hw:tcp:connect">Connect to Server</button>
+<button action="hw:tcp:iot:relay_toggle:1">💡 Toggle Light</button>
+<button action="hw:tcp:invite:102">📞 Call Ext 102</button>
 ```
 
 ---
 
-## 💬 4. Real-Time Chat
-Send text messages instantly.
+## 🎨 2. UI & Navigation (5 Actions)
+Control what happens on the screen.
 
 ### 🛠️ Actions
-* `hw:tcp:chat:Hello!` - Sends "Hello!" to the target extension.
-
-### 👁️ States
-* `[stateKey:sys_chat_msg]` - Shows the newest message you received.
+* `nav:HomePage` - Jump to the "HomePage" screen.
+* `app.navigate:HomePage` - Same as above, jumps to a screen.
+* `anim:bounce` - Play a UI animation (e.g., `bounce`, `fade_in`).
+* `alert:Hello World!` - Show a pop-up alert dialog on the screen.
+* `state:counter` - Add +1 to a state variable (e.g., to make a click counter).
 
 **Example Code:**
 ```jsx
-<div className="bg-slate-800 p-4 rounded-lg">
-    📬 New Message: [stateKey:sys_chat_msg]
-</div>
+<button action="nav:SettingsPage">⚙️ Go to Settings</button>
+<button action="alert:Saved Successfully!">💾 Save</button>
 ```
 
 ---
 
-## 🧭 5. Screen Navigation
-Move between different pages in your app.
+## 🎛️ 3. Hardware Sensors & Basics (10 Actions)
+Control the physical hardware of the phone.
 
 ### 🛠️ Actions
-* `app.navigate:TcpCamera` - Jumps to the `TcpCamera` screen.
-* `app.navigate:Home` - Goes back to the `Home` screen.
+* `hw:flashlight:on` - Turn the camera flashlight ON.
+* `hw:flashlight:off` - Turn the flashlight OFF.
+* `hw:haptics:vibrate` - Make the phone vibrate gently.
+* `hw:haptics:heavy` - Make the phone vibrate strongly.
+* `hw:camera:capture` - Take a photo.
+* `hw:camera:switch` - Switch between Front and Back camera.
+* `hw:mic:start` - Start recording audio from the microphone.
+* `hw:mic:stop` - Stop recording audio.
+* `hw:sensor:accel` - Read the Accelerometer (movement) sensor data.
+* `hw:battery` - Read the battery percentage and charging status.
 
 **Example Code:**
 ```jsx
-<button action="app.navigate:TcpCamera" className="bg-purple-500 p-3 rounded text-white">
-    ➡️ Go to Camera Page
-</button>
+<button action="hw:flashlight:on">🔦 Torch ON</button>
+<button action="hw:haptics:heavy">📳 Heavy Vibrate</button>
+<button action="hw:battery">🔋 Check Battery</button>
+<div>Battery is: [stateKey:battery_text]</div>
 ```
+
+---
+
+## 📱 4. Phone & Communications (8 Actions)
+Interact with the phone's communication features.
+
+### 🛠️ Actions
+* `hw:phone:call:9800000000` - Open the dialer to call a real phone number.
+* `hw:phone:carrier` - Get the mobile network name (e.g., Ncell, NTC).
+* `hw:phone:simState` - Check if the SIM card is ready.
+* `hw:phone:number` - Get the device's phone number.
+* `hw:sms:send:9800000000:Hello` - Send an SMS message.
+* `hw:contacts:get` - Fetch the phone's contact list.
+* `hw:contacts:list` - Show the contact list.
+* `hw:clipboard:copy:MyText` - Copy text to the phone's clipboard.
+
+**Example Code:**
+```jsx
+<button action="hw:phone:call:9841234567">📱 Call Manager</button>
+<button action="hw:clipboard:copy:Dolphin Is Awesome">📋 Copy Text</button>
+```
+
+---
+
+## 🌍 5. GPS, Storage & Connectivity (8 Actions)
+Access location, files, and other networks.
+
+### 🛠️ Actions
+* `hw:gps:get` - Fetch the current GPS location once.
+* `hw:gps:watch` - Continuously track the live GPS location.
+* `hw:gps:stop` - Stop tracking GPS.
+* `hw:storage:save:myFile.txt` - Save data to a local file.
+* `hw:network:status` - Check if connected to WiFi or Mobile Data.
+* `hw:bluetooth:scan` - Scan for nearby Bluetooth devices.
+* `hw:bluetooth:connect:MAC_ADDRESS` - Connect to a specific Bluetooth device.
+* `hw:nfc:read` - Read data from an NFC tag.
+
+**Example Code:**
+```jsx
+<button action="hw:gps:get">📍 Get My Location</button>
+<div>Lat: [stateKey:gps_lat], Lng: [stateKey:gps_lng]</div>
+```
+
+---
+*Total Actions: 42. Welcome to the power of Dolphin Native!*
