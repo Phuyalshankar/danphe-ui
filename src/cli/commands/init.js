@@ -354,7 +354,7 @@ module.exports = {};
             build: 'dolphin build',
             'build:android': 'dolphin android build --hotpatch',
         },
-        dependencies: { 'dolphin-native': '*' },
+        dependencies: { 'dolphin-native': 'git+https://github.com/Phuyalshankar/dolphin-native-2.git' },
     };
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify(pkg, null, 2));
 

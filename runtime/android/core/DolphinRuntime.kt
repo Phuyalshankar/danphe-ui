@@ -197,8 +197,20 @@ class DolphinRuntime(val context: Context) {
                         val targetScreen = resolveScreenName(requestedScreen)
                         if (targetScreen != null) {
                             Log.i(TAG, "🧭 Native Navigation to: $targetScreen (from $requestedScreen)")
+                            val prevScreen = lastNavScreen
                             lastNavScreen = targetScreen
                             lastNavTime = System.currentTimeMillis()
+                            
+                            // 1. Update general active screen state
+                            DolphinStateEngine.set("sys_active_screen", targetScreen)
+                            
+                            // 2. Turn OFF previous tab shade (if it exists)
+                            if (prevScreen != null) {
+                                DolphinStateEngine.set("tab_${prevScreen.lowercase()}_shade", 0)
+                            }
+                            // 3. Turn ON new active tab shade (255)
+                            DolphinStateEngine.set("tab_${targetScreen.lowercase()}_shade", 255)
+
                             this.onAction?.invoke("nav:$targetScreen", valueStr)
                         } else {
                             this.onAction?.invoke(action, valueStr)
