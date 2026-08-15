@@ -242,18 +242,15 @@ fun ViewFactory.createImage(bin: ByteArray): View {
     }
     imageView.layoutParams = lp
 
+    if (DolphinStateEngine.imageLoader == null) {
+        DolphinStateEngine.imageLoader = { v, imgUrl ->
+            loadImage(v, imgUrl)
+        }
+    }
+
     if (url.startsWith("[stateKey:") && url.endsWith("]")) {
         val stateKey = url.substring(10, url.length - 1)
-        val initialUrl = DolphinStateEngine.getState(stateKey) ?: ""
-        if (initialUrl.isNotEmpty()) {
-            loadImage(imageView, initialUrl)
-        }
-        DolphinStateEngine.subscribe(stateKey) { newVal ->
-            val liveUrl = newVal?.toString() ?: ""
-            if (liveUrl.isNotEmpty()) {
-                loadImage(imageView, liveUrl)
-            }
-        }
+        DolphinStateEngine.bind(stateKey, imageView, DolphinStateEngine.Property.IMAGE, "")
     } else {
         loadImage(imageView, url)
     }
