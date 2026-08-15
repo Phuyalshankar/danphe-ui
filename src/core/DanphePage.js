@@ -53,12 +53,22 @@ class DanphePage {
     }
 
     /**
-     * Fetch remote API data and auto-unpack array/object into Page state
+     * Fetch remote API data with automatic loading, try-catch, error state, and unpacking
      */
     async fetch(url, options = {}) {
+        this.loading = true;
+        this.isLoading = true;
+        this.error = null;
+        this.status = 'Loading... ⏳';
+
         try {
             const fetchFn = (typeof fetch !== 'undefined') ? fetch : require('node-fetch');
             const res = await fetchFn(url, options);
+            
+            if (!res.ok) {
+                throw new Error(`HTTP Error ${res.status}: ${res.statusText || 'Failed to fetch'}`);
+            }
+
             const data = await res.json();
             if (Array.isArray(data)) {
                 // Array format (e.g. products API) -> auto-flatten into prod1_title, prod1_img, etc.
@@ -73,15 +83,24 @@ class DanphePage {
                         this[`item${idx + 1}`] = item;
                     }
                 });
-                this.status = `✅ Loaded ${data.length} items from API!`;
+                this.status = `✅ Loaded ${data.length} items successfully!`;
             } else if (data && typeof data === 'object') {
                 for (const [key, val] of Object.entries(data)) {
                     this[key] = val;
                 }
+                this.status = '✅ Data synchronized!';
             }
+            
+            this.loading = false;
+            this.isLoading = false;
+            this.error = null;
             return data;
         } catch (e) {
             console.error(`[DanphePage] Fetch error for ${url}:`, e.message);
+            this.loading = false;
+            this.isLoading = false;
+            this.error = e.message || 'Network Request Failed';
+            this.status = `⚠️ Error: ${this.error}`;
             return null;
         }
     }
