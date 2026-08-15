@@ -1539,9 +1539,14 @@ class DevServer extends EventEmitter {
         <span class="stat-value" style="color: var(--warning);">ESP32 / Smartwatch / Displays</span>
       </div>
 
-      <a id="thorvg-download-btn" href="/download-thorvg" download class="btn" style="background: linear-gradient(135deg, #0284c7, #38bdf8);">
-        ⚡ Download Native C++ Screen (.cpp)
-      </a>
+      <div style="display: flex; gap: 8px; margin-top: 15px;">
+        <a id="thorvg-download-btn" href="/download-thorvg" download class="btn" style="flex: 1; margin:0; background: linear-gradient(135deg, #0284c7, #38bdf8);">
+          ⚡ Download C++
+        </a>
+        <button id="btn-flash-device" onclick="flashHardwareWebSerial()" class="btn" style="flex: 1; margin:0; background: linear-gradient(135deg, #10b981, #059669);">
+          🔌 1-Click Flash Device
+        </button>
+      </div>
     </div>
 
     <!-- 3. Connected Devices Monitor Card -->
