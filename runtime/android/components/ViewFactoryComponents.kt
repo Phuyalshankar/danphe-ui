@@ -229,19 +229,34 @@ fun ViewFactory.loadImage(imageView: ImageView, url: String) {
 
 fun ViewFactory.createImage(bin: ByteArray): View {
     val imageView = ImageView(ctx).apply {
-        scaleType = ImageView.ScaleType.CENTER_CROP
+        scaleType = ImageView.ScaleType.FIT_CENTER
         adjustViewBounds = true
     }
     applyStyles(imageView, bin)
-    val url = nextStr()
+    var url = nextStr()
     var lp = imageView.layoutParams
     if (lp == null) {
-        lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(200))
+        lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(180))
     } else if (lp.height == ViewGroup.LayoutParams.WRAP_CONTENT || lp.height <= 0) {
-        lp.height = dp(200)
+        lp.height = dp(180)
     }
     imageView.layoutParams = lp
-    loadImage(imageView, url)
+
+    if (url.startsWith("[stateKey:") && url.endsWith("]")) {
+        val stateKey = url.substring(10, url.length - 1)
+        val initialUrl = DolphinStateEngine.getState(stateKey) ?: ""
+        if (initialUrl.isNotEmpty()) {
+            loadImage(imageView, initialUrl)
+        }
+        DolphinStateEngine.subscribe(stateKey) { newVal ->
+            val liveUrl = newVal?.toString() ?: ""
+            if (liveUrl.isNotEmpty()) {
+                loadImage(imageView, liveUrl)
+            }
+        }
+    } else {
+        loadImage(imageView, url)
+    }
     return imageView
 }
 
