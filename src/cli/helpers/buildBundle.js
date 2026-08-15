@@ -61,11 +61,30 @@ function buildBundle(appPath, config) {
     // app.jsx resolves from the TEST PROJECT's own node_modules (which has the file: symlink)
     // rather than from the CLI package's own directory.
     const projectNodeModules = path.join(path.dirname(appPath), 'node_modules');
+    const danpheCorePath = path.resolve(__dirname, '../../../');
     const existingNodePath = process.env.NODE_PATH || '';
-    if (!existingNodePath.includes(projectNodeModules)) {
-        process.env.NODE_PATH = projectNodeModules + (existingNodePath ? path.delimiter + existingNodePath : '');
+    if (!existingNodePath.includes(danpheCorePath)) {
+        process.env.NODE_PATH = danpheCorePath + path.delimiter + projectNodeModules + (existingNodePath ? path.delimiter + existingNodePath : '');
         require('module').Module._initPaths();
     }
+
+    if (module.paths && !module.paths.includes(danpheCorePath)) {
+        module.paths.unshift(danpheCorePath);
+    }
+
+    // Direct mock for require('dolphin-native') and require('danphe-native')
+    const nativeExports = require('../../index.js');
+    require.cache[require.resolve('../../index.js')] = { exports: nativeExports, loaded: true };
+    try {
+        const Module = require('module');
+        const origResolve = Module._resolveFilename;
+        Module._resolveFilename = function(request, parent, isMain, options) {
+            if (request === 'dolphin-native' || request === 'danphe-native') {
+                return path.resolve(danpheCorePath, 'index.js');
+            }
+            return origResolve.call(this, request, parent, isMain, options);
+        };
+    } catch(e) {}
 
     const app = require(appPath);
 
