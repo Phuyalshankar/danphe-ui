@@ -212,6 +212,11 @@ class DolphinWebEngine {
         if (extractedStateKey) attrs.push(`data-state-key="${this._escapeHTML(extractedStateKey)}"`);
         if (props.src) {
             let cleanSrc = String(props.src);
+            if (cleanSrc.startsWith('[stateKey:') && cleanSrc.endsWith(']')) {
+                const key = cleanSrc.substring(10, cleanSrc.length - 1);
+                cleanSrc = (stateMap && stateMap[key] !== undefined) ? stateMap[key] : cleanSrc;
+                attrs.push(`data-state-img="${this._escapeHTML(key)}"`);
+            }
             if (cleanSrc.startsWith('../assets/')) cleanSrc = '/assets/' + cleanSrc.substring(10);
             else if (cleanSrc.startsWith('./assets/')) cleanSrc = '/assets/' + cleanSrc.substring(9);
             else if (cleanSrc.startsWith('assets/')) cleanSrc = '/assets/' + cleanSrc.substring(7);
@@ -428,6 +433,17 @@ class DolphinWebEngine {
                 }
               } else {
                 el.textContent = state[key];
+              }
+            }
+          });
+
+          var imgElements = document.querySelectorAll('[data-state-img]');
+          imgElements.forEach(function(img) {
+            var imgKey = img.getAttribute('data-state-img');
+            if (imgKey && state[imgKey] !== undefined) {
+              var newSrc = String(state[imgKey]);
+              if (img.getAttribute('src') !== newSrc) {
+                img.setAttribute('src', newSrc);
               }
             }
           });
