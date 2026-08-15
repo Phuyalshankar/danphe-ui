@@ -46,7 +46,8 @@
     "./*": "./*"
   },
   "bin": {
-    "dolphin": "bin/dolphin.js",
+    "danphe": "bin/dolphin.js",
+    "danphe-mobile": "bin/dolphin-mobile.js",
     "dolphin-mobile": "bin/dolphin-mobile.js"
   },
   "scripts": {

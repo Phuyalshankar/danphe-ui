@@ -718,6 +718,23 @@ class DevServer extends EventEmitter {
                     res.end('APK not built yet. Run dolphin android build');
                 }
 
+            } else if (url === '/download-thorvg' || url === '/download-cpp') {
+                const thorvgFile = path.join(this.watchDir, 'src', 'embedded', 'danphe_thorvg_screen.cpp');
+                if (fs.existsSync(thorvgFile)) {
+                    const stat = fs.statSync(thorvgFile);
+                    res.writeHead(200, {
+                        'Content-Type': 'text/x-c++src',
+                        'Content-Length': stat.size,
+                        'Content-Disposition': 'attachment; filename="danphe_thorvg_screen.cpp"',
+                        'Cache-Control': 'no-cache',
+                        'Access-Control-Allow-Origin': '*'
+                    });
+                    fs.createReadStream(thorvgFile).pipe(res);
+                } else {
+                    res.writeHead(404);
+                    res.end('ThorVG C++ code not generated yet. Run dolphin thorvg');
+                }
+
             } else if (url === '/web' || url === '/app') {
                 const DolphinWebEngine = require('../web/DolphinWebEngine');
                 const CdnAssetFetcher2  = require('../compiler/CdnAssetFetcher');
@@ -1500,6 +1517,30 @@ class DevServer extends EventEmitter {
       <a id="apk-download-btn" href="/download-apk" download class="btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
         Download ${apk} (${apkSize} MB)
+      </a>
+    </div>
+
+    <!-- 3. Samsung ThorVG / LVGL C++ Screen Pack Card -->
+    <div class="card">
+      <h2>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#38bdf8" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM4.5 7.5a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7z"/></svg>
+        Samsung ThorVG / LVGL C++ Pack
+      </h2>
+      <div class="stat-row">
+        <span class="stat-label">Target Engine</span>
+        <span class="stat-value" style="color: var(--accent);">Samsung ThorVG + LVGL</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Output Code</span>
+        <span class="stat-value" style="color: var(--success);">danphe_thorvg_screen.cpp</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Target Hardware</span>
+        <span class="stat-value" style="color: var(--warning);">ESP32 / Smartwatch / Displays</span>
+      </div>
+
+      <a id="thorvg-download-btn" href="/download-thorvg" download class="btn" style="background: linear-gradient(135deg, #0284c7, #38bdf8);">
+        ⚡ Download Native C++ Screen (.cpp)
       </a>
     </div>
 

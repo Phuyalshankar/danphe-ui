@@ -18,6 +18,7 @@ function showHelp(version) {
      \x1b[32mbuild --android\x1b[0m        Compile + build Android APK
      \x1b[32mbuild --android --hotpatch\x1b[0m Compile + build debug APK with hot-binary patching enabled
      \x1b[32mbuild --android --run\x1b[0m  Compile + build + install + launch on device
+     \x1b[32mthorvg\x1b[0m                 Compile UI to Native Samsung ThorVG / LVGL C++ code
      \x1b[32mandroid setup\x1b[0m          Auto-install Android SDK toolchain
      \x1b[32mandroid build\x1b[0m          Build signed APK for production
      \x1b[32mandroid build --hotpatch\x1b[0m Build debug APK with hot-binary patching enabled

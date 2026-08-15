@@ -13,7 +13,7 @@ if (module.paths && !module.paths.includes(globalNativePath)) {
     module.paths.unshift(globalNativePath);
 }
 
-const { cmdInit, cmdDev, cmdBuild, cmdInspect, cmdAndroid, cmdDoctor, cmdGenerate, showHelp } = require('./commands');
+const { cmdInit, cmdDev, cmdBuild, cmdInspect, cmdAndroid, cmdDoctor, cmdGenerate, cmdThorVG, showHelp } = require('./commands');
 
 // ── Enable JSX via Babel globally ───────────────────────────────
 try {
@@ -62,6 +62,7 @@ async function main() {
         case 'inspect':  await cmdInspect(sub);              process.exit(0);
         case 'android':  await cmdAndroid(sub, rest);        process.exit(0);
         case 'doctor':   await cmdDoctor(allArgs);           process.exit(0);
+        case 'thorvg':   await cmdThorVG(allArgs);           process.exit(0);
         case 'g':
         case 'generate': await cmdGenerate(sub, rest[0]);    process.exit(0);
         default:         showHelp(version);                  process.exit(0);

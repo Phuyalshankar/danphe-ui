@@ -57,6 +57,9 @@ module.exports = {
     MAGIC_BYTES,
     PLATFORM_CONFIG,
     
+    // Danphe 2 "Page as Variable" Zero-Hook Architecture
+    ...require('./core/DanphePage'),
+    
     // Factory
     create: (config) => new DolphinCSS(config),
     createApp: (config) => DolphinFramework.DolphinFramework.createApp(config),

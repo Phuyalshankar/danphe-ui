@@ -15,6 +15,7 @@ const { cmdInspect } = require('./inspect');
 const { cmdAndroid } = require('./android');
 const { cmdDoctor }  = require('./doctor');
 const { cmdGenerate } = require('./generate');
+const { cmdThorVG }   = require('./thorvg');
 const { showHelp }   = require('./help');
 
 module.exports = {
@@ -25,5 +26,6 @@ module.exports = {
     cmdAndroid,
     cmdDoctor,
     cmdGenerate,
+    cmdThorVG,
     showHelp,
 };
