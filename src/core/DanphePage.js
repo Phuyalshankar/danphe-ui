@@ -53,6 +53,36 @@ class DanphePage {
     }
 
     /**
+     * Fetch remote API data and auto-update Page state
+     */
+    async fetch(url, options = {}) {
+        try {
+            const fetchFn = (typeof fetch !== 'undefined') ? fetch : require('node-fetch');
+            const res = await fetchFn(url, options);
+            const data = await res.json();
+            if (data && typeof data === 'object') {
+                for (const [key, val] of Object.entries(data)) {
+                    this[key] = val;
+                }
+            }
+            return data;
+        } catch (e) {
+            console.error(`[DanphePage] Fetch error for ${url}:`, e.message);
+            return null;
+        }
+    }
+
+    /**
+     * Poll remote API or Modbus sensor periodically
+     */
+    poll(url, intervalMs = 2000, options = {}) {
+        this.fetch(url, options);
+        return setInterval(() => {
+            this.fetch(url, options);
+        }, intervalMs);
+    }
+
+    /**
      * Subscribe to state mutations
      */
     subscribe(listener) {
