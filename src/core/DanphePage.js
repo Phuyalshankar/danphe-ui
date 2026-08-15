@@ -53,14 +53,28 @@ class DanphePage {
     }
 
     /**
-     * Fetch remote API data and auto-update Page state
+     * Fetch remote API data and auto-unpack array/object into Page state
      */
     async fetch(url, options = {}) {
         try {
             const fetchFn = (typeof fetch !== 'undefined') ? fetch : require('node-fetch');
             const res = await fetchFn(url, options);
             const data = await res.json();
-            if (data && typeof data === 'object') {
+            if (Array.isArray(data)) {
+                // Array format (e.g. products API) -> auto-flatten into prod1_title, prod1_img, etc.
+                data.slice(0, 20).forEach((item, idx) => {
+                    const prefix = `prod${idx + 1}_`;
+                    if (typeof item === 'object' && item !== null) {
+                        this[`${prefix}title`] = item.title || item.name || '';
+                        this[`${prefix}price`] = typeof item.price === 'number' ? `$${item.price}` : (item.price || '');
+                        this[`${prefix}cat`] = item.category || item.type || '';
+                        this[`${prefix}img`] = item.image || item.thumbnail || item.img || '';
+                    } else {
+                        this[`item${idx + 1}`] = item;
+                    }
+                });
+                this.status = `✅ Loaded ${data.length} items from API!`;
+            } else if (data && typeof data === 'object') {
                 for (const [key, val] of Object.entries(data)) {
                     this[key] = val;
                 }
@@ -110,9 +124,17 @@ class DanphePage {
 
 /**
  * Universal Factory to create a Page as Variable
+ * Supports:
+ *   1. Object literal: Page({ title: "...", count: 0 })
+ *   2. Direct 1-Line URL: Page("https://fakestoreapi.com/products")
  */
-function createPage(initialState = {}) {
-    return new DanphePage(initialState);
+function createPage(initialArg = {}) {
+    if (typeof initialArg === 'string') {
+        const page = new DanphePage({ status: 'Loading 1-line API...' });
+        page.fetch(initialArg);
+        return page;
+    }
+    return new DanphePage(initialArg);
 }
 
 module.exports = {
