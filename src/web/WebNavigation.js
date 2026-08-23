@@ -41,6 +41,18 @@ class WebNavigation {
         `;
     }
 
+    static getBottomDrawerHTML() {
+        return `
+    <!-- 🌐 Web Slide-Up Bottom Drawer / Bottom Sheet Overlay -->
+    <div id="dolphin-web-bottom-drawer-backdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 99998;" onclick="window.closeBottomDrawer && window.closeBottomDrawer()"></div>
+    <div id="dolphin-web-bottom-drawer" style="position: fixed; bottom: 0; left: 50%; transform: translate(-50%, 100%); width: 100%; max-width: 480px; max-height: 60vh; overflow-y: auto; background: #0b0f19; border: 1px solid #1e293b; border-bottom: none; border-radius: 24px 24px 0 0; transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); z-index: 99999; display: flex; flex-direction: column; padding: 20px 16px 28px 16px; box-shadow: 0 -20px 50px rgba(0,0,0,0.7);">
+        <!-- Drag Handle Indicator -->
+        <div style="width: 48px; height: 5px; background: #334155; border-radius: 999px; margin: 0 auto 16px auto; cursor: pointer;" onclick="window.closeBottomDrawer && window.closeBottomDrawer()"></div>
+        <div id="dolphin-web-bottom-drawer-content" style="width: 100%;"></div>
+    </div>
+        `;
+    }
+
     static getClientScript() {
         return `
         window.openWebDrawer = function() {
@@ -69,9 +81,40 @@ class WebNavigation {
             b.classList.remove('drawer-open');
           }
         };
+        window.openBottomDrawer = function(screenName) {
+          var d = document.getElementById('dolphin-web-bottom-drawer');
+          var b = document.getElementById('dolphin-web-bottom-drawer-backdrop');
+          var c = document.getElementById('dolphin-web-bottom-drawer-content');
+          if (screenName && window.DolphinRenderScreenContent && c) {
+            window.DolphinRenderScreenContent(screenName, c);
+          }
+          if (d) {
+            d.style.setProperty('transform', 'translate(-50%, 0)', 'important');
+            d.classList.add('drawer-open');
+          }
+          if (b) {
+            b.style.setProperty('opacity', '1', 'important');
+            b.style.setProperty('pointer-events', 'auto', 'important');
+            b.classList.add('drawer-open');
+          }
+        };
+        window.closeBottomDrawer = function() {
+          var d = document.getElementById('dolphin-web-bottom-drawer');
+          var b = document.getElementById('dolphin-web-drawer-backdrop');
+          if (d) {
+            d.style.setProperty('transform', 'translate(-50%, 100%)', 'important');
+            d.classList.remove('drawer-open');
+          }
+          if (b) {
+            b.style.setProperty('opacity', '0', 'important');
+            b.style.setProperty('pointer-events', 'none', 'important');
+            b.classList.remove('drawer-open');
+          }
+        };
         window.DolphinWebNavigate = function(screenTarget) {
           if (!screenTarget) return;
           if (window.closeWebDrawer) window.closeWebDrawer();
+          if (window.closeBottomDrawer) window.closeBottomDrawer();
           var lowerTarget = String(screenTarget).toLowerCase().trim();
           var targetFile = lowerTarget;
           if (lowerTarget === 'home' || lowerTarget === 'homescreen') {

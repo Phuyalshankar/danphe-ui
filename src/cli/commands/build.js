@@ -44,13 +44,14 @@ async function cmdBuild(args) {
     await IconCDNFetcher.ensureIconsDownloaded(config, projectRoot);
 
     const entryPaths = [
+        config.entry ? path.resolve(projectRoot, config.entry) : null,
         path.resolve(projectRoot, 'frontend', 'app.jsx'),
         path.resolve(projectRoot, 'frontend', 'app.js'),
         path.resolve(projectRoot, 'app.jsx'),
         path.resolve(projectRoot, 'app.js'),
         path.resolve(projectRoot, 'DemoApp', 'app.jsx'),
         path.resolve(projectRoot, 'DemoApp', 'app.js')
-    ];
+    ].filter(Boolean);
     const appPath = entryPaths.find(p => fs.existsSync(p));
     if (!appPath) {
         console.error('❌  Entry file (app.js or app.jsx) not found.');

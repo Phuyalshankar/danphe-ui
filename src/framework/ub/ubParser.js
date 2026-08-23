@@ -717,13 +717,50 @@ function parseClass(cls, darkMode = false) {
 
 function parseTW(tw) {
     if (!tw || typeof tw !== 'string') return {};
-    const mobileTw = tw.replace(/\[.*?\]/g, '').trim();
     const props = {};
 
-    if (!mobileTw) return props;
-
-    mobileTw.split(/\s+/).forEach(p => {
+    tw.split(/\s+/).forEach(p => {
         if (!p) return;
+
+        // Arbitrary Text Size: text-[8.5px], text-[10px], text-[12px]
+        if (p.startsWith('text-[') && p.endsWith(']')) {
+            const inner = p.slice(6, -1);
+            const num = parseFloat(inner);
+            if (!isNaN(num)) {
+                props.size = num;
+                props.fontSize = num;
+            }
+            return;
+        }
+
+        // Negative Margins: -mt-5, -mb-2, -ml-4, -mr-4, -m-2
+        if (p.startsWith('-mt-')) {
+            const val = parseSpacingValue(p.slice(4));
+            if (val !== undefined) props.mt = -val;
+            return;
+        }
+        if (p.startsWith('-mb-')) {
+            const val = parseSpacingValue(p.slice(4));
+            if (val !== undefined) props.mb = -val;
+            return;
+        }
+        if (p.startsWith('-ml-')) {
+            const val = parseSpacingValue(p.slice(4));
+            if (val !== undefined) props.ml = -val;
+            return;
+        }
+        if (p.startsWith('-mr-')) {
+            const val = parseSpacingValue(p.slice(4));
+            if (val !== undefined) props.mr = -val;
+            return;
+        }
+        if (p.startsWith('-m-')) {
+            const val = parseSpacingValue(p.slice(3));
+            if (val !== undefined) {
+                props.mt = -val; props.mb = -val; props.ml = -val; props.mr = -val;
+            }
+            return;
+        }
 
         if (p === 'w-full' || p === 'w-screen' || p === 'w-100') {
             props.width = -1;
@@ -810,7 +847,13 @@ function parseTW(tw) {
             else if (p.startsWith('border-')) {
                 const colorPart = p.slice(7);
                 if (colorPart !== 'solid' && colorPart !== 'dashed' && colorPart !== 'dotted' && colorPart !== 'inset' && colorPart !== 'outset') {
-                    props.borderColor = colorPart;
+                    if (colorPart.includes('/')) {
+                        const [cName, opStr] = colorPart.split('/');
+                        props.borderColor = cName;
+                        props.borderOpacity = parseInt(opStr, 10) || 100;
+                    } else {
+                        props.borderColor = colorPart;
+                    }
                 } else {
                     props.borderStyle = colorPart;
                 }
@@ -823,7 +866,13 @@ function parseTW(tw) {
             if (colorPart === 'white') { props.bg = 'white'; return; }
             if (colorPart === 'black') { props.bg = 'black'; return; }
             if (colorPart === 'transparent') { props.bg = 'transparent'; return; }
-            props.bg = colorPart;
+            if (colorPart.includes('/')) {
+                const [cName, opStr] = colorPart.split('/');
+                props.bg = cName;
+                props.bgOpacity = parseInt(opStr, 10) || 100;
+            } else {
+                props.bg = colorPart;
+            }
             return;
         }
 
@@ -850,6 +899,19 @@ function parseTW(tw) {
         if (p === 'text-center') { props.align = 'center'; return; }
         if (p === 'text-left') { props.align = 'left'; return; }
         if (p === 'text-right') { props.align = 'right'; return; }
+        if (p.startsWith('text-') && !['text-left', 'text-right', 'text-center', 'text-justify', 'text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl'].includes(p) && !p.startsWith('text-[')) {
+            let colorPart = p.slice(5);
+            if (colorPart.includes('/')) {
+                const [cName, opStr] = colorPart.split('/');
+                props.color = cName;
+                props.textColor = cName;
+                props.textOpacity = parseInt(opStr, 10) || 100;
+            } else {
+                props.color = colorPart;
+                props.textColor = colorPart;
+            }
+            return;
+        }
 
         if (p === 'Button' || p === 'button') { props.type = 'Button'; return; }
         if (p === 'Text' || p === 'text') { props.type = 'Text'; return; }
@@ -991,12 +1053,12 @@ function parseSpacingValue(str) {
     if (clean.startsWith('[') && clean.endsWith(']')) {
         clean = clean.slice(1, -1);
     }
-    const val = parseInt(clean);
+    const val = parseFloat(clean);
     if (isNaN(val)) return undefined;
     if (clean.endsWith('px') || str.includes('[')) {
-        return val;
+        return Math.round(val);
     }
-    return val * PX_MULTIPLIER;
+    return Math.round(val * PX_MULTIPLIER);
 }
 
 function getColorIndex(colorName) {

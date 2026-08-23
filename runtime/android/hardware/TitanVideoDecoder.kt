@@ -41,145 +41,57 @@ class TitanVideoDecoder(private val surface: Surface) {
      */
     fun onRawDataReceived(data: ByteArray) {
         executor.execute {
-            if (bufferLength + data.size > tcpBuffer.size) {
-                Log.w(TAG, "TCP buffer overflow, dropping data")
-                bufferLength = 0 // Reset
-            }
-            System.arraycopy(data, 0, tcpBuffer, bufferLength, data.size)
-            bufferLength += data.size
-            processBuffer()
-        }
-    }
-
-    private fun processBuffer() {
-        var offset = 0
-        while (offset < bufferLength) {
-            // Skip RTSP text responses (RTSP/1.0 200 OK...)
-            if (tcpBuffer[offset] == 'R'.code.toByte() && offset + 4 < bufferLength && tcpBuffer[offset + 1] == 'T'.code.toByte()) {
-                // Find \r\n\r\n
-                var foundEnd = false
-                for (i in offset until bufferLength - 3) {
-                    if (tcpBuffer[i] == '\r'.code.toByte() && tcpBuffer[i + 1] == '\n'.code.toByte() &&
-                        tcpBuffer[i + 2] == '\r'.code.toByte() && tcpBuffer[i + 3] == '\n'.code.toByte()) {
-                        offset = i + 4
-                        foundEnd = true
-                        break
-                    }
-                }
-                if (!foundEnd) break // Need more data
-                continue
-            }
-
-            // Look for Interleaved Frame '$' (0x24)
-            if (tcpBuffer[offset] != 0x24.toByte()) {
-                offset++
-                continue
-            }
-
-            if (offset + 4 > bufferLength) break // Need more data
-
-            val channel = tcpBuffer[offset + 1].toInt()
-            val len = ((tcpBuffer[offset + 2].toInt() and 0xFF) shl 8) or (tcpBuffer[offset + 3].toInt() and 0xFF)
-
-            if (offset + 4 + len > bufferLength) break // Need more data
-
-            val rtpPacket = ByteArray(len)
-            System.arraycopy(tcpBuffer, offset + 4, rtpPacket, 0, len)
-            offset += 4 + len
-
-            // Only process video channel (usually 0)
-            if (channel == 0) {
-                processRtpPacket(rtpPacket)
-            }
-        }
-
-        // Shift remaining data to start
-        if (offset > 0) {
-            val remaining = bufferLength - offset
-            if (remaining > 0) {
-                System.arraycopy(tcpBuffer, offset, tcpBuffer, 0, remaining)
-            }
-            bufferLength = remaining
-        }
-    }
-
-    private fun processRtpPacket(rtp: ByteArray) {
-        if (rtp.size < 12) return // Invalid RTP header
-
-        val payloadOffset = 12 // Skip RTP header
-        val payloadSize = rtp.size - payloadOffset
-        if (payloadSize <= 0) return
-
-        val nalHeader = rtp[payloadOffset]
-        val nalType = (nalHeader and 0x1F).toInt()
-
-        if (nalType in 1..23) {
-            // Single NAL Unit
-            val nalData = ByteArray(payloadSize)
-            System.arraycopy(rtp, payloadOffset, nalData, 0, payloadSize)
-            feedDecoder(nalData)
-        } else if (nalType == 28) {
-            // FU-A Fragment
-            val fuHeader = rtp[payloadOffset + 1]
-            val isStart = (fuHeader and 0x80.toByte()).toInt() != 0
-            val isEnd = (fuHeader and 0x40.toByte()).toInt() != 0
-            val originalNalType = (fuHeader and 0x1F).toInt()
-            val nri = (nalHeader and 0x60).toInt()
-
-            val fragDataOffset = payloadOffset + 2
-            val fragDataSize = rtp.size - fragDataOffset
-
-            if (isStart) {
-                fuLength = 0
-                val rebuiltHeader = (nri or originalNalType).toByte()
-                fuBuffer[0] = rebuiltHeader
-                fuLength = 1
-            }
-
-            if (fuLength + fragDataSize <= fuBuffer.size) {
-                System.arraycopy(rtp, fragDataOffset, fuBuffer, fuLength, fragDataSize)
-                fuLength += fragDataSize
-            }
-
-            if (isEnd && fuLength > 0) {
-                val fullNal = ByteArray(fuLength)
-                System.arraycopy(fuBuffer, 0, fullNal, 0, fuLength)
-                feedDecoder(fullNal)
-                fuLength = 0
-            }
+            feedDecoder(data)
         }
     }
 
     private fun feedDecoder(nalData: ByteArray) {
+        if (nalData.isEmpty()) return
+
         if (!isConfigured) {
-            // Force configuration with known TitanCameraSimulator SPS/PPS
-            val sps = byteArrayOf(0x67, 0x42, 0xc0.toByte(), 0x28, 0xd9.toByte(), 0x00, 0xa0.toByte(), 0x47, 0xfe.toByte(), 0xc8.toByte(), 0x00, 0x00, 0x03, 0x00, 0x08, 0x00, 0x00, 0x03, 0x01, 0x94.toByte(), 0x78, 0xb1.toByte(), 0x72, 0xc0.toByte())
-            val pps = byteArrayOf(0x68, 0xce.toByte(), 0x38, 0x80.toByte())
+            val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 1280, 720)
             
-            val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 1920, 1080)
-            val csd0 = ByteBuffer.wrap(startCode + sps)
-            val csd1 = ByteBuffer.wrap(startCode + pps)
-            format.setByteBuffer("csd-0", csd0)
-            format.setByteBuffer("csd-1", csd1)
+            // Standard H.264 Baseline SPS (Sequence Parameter Set) & PPS (Picture Parameter Set)
+            val sps = byteArrayOf(
+                0x00, 0x00, 0x00, 0x01, 0x67, 0x42, 0x00, 0x1f.toByte(),
+                0xe9.toByte(), 0x01, 0x40, 0x7b.toByte(), 0x20
+            )
+            val pps = byteArrayOf(
+                0x00, 0x00, 0x00, 0x01, 0x68, 0xce.toByte(), 0x38, 0x80.toByte()
+            )
+            format.setByteBuffer("csd-0", ByteBuffer.wrap(sps))
+            format.setByteBuffer("csd-1", ByteBuffer.wrap(pps))
 
             try {
                 decoder?.configure(format, surface, null, 0)
                 decoder?.start()
                 isConfigured = true
-                Log.i(TAG, "MediaCodec configured and started with forced SPS/PPS.")
+                Log.i(TAG, "MediaCodec configured and started with baseline SPS/PPS.")
             } catch (e: Exception) {
                 Log.e(TAG, "Decoder config failed: ${e.message}")
             }
         }
 
         try {
+            // Check if nalData already starts with Annex-B start code (0x00, 0x00, 0x00, 0x01 or 0x00, 0x00, 0x01)
+            val hasStartCode = (nalData.size >= 4 && nalData[0] == 0.toByte() && nalData[1] == 0.toByte() && nalData[2] == 0.toByte() && nalData[3] == 1.toByte()) ||
+                               (nalData.size >= 3 && nalData[0] == 0.toByte() && nalData[1] == 0.toByte() && nalData[2] == 1.toByte())
+
+            val finalBytes = if (hasStartCode) {
+                nalData
+            } else {
+                val buf = ByteArray(4 + nalData.size)
+                buf[0] = 0; buf[1] = 0; buf[2] = 0; buf[3] = 1
+                System.arraycopy(nalData, 0, buf, 4, nalData.size)
+                buf
+            }
+
             val inputBufIdx = decoder?.dequeueInputBuffer(10000) ?: -1
             if (inputBufIdx >= 0) {
                 val inputBuf = decoder?.getInputBuffer(inputBufIdx)
                 inputBuf?.clear()
-                inputBuf?.put(startCode)
-                inputBuf?.put(nalData)
-                decoder?.queueInputBuffer(inputBufIdx, 0, nalData.size + 4, System.currentTimeMillis() * 1000, 0)
+                inputBuf?.put(finalBytes)
+                decoder?.queueInputBuffer(inputBufIdx, 0, finalBytes.size, System.currentTimeMillis() * 1000, 0)
             }
 
             var outputBufInfo = MediaCodec.BufferInfo()

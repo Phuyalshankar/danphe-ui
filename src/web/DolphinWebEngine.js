@@ -167,24 +167,57 @@ class DolphinWebEngine {
             htmlTag = 'canvas';
         }
 
+        // Inline Utility Style Generator
+        let inlineStyle = this._classNameToStyle(props.className);
+
+        // Resolve custom gradient="danphe" / gradient="gradient-horiz-..." attributes
+        const gradAttr = props.gradient || (props.attributes && props.attributes.gradient) || null;
+        if (gradAttr) {
+            const gradCss = this._resolveGradientString(gradAttr);
+            if (gradCss) {
+                inlineStyle = inlineStyle ? `background-image:${gradCss} !important;${inlineStyle}` : `background-image:${gradCss} !important`;
+            }
+        }
+
+        const svgTags = ['svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'g', 'defs', 'clippath', 'use'];
+        if (svgTags.includes(rawTag)) {
+            htmlTag = rawTag;
+        }
+
+        if (rawTag === 'icon') {
+            const iconName = props.name || props.icon || props.className || '';
+            const faClass = iconName.startsWith('fa-') || iconName.includes('fa-') ? iconName : `fa-solid fa-${iconName}`;
+            const webClasses = String(props.className || '').replace(/\[(.*?)\]/g, '$1').replace(/\s+/g, ' ').trim();
+            return `<i class="${faClass} ${this._escapeHTML(webClasses)}" style="${this._escapeHTML(inlineStyle)}"></i>`;
+        }
+
+        if (rawTag === 'thorvg' || rawTag === 'nativecanvas' || compTypeProp === '0x61' || compTypeProp === 'thorvg') {
+            const svgContent = props.svg || props.src || props.d || '';
+            if (svgContent && typeof svgContent === 'string' && svgContent.trim().startsWith('<svg')) {
+                let cleanSvg = svgContent.trim();
+                if (!cleanSvg.includes('width=') && !cleanSvg.includes('width:')) {
+                    cleanSvg = cleanSvg.replace('<svg ', '<svg width="100%" height="100%" ');
+                }
+                const webClasses = String(props.className || '').replace(/\[(.*?)\]/g, '$1').replace(/\s+/g, ' ').trim();
+                return `<div class="${this._escapeHTML(webClasses)}" style="display:inline-flex;align-items:center;justify-content:center;${this._escapeHTML(inlineStyle)}">${cleanSvg}</div>`;
+            } else if (props.d || (svgContent && typeof svgContent === 'string' && !svgContent.startsWith('<svg') && svgContent.length > 5)) {
+                const pathD = props.d || svgContent;
+                const w = props.width || 24;
+                const h = props.height || 24;
+                const stroke = props.stroke || 'currentColor';
+                const fill = props.fill || 'none';
+                const cleanSvg = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${pathD}"/></svg>`;
+                const webClasses = String(props.className || '').replace(/\[(.*?)\]/g, '$1').replace(/\s+/g, ' ').trim();
+                return `<div class="${this._escapeHTML(webClasses)}" style="display:inline-flex;align-items:center;justify-content:center;${this._escapeHTML(inlineStyle)}">${cleanSvg}</div>`;
+            }
+        }
+
         // Build HTML attributes
         const attrs = [];
         if (props.id) attrs.push(`id="${this._escapeHTML(props.id)}"`);
         if (props.className) {
             const webClasses = String(props.className).replace(/\[(.*?)\]/g, '$1').replace(/\s+/g, ' ').trim();
             attrs.push(`class="${this._escapeHTML(webClasses)}"`);
-        }
-
-        // Inline Utility Style Generator
-        let inlineStyle = this._classNameToStyle(props.className);
-
-        // Resolve custom gradient="danphe" / gradient="gradient-horiz-..." attributes
-        const gradAttr = props.gradient || normAttrs.gradient || null;
-        if (gradAttr) {
-            const gradCss = this._resolveGradientString(gradAttr);
-            if (gradCss) {
-                inlineStyle = inlineStyle ? `background-image:${gradCss} !important;${inlineStyle}` : `background-image:${gradCss} !important`;
-            }
         }
 
         if (props.style) {
@@ -346,9 +379,13 @@ class DolphinWebEngine {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
     
-    <!-- 100% Offline Local Assets Support -->
-    <link rel="stylesheet" href="./assets/icons/icons.css" />
+    <!-- 100% Offline Local Assets & Icons Support -->
+    <link rel="stylesheet" href="/assets/icons/icons.css" />
+    <link rel="stylesheet" href="/assets/cdn/fa-all.min.css" />
+    <link rel="stylesheet" href="/assets/cdn/dolphin-css.css" />
     <style>
         ${WebCSS.getBaseStyles()}
     </style>
@@ -357,6 +394,7 @@ class DolphinWebEngine {
     <div id="root">${bodyHTML}</div>
 
     ${WebNavigation.getDrawerHTML()}
+    ${WebNavigation.getBottomDrawerHTML()}
 
     <!-- Pure Web-Native In-Browser State Engine & Action Router -->
     <script>
@@ -437,6 +475,33 @@ class DolphinWebEngine {
             }
           });
 
+          var busElements = document.querySelectorAll('[data-bus]');
+          busElements.forEach(function(el) {
+            var busKey = el.getAttribute('data-bus');
+            if (busKey) {
+              var isNested = busKey.indexOf('.') >= 0;
+              var regId = isNested ? busKey.split('.')[0] : busKey;
+              var propPath = isNested ? busKey.split('.').slice(1) : [];
+
+              var val = state['bus:' + regId] !== undefined ? state['bus:' + regId] : (state[regId] !== undefined ? state[regId] : (state['bus:' + busKey] !== undefined ? state['bus:' + busKey] : state[busKey]));
+              if (isNested && val && typeof val === 'object') {
+                var cur = val;
+                for (var p = 0; p < propPath.length; p++) {
+                  if (cur && cur[propPath[p]] !== undefined) cur = cur[propPath[p]];
+                  else { cur = ''; break; }
+                }
+                val = cur;
+              }
+              if (val !== undefined && val !== null) {
+                if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') {
+                  if (document.activeElement !== el) el.value = String(val);
+                } else {
+                  el.textContent = String(val);
+                }
+              }
+            }
+          });
+
           var imgElements = document.querySelectorAll('[data-state-img]');
           imgElements.forEach(function(img) {
             var imgKey = img.getAttribute('data-state-img');
@@ -478,6 +543,46 @@ class DolphinWebEngine {
           e.preventDefault();
           var lowerAct = String(action).toLowerCase().trim();
 
+          // Everest Bus Actions (bus:key:X, bus:backspace, bus:dial, bus:write:reg:val, bus:relay:id:state, etc.)
+          if (lowerAct.startsWith('bus:')) {
+            var parts = action.split(':');
+            var verb = parts[1];
+            if (verb === 'key') {
+              var key = parts[2] || '';
+              var cur = String(state['1000'] || state['bus:1000'] || state['dial_input'] || '');
+              var updated = cur + key;
+              state['1000'] = updated;
+              state['bus:1000'] = updated;
+              state['dial_input'] = updated;
+            } else if (verb === 'backspace') {
+              var cur = String(state['1000'] || state['bus:1000'] || state['dial_input'] || '');
+              var updated = cur.length > 0 ? cur.slice(0, -1) : '';
+              state['1000'] = updated;
+              state['bus:1000'] = updated;
+              state['dial_input'] = updated;
+            } else if (verb === 'dial') {
+              state['10'] = 'ActiveCall';
+              state['bus:10'] = 'ActiveCall';
+              state['currentScreen'] = 'ActiveCall';
+            } else if (verb === 'write') {
+              var reg = parts[2];
+              var val = parts.slice(3).join(':');
+              state[reg] = val;
+              state['bus:' + reg] = val;
+            } else if (verb === 'relay') {
+              var rId = parts[2];
+              var rSt = parts[3] === 'on' || parts[3] === '1' ? 1 : 0;
+              state['2000' + rId] = rSt;
+              state['bus:2000' + rId] = rSt;
+            } else if (verb === 'screen') {
+              var target = parts[2];
+              state['10'] = target;
+              state['bus:10'] = target;
+              state['currentScreen'] = target;
+            }
+            updateDOM();
+          }
+
           // Drawer Actions for Web
           if (lowerAct === 'drawer:open' || lowerAct === 'drawer:toggle' || lowerAct === 'app:drawer:open' || lowerAct === 'app.drawer.open') {
             if (window.openWebDrawer) window.openWebDrawer();
@@ -485,6 +590,18 @@ class DolphinWebEngine {
           }
           if (lowerAct === 'drawer:close' || lowerAct === 'app:drawer:close' || lowerAct === 'app.drawer.close') {
             if (window.closeWebDrawer) window.closeWebDrawer();
+            return;
+          }
+
+          // Bottom Drawer / Bottom Sheet Actions for Web
+          if (lowerAct.startsWith('bottom_drawer:open') || lowerAct.startsWith('bottom_sheet:open') ||
+              lowerAct.startsWith('sheet:open') || lowerAct === 'bottom_drawer:toggle' || lowerAct === 'bottom_drawer:show') {
+            var targetDrawer = action.includes(':') && action.split(':').length > 2 ? action.split(':').pop().trim() : 'Keypad';
+            if (window.openBottomDrawer) window.openBottomDrawer(targetDrawer);
+            return;
+          }
+          if (lowerAct === 'bottom_drawer:close' || lowerAct === 'bottom_sheet:close' || lowerAct === 'sheet:close') {
+            if (window.closeBottomDrawer) window.closeBottomDrawer();
             return;
           }
 
@@ -530,6 +647,43 @@ class DolphinWebEngine {
               }
               return;
             }
+          }
+
+          // Generic State Mutators (state:key:val, state:key_append:val, state:key:backspace)
+          if (lowerAct.startsWith('state:')) {
+            var parts = action.split(':');
+            var keyOrOp = parts[1] || '';
+            var val = parts.slice(2).join(':');
+            if (keyOrOp.endsWith('_append')) {
+              var realKey = keyOrOp.replace(/_append$/, '');
+              state[realKey] = (state[realKey] !== undefined ? String(state[realKey]) : '') + val;
+            } else if (keyOrOp === 'dial_input_backspace' || keyOrOp.endsWith('_backspace') || val === 'backspace') {
+              var realKey = keyOrOp === 'dial_input_backspace' ? 'dial_input' : keyOrOp.replace(/_backspace$/, '');
+              state[realKey] = state[realKey] ? String(state[realKey]).slice(0, -1) : '';
+            } else if (keyOrOp.endsWith('_clear') || val === 'clear') {
+              var realKey = keyOrOp.replace(/_clear$/, '');
+              state[realKey] = '';
+            } else if (val !== undefined && val !== '') {
+              state[keyOrOp] = val;
+            }
+            updateDOM();
+          }
+
+          // Named App Actions
+          if (lowerAct.startsWith('action:')) {
+            var actName = action.replace(/^action:/i, '');
+            if (actName === 'unlock_door') {
+              state.gate_status = '🔓 Gate Unlocked (10s)';
+              updateDOM();
+              setTimeout(function() { state.gate_status = '🔒 Gate Locked'; updateDOM(); }, 10000);
+            } else if (actName === 'toggle_mute') {
+              state.mic_muted = (state.mic_muted === 'true') ? 'false' : 'true';
+              updateDOM();
+            } else if (actName === 'toggle_speaker') {
+              state.speaker_on = (state.speaker_on === 'true') ? 'false' : 'true';
+              updateDOM();
+            }
+            updateDOM();
           }
 
           // Hardware & Multimedia Actions for Web
@@ -721,6 +875,31 @@ class DolphinWebEngine {
               updateDOM();
             }, 3000);
             updateDOM();
+          }
+
+          // Universal Action Forwarder to Backend Server (Syncs with Node/Kotlin Core)
+          try {
+            fetch('/action', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: action, value: '' })
+            }).catch(function() {});
+          } catch (e) {}
+        });
+
+        // Forward live search/text input events with action
+        document.addEventListener('input', function(e) {
+          var el = e.target;
+          if (!el) return;
+          var act = el.getAttribute('data-action') || el.getAttribute('action');
+          if (act) {
+            try {
+              fetch('/action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: act, value: el.value })
+              }).catch(function() {});
+            } catch(e) {}
           }
         });
       })();

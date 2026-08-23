@@ -240,6 +240,10 @@ class HybridParser {
         if (typeof element !== 'object') return null;
 
         const { type, props = {} } = element;
+        if (element.key !== null && element.key !== undefined) {
+            if (props.key === undefined) props.key = element.key;
+            if (props.stateKey === undefined) props.stateKey = element.key;
+        }
 
         if (typeof type === 'function') {
             try {
@@ -383,6 +387,10 @@ class HybridParser {
             else if (cls === 'text-2xl') props.fontSize = 24;
             else if (cls === 'text-3xl') props.fontSize = 30;
             else if (cls === 'text-4xl') props.fontSize = 36;
+            else if (cls === 'text-5xl') props.fontSize = 48;
+            else if (cls === 'text-6xl') props.fontSize = 60;
+            else if (cls === 'text-7xl') props.fontSize = 72;
+            else if (cls === 'text-8xl') props.fontSize = 96;
             
             // ── Opacity ──
             if (cls.startsWith('opacity-')) {
@@ -496,6 +504,10 @@ class HybridParser {
             });
             cls = clsArr.join(' ');
             props.className = cls;
+        } else if (['thorvg', 'nativecanvas', 'gauge', 'vectorcanvas', 'svg', 'vector'].includes(tagLower)) {
+            type = 'ThorVG';
+        } else if (['state', 'statetext', 'state-text'].includes(tagLower)) {
+            type = 'State';
         }
 
         const schema = { type };
@@ -528,6 +540,10 @@ class HybridParser {
             else if (c === 'text-2xl') schema.size = 24;
             else if (c === 'text-3xl') schema.size = 30;
             else if (c === 'text-4xl') schema.size = 36;
+            else if (c === 'text-5xl') schema.size = 48;
+            else if (c === 'text-6xl') schema.size = 60;
+            else if (c === 'text-7xl') schema.size = 72;
+            else if (c === 'text-8xl') schema.size = 96;
             else if (c.startsWith('mb-')) schema.mb = parseInt(c.slice(3)) * 4;
             else if (c.startsWith('ml-')) schema.ml = parseInt(c.slice(3)) * 4;
             else if (c.startsWith('mr-')) schema.mr = parseInt(c.slice(3)) * 4;
@@ -634,6 +650,8 @@ class HybridParser {
         if (props.title) schema.title = props.title;
         if (props.src) schema.src = props.src;
         if (props.url) schema.url = props.url;
+        if (props.svg) schema.svg = props.svg;
+        if (props.d) schema.d = props.d;
         if (props.target) schema.target = props.target;
         if (props.platform) schema.platform = props.platform;
 
@@ -711,6 +729,12 @@ class HybridParser {
             schema.src = props.src || props.source || props.image || '';
         } else if (type === 'Button') {
             schema.icon = props.icon || props.iconName || '';
+        } else if (type === 'State') {
+            schema.stateKey = props.stateKey || props.key || props['data-key'] || '';
+            schema.template = props.template || '';
+            schema.keys = props.keys || '';
+            schema.fallback = props.fallback !== undefined ? String(props.fallback) : (props.initial !== undefined ? String(props.initial) : '');
+            schema.initial = props.initial !== undefined ? String(props.initial) : schema.fallback;
         }
 
         if (tagLower === 'option') {
@@ -718,7 +742,7 @@ class HybridParser {
         }
 
         // ─── Text / Button content ───
-        const TEXT_TYPES = new Set(['Text','Button','AppBar','option','p','span','h1','h2','h3','h4','h5','h6']);
+        const TEXT_TYPES = new Set(['Text','Button','AppBar','option','p','span','h1','h2','h3','h4','h5','h6','State']);
 
         const extractAllText = (nodes) => {
             return nodes.map(node => {

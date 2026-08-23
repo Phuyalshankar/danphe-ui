@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.Executors
@@ -33,7 +34,7 @@ object TitanTcpClient {
     const val CMD_REJECT = 0x12
     const val CMD_HANGUP = 0x13
     const val CMD_AUDIO_FRAME = 0x14
-    const val CMD_VIDEO_FRAME = 0x15
+    const val CMD_VIDEO_FRAME = 0x40
     const val CMD_CHAT_MESSAGE = 0x20
     const val CMD_HEARTBEAT = 0x30
     const val CMD_HEARTBEAT_ACK = 0x31
@@ -92,43 +93,58 @@ object TitanTcpClient {
         }
     }
 
-    fun connect(host: String, port: Int, ext: Int) {
+    fun startAutoConnectLoop(host: String = "192.168.1.6", port: Int = 8888, ext: Int = 101) {
         lastHost = host
         lastPort = port
-        if (isConnected.get()) {
-            disconnect()
-        }
         myExt = ext
-        thread(name = "TitanTcpConnectThread") {
-            try {
-                Log.i(TAG, "Connecting to remote Titan TCP at $host:$port for ext $ext")
-                val sock = Socket(host, port)
-                sock.soTimeout = 40000 // 40 seconds timeout
-                socket = sock
-                outputStream = sock.getOutputStream()
-                isConnected.set(true)
-                Log.i(TAG, "Connected to remote TCP successfully")
-                DolphinStateEngine.set("titan_connected", "● TCP ONLINE")
-                DolphinStateEngine.set("sys_tcp_status", "● ONLINE")
+        thread(name = "TitanAutoConnectThread", isDaemon = true) {
+            while (true) {
+                if (!isConnected.get()) {
+                    try {
+                        val activeH = if (HotPatchClient.activeHost.isNotEmpty() && HotPatchClient.activeHost != "127.0.0.1") HotPatchClient.activeHost else host
+                        Log.i(TAG, "🔄 Auto-connecting to Titan TCP at $activeH:$port (ext $ext)...")
+                        
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            DolphinStateEngine.set("sys_tcp_status", "● CONNECTING to $activeH:$port...")
+                        }
 
-                // Send register packet immediately
-                sendPacket(CMD_REGISTER, myExt, 0, null)
+                        val sock = Socket()
+                        sock.connect(InetSocketAddress(activeH, port), 4000)
+                        sock.tcpNoDelay = true
+                        sock.soTimeout = 0
+                        socket = sock
+                        outputStream = sock.getOutputStream()
+                        isConnected.set(true)
+                        Log.i(TAG, "✅ Auto-connected to Titan TCP successfully at $activeH:$port")
+                        
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            DolphinStateEngine.set("titan_connected", "● TCP ONLINE")
+                            DolphinStateEngine.set("sys_tcp_status", "● ONLINE ($activeH:$port)")
+                        }
 
-                // Start reader thread
-                thread(name = "TitanTcpReadThread") {
-                    readLoop(sock.getInputStream())
+                        // Send register packet immediately
+                        sendPacket(CMD_REGISTER, myExt, 0, null)
+
+                        // Block and read continuous stream
+                        readLoop(sock.getInputStream())
+                    } catch (e: Exception) {
+                        val err = e.message ?: e.javaClass.simpleName
+                        Log.w(TAG, "Titan TCP connection retry: $err")
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            DolphinStateEngine.set("sys_tcp_status", "● ERR: $err")
+                        }
+                        disconnect()
+                    }
                 }
-
-                // Start heartbeat thread
-                thread(name = "TitanTcpHeartbeatThread") {
-                    heartbeatLoop()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Connection failed: ${e.message}")
-                DolphinStateEngine.set("sys_tcp_status", "● DISCONNECTED")
-                disconnect()
+                try {
+                    Thread.sleep(2000) // Retry every 2 seconds automatically
+                } catch (_: Exception) {}
             }
         }
+    }
+
+    fun connect(host: String, port: Int, ext: Int) {
+        startAutoConnectLoop(host, port, ext)
     }
 
     fun disconnect() {
@@ -197,50 +213,48 @@ object TitanTcpClient {
     }
 
     private fun readLoop(inputStream: InputStream) {
-        try {
-            val headerBuffer = ByteArray(24)
-            while (isConnected.get()) {
-                // Read exact 24-byte header
-                var bytesRead = 0
-                while (bytesRead < 24) {
-                    val read = inputStream.read(headerBuffer, bytesRead, 24 - bytesRead)
-                    if (read == -1) throw Exception("Stream closed")
-                    bytesRead += read
+        val headerBuffer = ByteArray(24)
+        while (isConnected.get()) {
+            // Read exact 24-byte header
+            var bytesRead = 0
+            while (bytesRead < 24) {
+                val read = inputStream.read(headerBuffer, bytesRead, 24 - bytesRead)
+                if (read == -1) {
+                    Log.i(TAG, "Server closed Titan stream")
+                    return
                 }
-
-                val header = ByteBuffer.wrap(headerBuffer).order(ByteOrder.BIG_ENDIAN)
-                val signature = header.short
-                if (signature != 0x5442.toShort()) {
-                    throw Exception("Invalid packet signature: $signature")
-                }
-                val version = header.get()
-                val cmdType = header.get().toInt() and 0xFF
-                val sender = header.int
-                val target = header.int
-                val payloadLen = header.int
-                val seqNo = header.int
-                val sessionId = header.short
-                val flags = header.get()
-                val checksum = header.get()
-
-                // Read payload if any
-                val payload = if (payloadLen > 0) {
-                    val pBuffer = ByteArray(payloadLen)
-                    var pBytesRead = 0
-                    while (pBytesRead < payloadLen) {
-                        val read = inputStream.read(pBuffer, pBytesRead, payloadLen - pBytesRead)
-                        if (read == -1) throw Exception("Stream closed while reading payload")
-                        pBytesRead += read
-                    }
-                    pBuffer
-                } else ByteArray(0)
-
-                // Route packet locally
-                handleIncomingPacket(cmdType, sender, payload)
+                bytesRead += read
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Read loop error: ${e.message}")
-            disconnect()
+
+            val header = ByteBuffer.wrap(headerBuffer).order(ByteOrder.BIG_ENDIAN)
+            val signature = header.short
+            if (signature != 0x5442.toShort()) {
+                // If signature didn't match, slide 1 byte and search for 0x5442 'TB'
+                continue
+            }
+            val version = header.get()
+            val cmdType = header.get().toInt() and 0xFF
+            val sender = header.int
+            val target = header.int
+            val payloadLen = header.int
+            val seqNo = header.int
+            val sessionId = header.short
+            val flags = header.get()
+            val checksum = header.get()
+
+            // Read payload safely
+            if (payloadLen in 1..2097152) { // Max 2MB per frame
+                val pBuffer = ByteArray(payloadLen)
+                var pBytesRead = 0
+                while (pBytesRead < payloadLen) {
+                    val read = inputStream.read(pBuffer, pBytesRead, payloadLen - pBytesRead)
+                    if (read == -1) return
+                    pBytesRead += read
+                }
+                handleIncomingPacket(cmdType, sender, pBuffer)
+            } else if (payloadLen == 0) {
+                handleIncomingPacket(cmdType, sender, ByteArray(0))
+            }
         }
     }
 

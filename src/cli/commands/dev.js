@@ -38,14 +38,18 @@ function resolveProjectPaths(cwd) {
     }
 
     const projectRoot = path.dirname(configPath);
+    let config = {};
+    try { config = require(configPath); } catch (e) {}
+
     const entryPaths = [
+        config.entry ? path.resolve(projectRoot, config.entry) : null,
         path.resolve(projectRoot, 'frontend', 'app.jsx'),
         path.resolve(projectRoot, 'frontend', 'app.js'),
         path.resolve(projectRoot, 'app.jsx'),
         path.resolve(projectRoot, 'app.js'),
         path.resolve(projectRoot, 'DemoApp', 'app.jsx'),
         path.resolve(projectRoot, 'DemoApp', 'app.js')
-    ];
+    ].filter(Boolean);
     const appPath = entryPaths.find(p => fs.existsSync(p));
     if (!appPath) {
         console.error('❌  app.js or app.jsx not found. Please create an entry file.');
@@ -184,6 +188,9 @@ async function cmdDev(args) {
             else if (typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))) v = Number(v);
 
             if (typeof actionHandler === 'function') actionHandler(action, v, id);
+            if (global.dolphinBus && typeof global.dolphinBus._onDeviceAction === 'function') {
+                global.dolphinBus._onDeviceAction(action, value, id);
+            }
         } catch (e) {
             console.error(`  ❌ Action handling error: ${e.message}`);
         }

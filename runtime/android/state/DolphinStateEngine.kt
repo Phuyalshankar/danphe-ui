@@ -43,25 +43,10 @@ object DolphinStateEngine {
     private val initial = mutableMapOf<String, Any>()
     private val propertyBindings = mutableMapOf<String, MutableList<Binding>>()
 
-    var themeLevel: Int = 0
+    var themeLevel: Int = 255
     var onThemeChanged: ((level: Int) -> Unit)? = null
 
     private val defaultState = mapOf(
-        "name" to "",
-        "email" to "",
-        "password" to "",
-        "text" to "",
-        "username" to "",
-        "phone" to "",
-        "address" to "",
-        "message" to "",
-        "search" to "",
-        "comment" to "",
-        "formName" to "",
-        "formEmail" to "",
-        "formPhone" to "",
-        "formPassword" to "",
-        "formStatus" to "",
         "counter" to 0,
         "isLoggedIn" to false,
         "userStatus" to "Guest User",
@@ -103,7 +88,7 @@ object DolphinStateEngine {
     }
 
     fun declareIfAbsent(key: String, initialValue: Any) {
-        if (!state.containsKey(key)) {
+        if (!state.containsKey(key) || (state[key]?.toString().isNullOrEmpty() && initialValue.toString().isNotEmpty())) {
             state[key] = initialValue
             initial[key] = initialValue
             Log.d("DolphinState", "Declared state: $key = $initialValue")
@@ -122,13 +107,19 @@ object DolphinStateEngine {
         colorCode: Int = 0,
         anim: AnimSpec? = null
     ) {
-        if (!state.containsKey(key)) {
+        val stateVal = state[key]
+        val currentValue = if (stateVal != null && stateVal.toString().isNotEmpty()) {
+            stateVal
+        } else if (initialValue.toString().isNotEmpty()) {
             state[key] = initialValue
             initial[key] = initialValue
-            Log.d("DolphinState", "✅ Auto-declared: $key = $initialValue")
+            initialValue
+        } else {
+            stateVal ?: initialValue
         }
 
         val list = propertyBindings.getOrPut(key) { mutableListOf() }
+        list.removeAll { it.view == view && it.property == property }
         val binding = Binding(view, property, colorCode, anim)
         list.add(binding)
 
@@ -144,7 +135,6 @@ object DolphinStateEngine {
             }
         })
 
-        val currentValue = state[key] ?: initialValue
         StateBinder.apply(view, property, currentValue, colorCode, anim = null)
     }
 
@@ -175,6 +165,113 @@ object DolphinStateEngine {
             return false // Skip echo
         }
 
+        // ── Direct Pattern Action: [bus:1000]1, [bus:1000]2, [stateKey:key]val ──
+        if (action.startsWith("[bus:") || action.startsWith("[stateKey:")) {
+            val endBracket = action.indexOf(']')
+            if (endBracket > 0) {
+                val rawKey = action.substring(1, endBracket)
+                val appendVal = action.substring(endBracket + 1)
+                val targetKey = if (rawKey.startsWith("stateKey:")) rawKey.removePrefix("stateKey:") else rawKey
+                val current = (state[targetKey] ?: state[targetKey.removePrefix("bus:")] ?: "").toString()
+                val updated = current + appendVal
+                updateState(targetKey, updated)
+                if (targetKey.startsWith("bus:")) {
+                    updateState(targetKey.removePrefix("bus:"), updated)
+                } else {
+                    updateState("bus:$targetKey", updated)
+                }
+                if (targetKey == "bus:1000" || targetKey == "1000") {
+                    updateState("dial_input", updated)
+                }
+                return true
+            }
+        }
+
+        val cleanAct = action.removePrefix("app:").removePrefix("app.").removePrefix("state:").removePrefix("state.").trim()
+
+        // ── Chat Send Action (Updates live bus stream & clears input box) ──
+        if (cleanAct.contains("send_chat_msg") || cleanAct == "bus:send_chat" || cleanAct == "send_chat") {
+            val typedMsg = (state["bus_1100"] ?: state["bus:1100"] ?: state["1100"] ?: state["chat_input"] ?: "").toString().trim()
+            if (typedMsg.isNotEmpty()) {
+                updateState("bus_1101", typedMsg)
+                updateState("bus:1101", typedMsg)
+                updateState("1101", typedMsg)
+                updateState("bus_1100", "")
+                updateState("bus:1100", "")
+                updateState("1100", "")
+                updateState("chat_input", "")
+            }
+            return true
+        }
+
+        // ── Everest Bus Actions (bus:write:reg:val, bus:key:5, bus:backspace, bus:dial, etc.) ──
+        if (action.startsWith("[bus:dial]") || action.startsWith("bus:dial_key:")) {
+            val digit = action.substringAfterLast(":")
+            val current = (state["bus:1000"] ?: state["1000"] ?: state["dial_input"] ?: "").toString()
+            val updated = current + digit
+            updateState("bus:1000", updated)
+            updateState("1000", updated)
+            updateState("dial_input", updated)
+            return true
+        }
+
+        if (action.startsWith("bus:")) {
+            val parts = action.split(":")
+            val verb = parts.getOrNull(1) ?: ""
+            when (verb) {
+                "write" -> {
+                    val reg = parts.getOrNull(2) ?: ""
+                    val valStr = parts.drop(3).joinToString(":")
+                    if (reg.isNotEmpty()) {
+                        updateState("bus:$reg", valStr)
+                        updateState(reg, valStr)
+                    }
+                    return true
+                }
+                "key" -> {
+                    val keyChar = parts.getOrNull(2) ?: ""
+                    val current = (state["bus:1000"] ?: state["1000"] ?: state["dial_input"] ?: "").toString()
+                    val updated = current + keyChar
+                    updateState("bus:1000", updated)
+                    updateState("1000", updated)
+                    updateState("dial_input", updated)
+                    return true
+                }
+                "backspace" -> {
+                    val current = (state["bus:1000"] ?: state["1000"] ?: state["dial_input"] ?: "").toString()
+                    if (current.isNotEmpty()) {
+                        val updated = current.dropLast(1)
+                        updateState("bus:1000", updated)
+                        updateState("1000", updated)
+                        updateState("dial_input", updated)
+                    }
+                    return true
+                }
+                "dial" -> {
+                    val ext = parts.getOrNull(2) ?: (state["bus:1000"] ?: state["dial_input"] ?: "").toString().ifEmpty { "1000" }
+                    updateState("bus:1000", ext)
+                    updateState("bus:10", "ActiveCall")
+                    updateState("currentScreen", "ActiveCall")
+                    updateState("activeTab", "ActiveCall")
+                    updateState("isDrawerOpen", false)
+                    updateState("drawerState", 0)
+                    return true
+                }
+                "relay" -> {
+                    val relayId = parts.getOrNull(2) ?: "1"
+                    val stateVal = if (parts.getOrNull(3) == "on" || parts.getOrNull(3) == "1") "1" else "0"
+                    updateState("bus:2000$relayId", stateVal)
+                    return true
+                }
+                "screen" -> {
+                    val target = parts.getOrNull(2) ?: "Home"
+                    updateState("bus:10", target)
+                    updateState("currentScreen", target)
+                    return true
+                }
+            }
+        }
+
         // Global Theme Toggle
         if (action == "toggle_theme") {
             themeLevel = if (themeLevel == 0) 255 else 0
@@ -182,9 +279,49 @@ object DolphinStateEngine {
             return true
         }
 
-        val cleanAct = action.removePrefix("app:").removePrefix("app.").trim()
+        // ── Dialpad / String Append Actions (e.g. dial_input_append:1, state:dial_input_append:1) ──
+        if (cleanAct.contains("_append:")) {
+            val key = cleanAct.substringBefore("_append:").trim()
+            val charToAppend = cleanAct.substringAfter("_append:").trim()
+            val currentStr = (state[key] ?: "").toString()
+            updateState(key, currentStr + charToAppend)
+            return true
+        }
 
-        // ── Screen Navigation Actions ──
+        // ── Dialpad / String Backspace Actions (e.g. dial_input:backspace, dial_input_backspace) ──
+        if (cleanAct.endsWith(":backspace") || cleanAct.endsWith("_backspace")) {
+            val key = cleanAct.removeSuffix(":backspace").removeSuffix("_backspace").trim()
+            val currentStr = (state[key] ?: "").toString()
+            if (currentStr.isNotEmpty()) {
+                updateState(key, currentStr.dropLast(1))
+            }
+            return true
+        }
+
+        // ── Dialpad / String Clear Actions ──
+        if (cleanAct.endsWith(":clear") || cleanAct.endsWith("_clear")) {
+            val key = cleanAct.removeSuffix(":clear").removeSuffix("_clear").trim()
+            updateState(key, "")
+            return true
+        }
+
+        // ── Drawer Open / Close Actions (drawer:open:KeypadDrawer, bottom_drawer:open:KeypadDrawer) ──
+        val isDrawer = cleanAct.startsWith("drawer:") || cleanAct.startsWith("bottom_drawer:")
+        if (isDrawer) {
+            val sub = cleanAct.substringAfter(":")
+            if (sub.startsWith("open")) {
+                val drawerTarget = sub.substringAfter("open:").trim().ifEmpty { "KeypadDrawer" }
+                updateState("drawerState", 1)
+                updateState("activeDrawer", drawerTarget)
+                updateState("isDrawerOpen", true)
+            } else if (sub == "close" || sub == "hide") {
+                updateState("drawerState", 0)
+                updateState("isDrawerOpen", false)
+            }
+            return true
+        }
+
+        // ── Screen Navigation Actions (Automatically resets drawer state) ──
         val isNav = cleanAct.startsWith("nav:") || cleanAct.startsWith("tab:") ||
                     cleanAct.startsWith("switchScreen:") || cleanAct.startsWith("switchTab:") ||
                     cleanAct.startsWith("navigate:")
@@ -193,6 +330,9 @@ object DolphinStateEngine {
             if (targetScreen.isNotEmpty()) {
                 updateState("currentScreen", targetScreen)
                 updateState("activeTab", targetScreen)
+                updateState("isDrawerOpen", false)
+                updateState("drawerState", 0)
+                updateState("activeDrawer", "")
             }
             return true
         }
@@ -319,6 +459,10 @@ object DolphinStateEngine {
         val normalized: Any = StateHelpers.normalizeValue(value)
         state[key] = normalized
 
+        // Dual Alias Sync for bus: keys (e.g. bus:1000 <-> 1000)
+        val altKey = if (key.startsWith("bus:")) key.removePrefix("bus:") else "bus:$key"
+        state[altKey] = normalized
+
         synchronized(listeners) {
             listeners.forEach { it(key, normalized) }
         }
@@ -333,13 +477,16 @@ object DolphinStateEngine {
             onThemeChanged?.invoke(themeLevel)
         }
 
-        val list = propertyBindings[key] ?: return
-
-        // Main thread property binding updates
-        android.os.Handler(android.os.Looper.getMainLooper()).post {
-            val snapshot = list.toList()
-            snapshot.forEach { binding ->
-                StateBinder.apply(binding.view, binding.property, normalized, binding.colorCode, binding.anim)
+        val keysToUpdate = listOf(key, altKey)
+        keysToUpdate.forEach { k ->
+            val list = propertyBindings[k]
+            if (list != null && list.isNotEmpty()) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    val snapshot = list.toList()
+                    snapshot.forEach { binding ->
+                        StateBinder.apply(binding.view, binding.property, normalized, binding.colorCode, binding.anim)
+                    }
+                }
             }
         }
     }

@@ -47,6 +47,7 @@ class VideoPlayerPlugin : DolphinUIPlugin {
         }
 
         val videoView = VideoView(ctx).apply {
+            setZOrderMediaOverlay(true)
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -133,7 +134,13 @@ class VideoPlayerPlugin : DolphinUIPlugin {
             if (rawUrl.isEmpty()) return
             var finalUrl = rawUrl.trim()
 
-            val devHost = DolphinRuntime.instance?.getDevServerHost()
+            var devHost = DolphinRuntime.instance?.getDevServerHost()
+            if (devHost.isNullOrEmpty()) {
+                devHost = DolphinStateEngine.get("tcp_host")?.toString()
+            }
+            if (devHost.isNullOrEmpty()) {
+                devHost = DolphinStateEngine.get("sys_dev_host")?.toString()
+            }
             if (!devHost.isNullOrEmpty() && (finalUrl.contains("127.0.0.1") || finalUrl.contains("localhost"))) {
                 finalUrl = finalUrl.replace("127.0.0.1", devHost).replace("localhost", devHost)
             }

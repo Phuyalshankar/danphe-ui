@@ -46,9 +46,20 @@ object BorderApplier {
 
         val isBottomOnly = borderStr.contains("bottom") || borderStr.contains("border-b") || borderStr.contains("_b") || borderStr.contains("|b|") || borderStr.contains("b|")
         if (isBottomOnly) {
+            var existingBgColor = Color.TRANSPARENT
+            val currentBg = v.background
+            if (currentBg is GradientDrawable) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    val colorStateList = currentBg.color
+                    if (colorStateList != null) existingBgColor = colorStateList.defaultColor
+                }
+            } else if (currentBg is android.graphics.drawable.ColorDrawable) {
+                existingBgColor = currentBg.color
+            }
+
             val gd = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                setColor(Color.TRANSPARENT)
+                setColor(existingBgColor)
                 setStroke(dpFunc(bWidthDp), bColorVal)
             }
             val inset = android.graphics.drawable.InsetDrawable(

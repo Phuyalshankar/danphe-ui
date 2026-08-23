@@ -156,3 +156,11 @@ module.exports.BREAKPOINTS      = _ui.BREAKPOINTS;
 const _titan = require('./titan/TitanTcpModule');
 module.exports.Titan = _titan.Titan;
 module.exports.TitanCMD = _titan.CMD;
+
+// ── Everest Unified Fieldbus Engine ──────────────────────────────────────────
+const _bus = require('./bus');
+module.exports.EverestBus = _bus.EverestBus;
+module.exports.EverestDeclarative = _bus.EverestDeclarative;
+module.exports.TitanMicroBus = _bus.TitanMicroBus;
+module.exports.CMD = _bus.CMD;
+

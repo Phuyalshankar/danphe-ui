@@ -8,8 +8,9 @@ class ComponentOpcodeMapper {
         const typeLower = String(compType).toLowerCase();
         const twStr = String(tw || '');
 
+        if (typeLower === 'drawer' || typeLower === 'keypaddrawer' || props.type === 'Drawer' || props.type === 'KeypadDrawer') return 0x28;
         if (typeLower === 'cameraview' || typeLower === 'camera' || props.type === 'CameraView' || props.native === 'camera') return 0x50;
-        if (typeLower === 'nativecanvas' || typeLower === 'nvr' || typeLower === '0x61' || props.type === 'NativeCanvas' || props.type === 'nativecanvas' || props.type === '0x61') return 0x61;
+        if (typeLower === 'nativecanvas' || typeLower === 'canvas' || typeLower === 'vector' || typeLower === 'draw' || typeLower === 'nvr' || typeLower === '0x61' || props.type === 'NativeCanvas' || props.type === 'nativecanvas' || props.type === 'canvas' || props.type === '0x61') return 0x61;
         if (typeLower === 'video' || typeLower === 'videoplayer' || props.type === 'VideoPlayer' || props.type === 'video') return 0x52;
         if (typeLower === 'mp3player' || typeLower === 'audioplayer' || props.type === 'Mp3Player' || props.type === 'AudioPlayer') return 0x51;
         if (typeLower === 'webview' || typeLower === 'web' || typeLower === '0x60' || props.type === 'WebView' || props.type === 'webview' || props.type === '0x60') return 0x60;
@@ -29,6 +30,11 @@ class ComponentOpcodeMapper {
         if (typeLower === 'select' || props.type === 'Select') return 0x1C;
         if (typeLower === 'textarea' || props.type === 'textarea') return 0x18;
         if (typeLower === 'input' || props.type === 'TextField') return 0x18;
+
+        // ── DSP: Dolphin State Protocol ──────────────────────────────
+        // <state key="my_ext" />  OR  <state template="..." keys="..." />
+        if (typeLower === 'state' || typeLower === 'statetext' || typeLower === 'state-text' ||
+            props.type === 'State' || props.type === 'StateText') return 0xD0;
 
         return 0x13; // Default Container
     }

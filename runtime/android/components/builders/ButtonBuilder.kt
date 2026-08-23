@@ -39,7 +39,12 @@ class ButtonBuilder : ComponentBuilder {
             textAlignment = View.TEXT_ALIGNMENT_CENTER
 
             if (action.isNotEmpty()) {
+                var lastClickTime = 0L
                 setOnClickListener {
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    if (now - lastClickTime < 250) return@setOnClickListener
+                    lastClickTime = now
+
                     if (action.startsWith("anim:")) {
                         val animName = action.substring(5)
                         DolphinEventDebugger.trace(this, action, "AnimationEngine", "EXECUTED", "animStr=$animName")
@@ -57,10 +62,6 @@ class ButtonBuilder : ComponentBuilder {
                                 .show()
                         }
                         factory.onAction?.invoke(action, displayTitle)
-                    } else if (action.startsWith("state:")) {
-                        val stateKey = action.substringAfter("state:")
-                        val current = DolphinStateEngine.get(stateKey)?.toString()?.toIntOrNull() ?: 0
-                        DolphinStateEngine.set(stateKey, (current + 1).toString())
                     } else {
                         DolphinEventDebugger.trace(this, action, "DolphinRuntime", "DISPATCHED")
                         factory.onAction?.invoke(action, displayTitle)

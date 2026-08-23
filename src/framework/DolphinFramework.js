@@ -120,6 +120,8 @@ class DolphinFramework {
      */
     registerScreen(name, ui, options = {}) {
         const startTime = performance.now();
+        if (!global.dolphinScreenFunctions) global.dolphinScreenFunctions = new Map();
+        global.dolphinScreenFunctions.set(name, ui);
         
         // Use HybridParser for auto-detection and conversion
         const parseResult = this.hybridParser.parse(ui, {
@@ -244,6 +246,8 @@ class DolphinFramework {
         } else {
             oldValue = this._globalState[key];
             this._globalState[key] = value;
+            if (!global.dolphinState) global.dolphinState = {};
+            global.dolphinState[key] = value;
 
             // Sync with all connected devices
             if (this._devServer && this._devServer.server) {
@@ -346,6 +350,7 @@ class DolphinApp {
         this._entryScreen = null;
         this._actionHandlers = new Map();
         this._actionHandlerSetup = false;
+        global.dolphinApp = this;
 
         Object.defineProperty(this, 'realtime', {
             get: () => {
@@ -519,10 +524,11 @@ class DolphinApp {
             this.onAction(async (action, value, deviceId) => {
                 return await this.framework.deviceContextStore.run(deviceId || 'default', async () => {
                     // Handle state sync from device (values starting with '=')
+                    // Save to state AND continue to call app.action() handler below.
                     if (typeof value === 'string' && value.startsWith('=')) {
                         const valStr = value.substring(1);
                         this.state(action, valStr);
-                        return;
+                        // ← NO early return — fall through to handler lookup
                     }
 
                     // Exact match
@@ -686,6 +692,30 @@ class DolphinApp {
             const devices = this.framework._devServer.server.getConnectedDevices();
             devices.forEach(dev => {
                 this.framework._devServer.server.openDrawer(dev.id, drawerName);
+            });
+        }
+    }
+
+    /**
+     * Open the bottom drawer / bottom sheet on connected devices
+     */
+    openBottomDrawer(drawerName = 'BottomDrawer') {
+        if (this.framework._devServer && this.framework._devServer.server) {
+            const devices = this.framework._devServer.server.getConnectedDevices();
+            devices.forEach(dev => {
+                this.framework._devServer.server.sendToDevice(dev.id, Buffer.from(`bottom_drawer:open:${drawerName}`), 0x07);
+            });
+        }
+    }
+
+    /**
+     * Close the bottom drawer / bottom sheet on connected devices
+     */
+    closeBottomDrawer() {
+        if (this.framework._devServer && this.framework._devServer.server) {
+            const devices = this.framework._devServer.server.getConnectedDevices();
+            devices.forEach(dev => {
+                this.framework._devServer.server.sendToDevice(dev.id, Buffer.from(`bottom_drawer:close`), 0x07);
             });
         }
     }

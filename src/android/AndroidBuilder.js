@@ -268,6 +268,11 @@ task clean(type: Delete) { delete rootProject.buildDir }
             }
         }
 
+        const nativeDir = path.resolve(__dirname, '../../native').replace(/\\/g, '/');
+        const ndkDir = 'C:/Users/USER/AppData/Local/Android/Sdk/ndk/25.1.8937393';
+        const cmakeDir = 'C:/Users/USER/AppData/Local/Android/Sdk/cmake/3.22.1';
+        this._write('local.properties', `sdk.dir=${this.androidHome.replace(/\\/g, '/')}\nndk.dir=${ndkDir}\ncmake.dir=${cmakeDir}\n`);
+
         this._write('app/build.gradle',
 `def getLocalIPv4() {
     try {
@@ -304,6 +309,20 @@ android {
         buildConfigField "boolean", "DOLPHIN_HOTPATCH_ENABLED", "${this.enableHotpatch ? 'true' : 'false'}"
         buildConfigField "String", "DOLPHIN_DEV_HOST", "\\"\${getLocalIPv4()}\\""
         buildConfigField "int", "DOLPHIN_DEV_PORT", "${this.devPort}"
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17 -O3 -fvisibility=hidden -fdata-sections -ffunction-sections"
+            }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path file("${nativeDir}/CMakeLists.txt")
+            version "3.22.1"
+        }
     }
     buildTypes {
         release { minifyEnabled false; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
@@ -488,6 +507,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import io.dolphin.runtime.DolphinRuntime
 import io.dolphin.runtime.DolphinBackgroundService
 import io.dolphin.runtime.DolphinStateEngine
@@ -495,6 +516,7 @@ import android.content.Intent
 import ${pkg}.BuildConfig
 import android.view.Gravity
 import android.view.ViewGroup
+import android.view.View
 
 class MainActivity : AppCompatActivity() {
     private lateinit var runtime: DolphinRuntime
@@ -505,6 +527,7 @@ class MainActivity : AppCompatActivity() {
     private var flashCameraId: String? = null
     private val screenHistory = mutableListOf<String>()
     private var currentScreen = "Home"
+    private var bottomSheetDialog: com.google.android.material.bottomsheet.BottomSheetDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_DolphinApp)
@@ -525,7 +548,7 @@ ${(this.customPluginClasses || []).map(cls => `        try {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(android.graphics.Color.parseColor("#f8fafc"))
+            setBackgroundColor(android.graphics.Color.parseColor("#0b0f19"))
         }
         // Content container for screens
         contentContainer = android.widget.FrameLayout(this).apply {
@@ -533,7 +556,7 @@ ${(this.customPluginClasses || []).map(cls => `        try {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(android.graphics.Color.parseColor("#f8fafc"))
+            setBackgroundColor(android.graphics.Color.parseColor("#0b0f19"))
         }
         drawerLayout.addView(contentContainer)
         
@@ -544,7 +567,7 @@ ${(this.customPluginClasses || []).map(cls => `        try {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.START
             )
-            setBackgroundColor(android.graphics.Color.WHITE)
+            setBackgroundColor(android.graphics.Color.parseColor("#0b0f19"))
             isClickable = true
         }
         drawerLayout.addView(navigationView)
@@ -567,7 +590,7 @@ ${(this.customPluginClasses || []).map(cls => `        try {
 
         runtime = DolphinRuntime(this)
 
-        // Request essential runtime hardware permissions on startup (Camera, Audio, Location, Contacts, Notifications)
+        // Request essential runtime hardware permissions on startup
         val requiredPermissions = mutableListOf(
             android.Manifest.permission.CAMERA,
             android.Manifest.permission.RECORD_AUDIO,
@@ -576,18 +599,14 @@ ${(this.customPluginClasses || []).map(cls => `        try {
             android.Manifest.permission.READ_EXTERNAL_STORAGE,
             android.Manifest.permission.WRITE_EXTERNAL_STORAGE
         )
-        if (Build.VERSION.SDK_INT >= 33) {
-            requiredPermissions.add(android.Manifest.permission.READ_MEDIA_IMAGES)
-            requiredPermissions.add(android.Manifest.permission.READ_MEDIA_VIDEO)
-        }
-        if (Build.VERSION.SDK_INT >= 33) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requiredPermissions.add(android.Manifest.permission.POST_NOTIFICATIONS)
         }
-        val missingPermissions = requiredPermissions.filter {
-            checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        val permissionsToRequest = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
-        if (missingPermissions.isNotEmpty()) {
-            requestPermissions(missingPermissions.toTypedArray(), 101)
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 1001)
         }
 
         // Auto-start DolphinBackgroundService on startup
@@ -599,32 +618,43 @@ ${(this.customPluginClasses || []).map(cls => `        try {
                 startService(serviceIntent)
             }
         } catch (e: Exception) {
-            Log.e("MainActivity", "Failed to auto-start background service: \${e.message}")
+            Log.e("MainActivity", "Failed to start DolphinBackgroundService: \${e.message}")
         }
 
 
         runtime.onAction = { action, value ->
-            Log.d("MainActivity", "⚡ onAction received: action=\$action value=\$value")
-            val isNavAction = (action.startsWith("nav:") || action.startsWith("tab:") ||
-                              action.startsWith("app.switchScreen:") || action.startsWith("app.switchTab:") ||
-                              action.startsWith("app.navigate:") || action.startsWith("switchScreen:") ||
-                              action.startsWith("switchTab:") || action.startsWith("navigate:")) &&
-                              !action.endsWith(":MainDrawer") && !action.endsWith(":Drawer")
-            if (isNavAction) {
-                val screenName = if (action.contains(":")) action.substringAfter(":") else (value?.toString() ?: "")
+            Log.d("MainActivity", "Dynamic action received: \$action (value: \$value)")
+            if (action == "drawer:open") {
+                runOnUiThread {
+                    drawerLayout.openDrawer(Gravity.START)
+                }
+            } else if (action == "drawer:close") {
+                runOnUiThread {
+                    drawerLayout.closeDrawers()
+                }
+            } else if (action.startsWith("open_drawer:")) {
+                val drawerName = action.removePrefix("open_drawer:")
+                runOnUiThread {
+                    if (runtime.getScreenNames().contains(drawerName)) {
+                        val drawerView = runtime.buildScreen(drawerName)
+                        navigationView.removeAllViews()
+                        navigationView.addView(drawerView)
+                    }
+                    drawerLayout.openDrawer(Gravity.START)
+                }
+            } else if (action.startsWith("nav:")) {
+                val screenName = action.removePrefix("nav:")
                 runOnUiThread {
                     try {
-                        val resolvedName = runtime.resolveScreenName(screenName) ?: screenName
                         val targetScreen = if (screenName == "back") {
                             if (screenHistory.isNotEmpty()) {
                                 screenHistory.removeAt(screenHistory.size - 1)
                             } else {
-                                "Home"
+                                "${this.entryScreen}"
                             }
                         } else {
-                            if (currentScreen != "back" && currentScreen != resolvedName) {
-                                screenHistory.add(currentScreen)
-                            }
+                            if (currentScreen.isNotEmpty()) screenHistory.add(currentScreen)
+                            val resolvedName = runtime.resolveScreenName(screenName) ?: screenName
                             resolvedName
                         }
 
@@ -653,30 +683,72 @@ ${(this.customPluginClasses || []).map(cls => `        try {
                             }
                         }
                         try { drawerLayout.closeDrawers() } catch (e: Exception) {}
+                        try { bottomSheetDialog?.dismiss() } catch (e: Exception) {}
                     } catch (e: Exception) {
                         Log.e("MainActivity", "Failed to navigate: \${e.message}")
                         Toast.makeText(this@MainActivity, "Screen not found: \$screenName", Toast.LENGTH_SHORT).show()
                     }
                 }
-            } else if (action == "drawer:open" || action == "drawer:toggle" || action == "drawer:show") {
+            } else if (action.startsWith("bottom_drawer:open") || action.startsWith("bottom_sheet:open") ||
+                       action.startsWith("sheet:open") || action == "bottom_drawer:toggle" || action == "bottom_drawer:show") {
                 runOnUiThread {
                     try {
-                        val drawerScreen = runtime.resolveScreenName("MainDrawer")
-                                       ?: runtime.resolveScreenName("Drawer")
-                                       ?: "MainDrawer"
-                        if (runtime.getScreenNames().contains(drawerScreen)) {
-                            val drawerView = runtime.buildScreen(drawerScreen)
-                            navigationView.removeAllViews()
-                            navigationView.addView(drawerView)
+                        val parts = action.split(":")
+                        val rawScreen = if (parts.size >= 3) parts[2] else ""
+                        val extNumber = if (parts.size >= 4) parts[3] else ""
+                        if (extNumber.isNotEmpty()) {
+                            DolphinStateEngine.updateState("dial_input", extNumber)
+                        } else if (rawScreen.isNotEmpty() && rawScreen.all { it.isDigit() }) {
+                            DolphinStateEngine.updateState("dial_input", rawScreen)
                         }
-                        drawerLayout.openDrawer(Gravity.START)
+                        val targetScreen = when {
+                            rawScreen.isNotEmpty() && !rawScreen.all { it.isDigit() } && rawScreen != "open" && rawScreen != "show" && rawScreen != "toggle" -> {
+                                runtime.resolveScreenName(rawScreen) ?: rawScreen
+                            }
+                            else -> {
+                                runtime.resolveScreenName("KeypadDrawer")
+                                    ?: runtime.resolveScreenName("BottomDrawer")
+                                    ?: runtime.resolveScreenName("Keypad")
+                                    ?: runtime.resolveScreenName("Drawer")
+                                    ?: "KeypadDrawer"
+                            }
+                        }
+                        if (runtime.getScreenNames().contains(targetScreen)) {
+                            bottomSheetDialog?.dismiss()
+                            val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this@MainActivity)
+                            val sheetView = runtime.buildScreen(targetScreen)
+                            sheetView.setBackgroundColor(android.graphics.Color.parseColor("#0b0f19"))
+                            
+                            val wrap = android.widget.FrameLayout(this@MainActivity).apply {
+                                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                                setBackgroundColor(android.graphics.Color.parseColor("#0b0f19"))
+                                addView(sheetView)
+                            }
+                            dialog.setContentView(wrap)
+
+                            dialog.setOnShowListener {
+                                val bottomSheet = dialog.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)
+                                if (bottomSheet != null) {
+                                    bottomSheet.setBackgroundColor(android.graphics.Color.parseColor("#0b0f19"))
+                                    val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet)
+                                    val heightPixels = resources.displayMetrics.heightPixels
+                                    val halfScreenHeight = (heightPixels * 0.58).toInt()
+                                    behavior.peekHeight = halfScreenHeight
+                                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
+                                }
+                            }
+                            dialog.show()
+                            bottomSheetDialog = dialog
+                        } else {
+                            Log.w("MainActivity", "BottomDrawer target screen not found: \$targetScreen")
+                        }
                     } catch (e: Exception) {
-                        Log.e("MainActivity", "Error opening drawer: \${e.message}")
+                        Log.e("MainActivity", "Error opening bottom drawer: \${e.message}")
                     }
                 }
-            } else if (action == "drawer:close") {
+            } else if (action == "bottom_drawer:close" || action == "bottom_sheet:close" || action == "sheet:close") {
                 runOnUiThread {
-                    try { drawerLayout.closeDrawers() } catch (e: Exception) {}
+                    try { bottomSheetDialog?.dismiss() } catch (e: Exception) {}
                 }
             } else {
                 runOnUiThread {

@@ -34,25 +34,26 @@ class TextFieldBuilder : ComponentBuilder {
 
         val textCode = data[13].toInt() and 0xFF
         val textShade = data[12].toInt() and 0x1F
-        val customTextColor = if (textCode != 0 && textCode != 10) ColorParser.parseColor(textCode, textShade * 8) else 0
+        val customTextColor = if (textCode != 0) ColorParser.parseColor(textCode, textShade * 8, true) else 0
 
         val gravByte = data[0].toInt() and 0x0F
         val isCenterAlign = gravByte == 0x02
-
         val isTextArea = typeStr.contains("textarea", ignoreCase = true) || label.contains("textarea", ignoreCase = true) || hint.contains("textarea", ignoreCase = true)
-        val isPlain = variant == "plain" || variant == "raw" || variant == "custom" || (label.isEmpty() && variant != "outlined" && variant != "filled" && variant != "standard") || isTextArea
+        val isPlain = variant == "plain" || variant == "raw" || variant == "custom" || label.isEmpty() || isTextArea
 
         // ── Direct Standalone EditText for Plain Inputs & Textareas (No TextInputLayout Overlay) ──
         if (isPlain) {
+            val resolvedTextColor = if (customTextColor != 0 && customTextColor != Color.parseColor("#0f172a")) customTextColor else Color.WHITE
             val editText = FormInputField.createEditText(
                 ctx = ctx,
                 inputTypeStr = if (isTextArea) "textarea" else typeStr,
                 hintText = hint,
                 stateKey = stateKey,
-                textColor = if (customTextColor != 0) customTextColor else (if (isDark) Color.WHITE else Color.parseColor("#0f172a")),
-                onAction = null
+                textColor = resolvedTextColor,
+                onAction = { act, v -> factory.onAction?.invoke(act, v) }
             ).apply {
                 tag = "PlainTextField"
+                factory.applyStyles(this, data)
 
                 val pt = data[4].toInt() and 0xFF
                 val pr = data[5].toInt() and 0xFF
@@ -61,8 +62,8 @@ class TextFieldBuilder : ComponentBuilder {
 
                 val padL = if (pl > 0) factory.dp(pl) else factory.dp(14)
                 val padR = if (pr > 0) factory.dp(pr) else factory.dp(14)
-                val padT = if (pt > 0) factory.dp(pt) else factory.dp(14)
-                val padB = if (pb > 0) factory.dp(pb) else factory.dp(14)
+                val padT = if (pt > 0) factory.dp(pt) else factory.dp(10)
+                val padB = if (pb > 0) factory.dp(pb) else factory.dp(10)
                 setPadding(padL, padT, padR, padB)
 
                 val mt = data[8].toInt() and 0xFF
@@ -70,12 +71,17 @@ class TextFieldBuilder : ComponentBuilder {
                 val mb = data[10].toInt() and 0xFF
                 val ml = data[11].toInt() and 0xFF
 
-                val topMargin = if (mt > 0) factory.dp(mt) else factory.dp(6)
-                val bottomMargin = if (mb > 0) factory.dp(mb) else factory.dp(6)
+                val topMargin = if (mt > 0) factory.dp(mt) else factory.dp(4)
+                val bottomMargin = if (mb > 0) factory.dp(mb) else factory.dp(4)
+
+                val flex = (data[0].toInt() shr 4) and 0x0F
+                val flexWeight = if (flex > 0) flex.toFloat() else 0f
+                val w = if (flexWeight > 0f) 0 else ViewGroup.LayoutParams.MATCH_PARENT
 
                 layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    if (isTextArea) factory.dp(100) else ViewGroup.LayoutParams.WRAP_CONTENT
+                    w,
+                    if (isTextArea) factory.dp(100) else ViewGroup.LayoutParams.WRAP_CONTENT,
+                    flexWeight
                 ).apply {
                     setMargins(factory.dp(ml), topMargin, factory.dp(mr), bottomMargin)
                 }
@@ -215,6 +221,16 @@ class TextFieldBuilder : ComponentBuilder {
 
             if (stateKey.isNotEmpty()) {
                 DolphinStateEngine.bindInput(stateKey, this)
+                // Real-time TextWatcher for NanoStore & Action handlers
+                addTextChangedListener(object : android.text.TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                        val text = s?.toString() ?: ""
+                        DolphinStateEngine.set(stateKey, text)
+                        factory.onAction?.invoke("input:$stateKey", text)
+                    }
+                    override fun afterTextChanged(s: android.text.Editable?) {}
+                })
             }
         }
 

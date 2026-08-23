@@ -62,6 +62,9 @@ class DolphinRuntime(val context: Context) {
         DolphinPluginRegistry.register(WebRTCAudioPlugin())
         DolphinDiagnostics.setupExceptionHandler(context)
         DolphinDiagnostics.checkAndShowCrashDialog(context)
+        
+        // 🚀 Auto-start Titan TCP connection loop immediately on startup
+        TitanTcpClient.startAutoConnectLoop("192.168.1.6", 8888, 101)
     }
 
     fun sendAction(action: String, value: Any?) {
@@ -190,10 +193,11 @@ class DolphinRuntime(val context: Context) {
                                          action.startsWith("app.switchScreen:") || action.startsWith("app.switchTab:") ||
                                          action.startsWith("app.navigate:") || action.startsWith("switchScreen:") ||
                                          action.startsWith("switchTab:") || action.startsWith("navigate:")
+                    val isDial = action.startsWith("bus:dial") || action == "dial"
                     val isNavSplit = (action == "nav" || action == "tab" || action == "switchScreen" || action == "switchTab") && !valueStr.isNullOrBlank()
 
-                    if (isNavWithColon || isNavSplit) {
-                        val requestedScreen = if (isNavWithColon) action.substringAfter(":") else (valueStr ?: "")
+                    if (isNavWithColon || isNavSplit || isDial) {
+                        val requestedScreen = if (isDial) "ActiveCall" else if (isNavWithColon) action.substringAfter(":").substringBefore(";").trim() else (valueStr ?: "")
                         val targetScreen = resolveScreenName(requestedScreen)
                         if (targetScreen != null) {
                             Log.i(TAG, "🧭 Native Navigation to: $targetScreen (from $requestedScreen)")
@@ -201,8 +205,11 @@ class DolphinRuntime(val context: Context) {
                             lastNavScreen = targetScreen
                             lastNavTime = System.currentTimeMillis()
                             
-                            // 1. Update general active screen state
+                            // 1. Update general active screen state & Close any native drawers
                             DolphinStateEngine.set("sys_active_screen", targetScreen)
+                            DolphinStateEngine.set("drawerState", 0)
+                            DolphinStateEngine.set("isDrawerOpen", false)
+                            closeNativeDrawers()
                             
                             // 2. Turn OFF previous tab shade (if it exists)
                             if (prevScreen != null) {
@@ -256,36 +263,7 @@ class DolphinRuntime(val context: Context) {
                 }
             }
 
-            try {
-                val gestureDetector = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
-                    override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-                        if (e1 == null) return false
-                        val diffX = e2.x - e1.x
-                        val diffY = e2.y - e1.y
-                        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 150 && Math.abs(velocityX) > 300) {
-                            val screens = this@DolphinRuntime.getScreenNames()
-                            val currentIndex = screens.indexOf(screenName)
-                            if (currentIndex != -1) {
-                                if (diffX < 0 && currentIndex < screens.size - 1) {
-                                    val nextScreen = screens[currentIndex + 1]
-                                    this@DolphinRuntime.onAction?.invoke("tab:$nextScreen", null)
-                                    return true
-                                } else if (diffX > 0 && currentIndex > 0) {
-                                    val prevScreen = screens[currentIndex - 1]
-                                    this@DolphinRuntime.onAction?.invoke("tab:$prevScreen", null)
-                                    return true
-                                }
-                            }
-                        }
-                        return false
-                    }
-                })
-
-                container.gestureDetector = gestureDetector
-            } catch (e: Throwable) {
-                Log.e(TAG, "Failed to attach swipe gesture detector: ${e.message}")
-            }
-
+            // Screen container returned cleanly without accidental swipe flinging
             return container
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to render screen: $screenName", e)
@@ -373,6 +351,17 @@ class DolphinRuntime(val context: Context) {
         val withSuffix = requested + "Screen"
         if (names.contains(withSuffix)) return withSuffix
         return names.firstOrNull { it.equals(requested, ignoreCase = true) || it.removeSuffix("Screen").equals(cleaned, ignoreCase = true) }
+    }
+
+    fun closeNativeDrawers() {
+        val activity = context as? android.app.Activity ?: return
+        val rootGroup = activity.findViewById<android.view.ViewGroup>(android.R.id.content) ?: return
+        if (rootGroup.childCount > 0) {
+            val topView = rootGroup.getChildAt(0)
+            if (topView is androidx.drawerlayout.widget.DrawerLayout) {
+                topView.closeDrawers()
+            }
+        }
     }
 
     fun getScreenContainer(): android.view.ViewGroup? {

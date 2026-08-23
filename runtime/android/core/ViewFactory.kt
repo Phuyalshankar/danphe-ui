@@ -42,10 +42,11 @@ class ViewFactory(val ctx: Context) {
         registerBuilder(NavBuilder())
         registerBuilder(HeaderBuilder())
         registerBuilder(DrawerBuilder())
+        registerBuilder(IconBuilder())          // 0x23 — Dynamic TTF & Vector Icon Builder
         registerBuilder(CameraViewBuilder())
-        registerBuilder(ImageBuilder())
         registerBuilder(WebViewBuilder())       // 0x60 — WebRTC / Jitsi / NVR Web Grid
-        registerBuilder(DolphinCanvasBuilder(0x61))  // 0x61 — Pure Native Canvas NVR Engine (TCP/MJPEG)
+        registerBuilder(ThorVGBuilder())        // 0x61 — Samsung ThorVG 120 FPS Hardware Vector Graphics
+        registerBuilder(NativeCanvasBuilder())  // 0x63 — Native TitanVideoDecoder (Hardware Accelerated)
 
         Log.d("ViewFactory", "✅ ${componentBuilders.size} ComponentBuilders registered")
     }
@@ -196,6 +197,17 @@ class ViewFactory(val ctx: Context) {
                         0x35 -> createHardwareView(bin, "battery")
                         0x36 -> createHardwareView(bin, "sensors")
                         0x50 -> CameraViewBuilder().build(ctx, bin, this)
+                        0x61 -> ThorVGBuilder().build(ctx, bin, this)
+                        0xD0 -> {
+                            val key = nextStr()
+                            val fallback = nextStr()
+                            TextView(ctx).apply {
+                                textSize = 14f
+                                DolphinStateEngine.bind(key, this, fallback)
+                                applyStyles(this, bin)
+                                applyTextStyles(this, bin)
+                            }
+                        }
                         else -> createColumn(bin, isCard = false)
                     }
                 }
@@ -343,11 +355,7 @@ class ViewFactory(val ctx: Context) {
                     val action = nextStr()
                     val textStr = nextStr()
                     val iconStr = nextStr()
-                    updatedText = when {
-                        textStr.isNotEmpty() -> textStr
-                        action.isNotEmpty() -> action.removePrefix("nav:").removePrefix("tab:").removePrefix("app:")
-                        else -> ""
-                    }
+                    updatedText = if (textStr.isNotEmpty()) textStr else null
                 }
                 0x1D -> { // Header (0x1D) — 2 strings
                     val action = nextStr()
@@ -404,6 +412,7 @@ class ViewFactory(val ctx: Context) {
                 // Skip applyStylesInPlace for TabBar — TabBuilder manages its own padding
                 if (type != 0x27) {
                     applyStylesInPlace(view, bin)
+                    applySize(view, sizeStr)
                 }
                 if (view is TextView) {
                     applyTextStyles(view, bin)

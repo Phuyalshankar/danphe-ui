@@ -30,8 +30,7 @@ private fun loadCdnIconAssets(ctx: Context) {
     cdnIconLoaded = true
     try {
         val assetManager = ctx.assets
-        val list = assetManager.list("icons") ?: emptyArray()
-        if (list.contains("icon-map.json")) {
+        try {
             val jsonStr = assetManager.open("icons/icon-map.json").bufferedReader().use { it.readText() }
             val jsonObj = org.json.JSONObject(jsonStr)
             val map = mutableMapOf<String, String>()
@@ -41,14 +40,20 @@ private fun loadCdnIconAssets(ctx: Context) {
                 map[k] = jsonObj.getString(k)
             }
             cdnIconMap = map
+            android.util.Log.i("DolphinIcons", "✅ Loaded ${map.size} dynamic icon mappings from asset icons/icon-map.json")
+        } catch (e: Exception) {
+            android.util.Log.w("DolphinIcons", "Could not open icons/icon-map.json: ${e.message}")
         }
-        val fontFileName = list.find { it.startsWith("icon-font") }
-        if (fontFileName != null) {
-            val fontFile = java.io.File(ctx.cacheDir, fontFileName)
-            assetManager.open("icons/$fontFileName").use { input ->
+
+        try {
+            val fontFile = java.io.File(ctx.cacheDir, "icon-font.ttf")
+            assetManager.open("icons/icon-font.ttf").use { input ->
                 java.io.FileOutputStream(fontFile).use { output -> input.copyTo(output) }
             }
             cdnTypeface = Typeface.createFromFile(fontFile)
+            android.util.Log.i("DolphinIcons", "✅ Loaded native TTF icon typeface from asset icons/icon-font.ttf")
+        } catch (e: Exception) {
+            android.util.Log.w("DolphinIcons", "Could not open icons/icon-font.ttf: ${e.message}")
         }
     } catch (e: Exception) { /* ignore CDN load error */ }
 }
@@ -229,31 +234,19 @@ fun ViewFactory.loadImage(imageView: ImageView, url: String) {
 
 fun ViewFactory.createImage(bin: ByteArray): View {
     val imageView = ImageView(ctx).apply {
-        scaleType = ImageView.ScaleType.FIT_CENTER
+        scaleType = ImageView.ScaleType.CENTER_CROP
         adjustViewBounds = true
     }
     applyStyles(imageView, bin)
-    var url = nextStr()
+    val url = nextStr()
     var lp = imageView.layoutParams
     if (lp == null) {
-        lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(180))
+        lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(200))
     } else if (lp.height == ViewGroup.LayoutParams.WRAP_CONTENT || lp.height <= 0) {
-        lp.height = dp(180)
+        lp.height = dp(200)
     }
     imageView.layoutParams = lp
-
-    if (DolphinStateEngine.imageLoader == null) {
-        DolphinStateEngine.imageLoader = { v, imgUrl ->
-            loadImage(v, imgUrl)
-        }
-    }
-
-    if (url.startsWith("[stateKey:") && url.endsWith("]")) {
-        val stateKey = url.substring(10, url.length - 1)
-        DolphinStateEngine.bind(stateKey, imageView, DolphinStateEngine.Property.IMAGE, "")
-    } else {
-        loadImage(imageView, url)
-    }
+    loadImage(imageView, url)
     return imageView
 }
 
@@ -380,14 +373,16 @@ fun ViewFactory.createText(bin: ByteArray): View {
         var targetKey: String? = null
         var defaultText: String = content
 
-        if (content.startsWith("stateKey:")) {
-            val key = content.removePrefix("stateKey:")
+        if (content.startsWith("stateKey:") || content.startsWith("bus:")) {
+            val key = content.removePrefix("stateKey:").removePrefix("bus:")
             defaultText = key.substringAfterLast("|", "")
-            targetKey   = key.substringBeforeLast("|")
-        } else if (content.contains("[stateKey:")) {
-            val match = Regex("\\[stateKey:([a-zA-Z0-9_$]+)\\]").find(content)
+            targetKey   = if (content.startsWith("bus:")) "bus:" + key.substringBeforeLast("|") else key.substringBeforeLast("|")
+        } else if (content.contains("[stateKey:") || content.contains("[bus:")) {
+            val match = Regex("\\[(stateKey|bus):([a-zA-Z0-9_$\\.]+)\\]").find(content)
             if (match != null) {
-                targetKey = match.groupValues[1]
+                val prefix = match.groupValues[1]
+                val rawKey = match.groupValues[2]
+                targetKey = if (prefix == "bus") "bus:$rawKey" else rawKey
             }
         }
 
@@ -430,7 +425,8 @@ fun ViewFactory.getDynamicIconDrawable(ctx: Context, iconName: String, color: In
         "location-dot" to "f3c5", "gps" to "f3c5",
         "battery-full" to "f240", "battery" to "f240",
         "address-book" to "f2b9", "contacts" to "f2b9",
-        "sliders" to "f1de", "check" to "f00c", "rotate" to "f01e"
+        "sliders" to "f1de", "check" to "f00c", "rotate" to "f01e",
+        "keypad" to "f11c", "keyboard" to "f11c", "dialpad" to "f11c"
     )
 
     val hexUnicode = cdnIconMap?.get(trimmed)
@@ -465,6 +461,19 @@ fun ViewFactory.getDynamicIconDrawable(ctx: Context, iconName: String, color: In
     val lower = cleanName.lowercase()
 
     when {
+        lower.contains("keypad") || lower.contains("dialpad") || lower.contains("keyboard") || lower.contains("matrix") -> {
+            val dotPaint = android.graphics.Paint(paint).apply {
+                this.style = android.graphics.Paint.Style.FILL
+            }
+            val dotR = 2.2f * density
+            val spacingX = r * 0.45f
+            val spacingY = r * 0.45f
+            for (row in -1..1) {
+                for (col in -1..1) {
+                    canvas.drawCircle(cx + col * spacingX, cy + row * spacingY, dotR, dotPaint)
+                }
+            }
+        }
         lower.contains("gas") || lower.contains("pump") || lower.contains("fuel") -> {
             val body = android.graphics.RectF(cx - r * 0.5f, cy - r * 0.6f, cx + r * 0.2f, cy + r * 0.7f)
             canvas.drawRoundRect(body, 4f * density, 4f * density, paint)
@@ -481,9 +490,16 @@ fun ViewFactory.getDynamicIconDrawable(ctx: Context, iconName: String, color: In
             canvas.drawLine(cx - r * 0.3f, cy, cx + r * 0.3f, cy, paint)
             canvas.drawLine(cx - r * 0.3f, cy + r * 0.3f, cx + r * 0.1f, cy + r * 0.3f, paint)
         }
-        lower.contains("phone") || lower.contains("mobile") || lower.contains("screen") -> {
+        lower.contains("phone") || lower.contains("mobile") || lower.contains("call") -> {
             val phone = android.graphics.RectF(cx - r * 0.4f, cy - r * 0.75f, cx + r * 0.4f, cy + r * 0.75f)
             canvas.drawRoundRect(phone, 6f * density, 6f * density, paint)
+            val screen = android.graphics.RectF(cx - r * 0.28f, cy - r * 0.55f, cx + r * 0.28f, cy + r * 0.45f)
+            val screenPaint = android.graphics.Paint(paint).apply {
+                this.color = Color.TRANSPARENT
+                this.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.CLEAR)
+            }
+            canvas.drawRect(screen, screenPaint)
+            canvas.drawCircle(cx, cy + r * 0.6f, 2f * density, paint)
         }
         lower.contains("house") || lower.contains("home") -> {
             val path = android.graphics.Path()
@@ -497,10 +513,15 @@ fun ViewFactory.getDynamicIconDrawable(ctx: Context, iconName: String, color: In
             path.close()
             canvas.drawPath(path, paint)
         }
-        lower.contains("user") || lower.contains("profile") || lower.contains("person") -> {
-            canvas.drawCircle(cx, cy - r * 0.35f, r * 0.35f, paint)
-            val rectF = android.graphics.RectF(cx - r * 0.6f, cy, cx + r * 0.6f, cy + r * 0.8f)
-            canvas.drawArc(rectF, 180f, 180f, true, paint)
+        lower.contains("user") || lower.contains("profile") || lower.contains("person") || lower.contains("contact") || lower.contains("address-book") -> {
+            val strokePaint = android.graphics.Paint(paint).apply {
+                this.style = android.graphics.Paint.Style.STROKE
+                this.strokeWidth = 2.5f * density
+                this.strokeCap = android.graphics.Paint.Cap.ROUND
+            }
+            canvas.drawCircle(cx, cy - r * 0.3f, r * 0.28f, strokePaint)
+            val bodyArc = android.graphics.RectF(cx - r * 0.55f, cy - r * 0.05f, cx + r * 0.55f, cy + r * 0.85f)
+            canvas.drawArc(bodyArc, 180f, 180f, false, strokePaint)
         }
         lower.contains("heart") -> {
             val path = android.graphics.Path()
@@ -529,17 +550,58 @@ fun ViewFactory.getDynamicIconDrawable(ctx: Context, iconName: String, color: In
             canvas.drawPath(path, paint)
         }
         lower.contains("bell") -> {
-            canvas.drawCircle(cx, cy - r * 0.1f, r * 0.45f, paint)
+            val strokePaint = android.graphics.Paint(paint).apply {
+                this.style = android.graphics.Paint.Style.STROKE
+                this.strokeWidth = 2.5f * density
+            }
+            canvas.drawCircle(cx, cy - r * 0.1f, r * 0.45f, strokePaint)
             canvas.drawCircle(cx, cy + r * 0.55f, r * 0.15f, paint)
         }
         lower.contains("gear") || lower.contains("cog") || lower.contains("settings") -> {
-            canvas.drawCircle(cx, cy, r * 0.6f, paint)
-            paint.style = android.graphics.Paint.Style.STROKE
-            canvas.drawCircle(cx, cy, r * 0.25f, paint)
+            val strokePaint = android.graphics.Paint(paint).apply {
+                this.style = android.graphics.Paint.Style.STROKE
+                this.strokeWidth = 2.5f * density
+                this.strokeCap = android.graphics.Paint.Cap.ROUND
+            }
+            for (i in 0 until 6) {
+                val angle = Math.toRadians((i * 60).toDouble())
+                val x1 = cx + ((r * 0.25f) * Math.cos(angle)).toFloat()
+                val y1 = cy + ((r * 0.25f) * Math.sin(angle)).toFloat()
+                val x2 = cx + ((r * 0.75f) * Math.cos(angle)).toFloat()
+                val y2 = cy + ((r * 0.75f) * Math.sin(angle)).toFloat()
+                canvas.drawLine(x1, y1, x2, y2, strokePaint)
+            }
+            canvas.drawCircle(cx, cy, r * 0.45f, strokePaint)
+            canvas.drawCircle(cx, cy, r * 0.18f, strokePaint)
         }
         lower.contains("trash") -> {
             canvas.drawRect(cx - r * 0.45f, cy - r * 0.2f, cx + r * 0.45f, cy + r * 0.6f, paint)
             canvas.drawLine(cx - r * 0.6f, cy - r * 0.3f, cx + r * 0.6f, cy - r * 0.3f, paint)
+        }
+        lower.contains("chat") || lower.contains("message") || lower.contains("comment") -> {
+            val bubble = android.graphics.RectF(cx - r * 0.6f, cy - r * 0.6f, cx + r * 0.6f, cy + r * 0.2f)
+            canvas.drawRoundRect(bubble, 6f * density, 6f * density, paint)
+            val tail = android.graphics.Path()
+            tail.moveTo(cx - r * 0.3f, cy + r * 0.2f)
+            tail.lineTo(cx - r * 0.5f, cy + r * 0.6f)
+            tail.lineTo(cx - r * 0.05f, cy + r * 0.2f)
+            tail.close()
+            canvas.drawPath(tail, paint)
+        }
+        lower.contains("conference") || lower.contains("meeting") || lower.contains("users") || lower.contains("group") -> {
+            canvas.drawCircle(cx, cy - r * 0.3f, r * 0.25f, paint)
+            val body1 = android.graphics.RectF(cx - r * 0.4f, cy, cx + r * 0.4f, cy + r * 0.6f)
+            canvas.drawArc(body1, 180f, 180f, true, paint)
+            canvas.drawCircle(cx + r * 0.45f, cy - r * 0.35f, r * 0.2f, paint)
+        }
+        lower.contains("search") -> {
+            canvas.drawCircle(cx - r * 0.15f, cy - r * 0.15f, r * 0.4f, paint)
+            canvas.drawLine(cx + r * 0.15f, cy + r * 0.15f, cx + r * 0.65f, cy + r * 0.65f, paint)
+        }
+        lower.contains("lock") -> {
+            canvas.drawRect(cx - r * 0.45f, cy - r * 0.1f, cx + r * 0.45f, cy + r * 0.6f, paint)
+            val shackle = android.graphics.RectF(cx - r * 0.3f, cy - r * 0.6f, cx + r * 0.3f, cy + r * 0.1f)
+            canvas.drawArc(shackle, 180f, 180f, false, paint)
         }
         lower.contains("check") -> {
             canvas.drawLine(cx - r * 0.5f, cy, cx - r * 0.1f, cy + r * 0.4f, paint)
@@ -603,8 +665,12 @@ fun ViewFactory.createButton(bin: ByteArray): View {
                 val resolvedColor = resolveColorFromBin(bin)
                 val iconColor = if (resolvedColor != 0) resolvedColor else Color.WHITE
                 val drawable = getDynamicIconDrawable(ctx, iconName, iconColor)
-                setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
-                compoundDrawablePadding = dp(8)
+                if (this.text.isEmpty()) {
+                    setCompoundDrawablesWithIntrinsicBounds(null, drawable, null, null)
+                } else {
+                    setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
+                    compoundDrawablePadding = dp(8)
+                }
             } catch (e: Exception) { /* ignore icon errors */ }
         }
 

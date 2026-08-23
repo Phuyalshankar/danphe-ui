@@ -358,8 +358,10 @@ class HotPatchClient(
         sendRaw(msg)
     }
 
+    private val sendExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+
     private fun sendRaw(bytes: ByteArray) {
-        thread {
+        sendExecutor.execute {
             try {
                 outputStream?.write(bytes)
                 outputStream?.flush()

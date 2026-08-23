@@ -247,6 +247,12 @@ class DolphinTitanBridge {
         }
         else if (tag === 'IMG') type = 'Image';
         else if (tag === 'I') type = 'Icon';
+        else if (tag === 'THORVG' || tag === 'NATIVECANVAS' || tag === 'GAUGE' || tag === 'VECTORCANVAS' || tag === 'SVG') type = 'ThorVG';
+        else if (tag === 'STATE') type = '0xD0';
+        else if (tag === 'CAMERA' || tag === 'CAMERAVIEW') type = 'CameraView';
+        else if (tag === 'VIDEO' || tag === 'VIDEOPLAYER') type = 'VideoPlayer';
+        else if (tag === 'AUDIO' || tag === 'MP3PLAYER' || tag === 'AUDIOPLAYER') type = 'Mp3Player';
+        else if (tag === 'WEBVIEW' || tag === 'WEB') type = 'WebView';
 
         const schema = { type, ...props };
 

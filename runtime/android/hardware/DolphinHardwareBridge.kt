@@ -687,13 +687,13 @@ object DolphinHardwareBridge {
                     // Usage: hw:tcp:connect:<host>:<port>:<ext>
                     // State: sys_tcp_status = "● CONNECTING..." → "● ONLINE"
                     "connect" -> {
-                        val devHost = DolphinRuntime.instance?.getDevServerHost() ?: ""
+                        val devHost = HotPatchClient.activeHost.ifEmpty { "192.168.1.6" }
                         val stateHost = DolphinStateEngine.get("tcp_host")?.toString() ?: ""
-                        val host = if (tcpParts.size > 3 && tcpParts[3].isNotEmpty()) tcpParts[3]
-                            else if (stateHost.isNotEmpty()) stateHost
+                        val host = if (tcpParts.size > 3 && tcpParts[3].isNotEmpty() && tcpParts[3] != "127.0.0.1") tcpParts[3]
+                            else if (stateHost.isNotEmpty() && stateHost != "127.0.0.1" && stateHost != "0.0.0.0") stateHost
                             else devHost
-                        val port = if (tcpParts.size > 4) tcpParts[4].toIntOrNull() ?: 9092 else
-                            DolphinStateEngine.get("tcp_port")?.toString()?.toIntOrNull() ?: 9092
+                        val port = if (tcpParts.size > 4) tcpParts[4].toIntOrNull() ?: 8888 else
+                            DolphinStateEngine.get("tcp_port")?.toString()?.toIntOrNull() ?: 8888
                         val ext  = if (tcpParts.size > 5) tcpParts[5].toIntOrNull() ?: 101 else
                             DolphinStateEngine.get("tcp_ext")?.toString()?.toIntOrNull() ?: 101
                         DolphinStateEngine.set("sys_tcp_status", "● CONNECTING...")

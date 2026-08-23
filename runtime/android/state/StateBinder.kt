@@ -20,6 +20,7 @@ object StateBinder {
                 DolphinStateEngine.Property.TEXT -> if (view is TextView) {
                     view.text = value.toString()
                     view.visibility = View.VISIBLE
+                    view.requestLayout()
                     view.invalidate()
                 }
 

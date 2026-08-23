@@ -49,11 +49,16 @@ class WebViewBuilder : ComponentBuilder {
     override fun build(ctx: Context, bin: ByteArray, factory: ViewFactory): View {
         var url = factory.nextStr().ifEmpty { "about:blank" }
         
+        var devHost = HotPatchClient.activeHost
+        if (devHost.isEmpty() || devHost == "127.0.0.1" || devHost == "0.0.0.0") {
+            devHost = DolphinStateEngine.get("tcp_host")?.toString() ?: ""
+        }
+        if (devHost.isEmpty() || devHost == "127.0.0.1" || devHost == "0.0.0.0") {
+            devHost = "192.168.1.6"
+        }
+
         if (url.contains("127.0.0.1") || url.contains("localhost")) {
-            val devHost = DolphinRuntime.instance?.getDevServerHost()
-            if (!devHost.isNullOrEmpty() && devHost != "127.0.0.1") {
-                url = url.replace("127.0.0.1", devHost).replace("localhost", devHost)
-            }
+            url = url.replace("127.0.0.1", devHost).replace("localhost", devHost)
         }
 
         val dolphinWebView = DolphinWebView(ctx).apply {

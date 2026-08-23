@@ -47,19 +47,44 @@ class WebStateEngine {
 
     static parseStateKeyString(str, stateMap = {}, escapeHTMLFn = (s) => String(s)) {
         if (str === null || str === undefined) return '';
-        const text = String(str);
-        if (!text.includes('[stateKey:')) {
+        let text = String(str);
+        if (!text.includes('[stateKey:') && !text.includes('[bus:')) {
             return escapeHTMLFn(text);
         }
 
         const defaultState = this.getDefaultState();
-        const parts = text.split(/(\[stateKey:[a-zA-Z0-9_\-\.]+\])/g);
+        let EverestBus = null;
+        try { EverestBus = require('../bus').EverestBus; } catch (e) {}
+
+        const parts = text.split(/(\[stateKey:[a-zA-Z0-9_\-\.]+\]|\[bus:[a-zA-Z0-9_\-\.]+\])/g);
         return parts.map(part => {
             if (part.startsWith('[stateKey:') && part.endsWith(']')) {
                 const stateKey = part.substring(10, part.length - 1);
                 const rawVal = stateMap[stateKey] !== undefined ? stateMap[stateKey] : defaultState[stateKey];
                 const displayVal = (rawVal !== undefined && rawVal !== null && rawVal !== '') ? String(rawVal) : (defaultState[stateKey] || '--');
                 return `<span data-state-key="${escapeHTMLFn(stateKey)}">${escapeHTMLFn(displayVal)}</span>`;
+            }
+            if (part.startsWith('[bus:') && part.endsWith(']')) {
+                const busKey = part.substring(5, part.length - 1);
+                const isNested = busKey.includes('.');
+                const regId = isNested ? busKey.split('.')[0] : busKey;
+                const propPath = isNested ? busKey.split('.').slice(1) : [];
+
+                let displayVal = '';
+                if (EverestBus) {
+                    let rawVal = EverestBus.read(regId, '');
+                    if (isNested && rawVal && typeof rawVal === 'object') {
+                        let cur = rawVal;
+                        for (const p of propPath) {
+                            if (cur && cur[p] !== undefined) cur = cur[p];
+                            else { cur = ''; break; }
+                        }
+                        displayVal = String(cur || '');
+                    } else {
+                        displayVal = String(rawVal || '');
+                    }
+                }
+                return `<span data-bus="${escapeHTMLFn(busKey)}">${escapeHTMLFn(displayVal)}</span>`;
             }
             return escapeHTMLFn(part);
         }).join('');

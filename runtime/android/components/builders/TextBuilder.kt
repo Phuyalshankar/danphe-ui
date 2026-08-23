@@ -1,7 +1,5 @@
 package io.dolphin.runtime
 
-
-
 import android.content.Context
 import android.util.Log
 import android.view.View
@@ -12,29 +10,28 @@ class TextBuilder : ComponentBuilder {
     override fun getName(): String = "Text"
 
     override fun build(ctx: Context, data: ByteArray, factory: ViewFactory): View {
-        var rawContent = factory.nextStr()
-
-        // Safety Filter: If string pool passes raw metadata/size string (e.g. 0|0|0|0), fetch the actual text content string
-        val isMetadataPipe = rawContent.contains("|") && !rawContent.startsWith("stateKey:") && !rawContent.contains("[stateKey:") && (rawContent.split("|").size >= 3)
-        if (isMetadataPipe) {
-            rawContent = factory.nextStr()
-        }
-        val content = rawContent
-
+        val content = factory.nextStr()
         Log.d("TextBuilder", "Building Text: '$content'")
 
         return TextView(ctx).apply {
             var targetKey: String? = null
             var defaultText: String = content
 
-            if (content.startsWith("stateKey:")) {
-                val key = content.removePrefix("stateKey:")
-                defaultText = key.substringAfterLast("|", "")
-                targetKey   = key.substringBeforeLast("|")
-            } else if (content.contains("[stateKey:")) {
-                val match = Regex("\\[stateKey:([a-zA-Z0-9_$]+)\\]").find(content)
+            if (content.startsWith("stateKey:") || content.startsWith("bus:")) {
+                val key = content.removePrefix("stateKey:").removePrefix("bus:")
+                if (key.contains("|")) {
+                    defaultText = key.substringAfter("|")
+                    targetKey = if (content.startsWith("bus:")) "bus:" + key.substringBefore("|") else key.substringBefore("|")
+                } else {
+                    targetKey = if (content.startsWith("bus:")) "bus:$key" else key
+                    defaultText = ""
+                }
+            } else if (content.contains("[stateKey:") || content.contains("[bus:")) {
+                val match = Regex("\\[(stateKey|bus):([a-zA-Z0-9_$\\.]+)\\]").find(content)
                 if (match != null) {
-                    targetKey = match.groupValues[1]
+                    val prefix = match.groupValues[1]
+                    val rawKey = match.groupValues[2]
+                    targetKey = if (prefix == "bus") "bus:$rawKey" else rawKey
                 }
             }
 

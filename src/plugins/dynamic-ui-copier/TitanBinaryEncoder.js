@@ -24,38 +24,44 @@ class TitanBinaryEncoder {
         }
 
         for (const node of astNodes) {
-            const packet = Buffer.alloc(16);
+            const packet = Buffer.alloc(24);
             packet.fill(0);
 
-            // Byte 0: Opcode
-            packet[0] = node.opcode & 0xFF;
+            // Byte 0: [Flex Weight: 4b | Gravity: 4b]
+            const flexWeight = node.styles.flex || 0;
+            const gravity = node.styles.alignItems === 'center' ? 0x01 : 0;
+            packet[0] = ((flexWeight & 0x0F) << 4) | (gravity & 0x0F);
 
-            // Byte 1-4: X, Y coordinates (Int16BE)
-            packet.writeInt16BE(node.bounds.x || 0, 1);
-            packet.writeInt16BE(node.bounds.y || 0, 3);
+            // Byte 1: Opcode
+            packet[1] = (node.opcode || 0x12) & 0xFF;
 
-            // Byte 5-7: Width, Height (Int16BE for W, Int8 for H or scaled)
-            packet.writeInt16BE(node.bounds.width || 0, 5);
+            // Byte 2-3: Background Shade & Palette
+            packet[2] = (node.styles.bgShade || 250) & 0xFF;
+            packet[3] = (node.styles.bgPalette || 0x07) & 0xFF;
 
-            // Byte 8-11: Margins / Paddings (Top, Right, Bottom, Left)
-            packet[8] = node.padding.top & 0xFF;
-            packet[9] = node.padding.right & 0xFF;
-            packet[10] = node.padding.bottom & 0xFF;
-            packet[11] = node.padding.left & 0xFF;
+            // Byte 4-7: Padding (Top, Right, Bottom, Left)
+            packet[4] = (node.padding.top || 0) & 0xFF;
+            packet[5] = (node.padding.right || 0) & 0xFF;
+            packet[6] = (node.padding.bottom || 0) & 0xFF;
+            packet[7] = (node.padding.left || 0) & 0xFF;
 
-            // Byte 12: Border Radius / Style Modifier
-            packet[12] = (node.styles.borderRadius || 0) & 0xFF;
+            // Byte 8-11: Margins (Signed 8-bit DP)
+            packet[8] = ((node.margin && node.margin.top) || 0) & 0xFF;
+            packet[9] = ((node.margin && node.margin.right) || 0) & 0xFF;
+            packet[10] = ((node.margin && node.margin.bottom) || 0) & 0xFF;
+            packet[11] = ((node.margin && node.margin.left) || 0) & 0xFF;
 
-            // Byte 13: Border Width
-            packet[13] = (node.styles.borderWidth || 0) & 0xFF;
+            // Byte 12-13: Border Width & Border Palette
+            packet[12] = (node.styles.borderWidth || 0) & 0xFF;
+            packet[13] = (node.styles.borderPalette || 0x07) & 0xFF;
 
-            // Byte 14: Font Size
-            packet[14] = (node.styles.fontSize || 14) & 0xFF;
+            // Byte 14: Corner Radius (0-255)
+            packet[14] = (node.styles.borderRadius || 0) & 0xFF;
 
-            // Byte 15: Flags (Bit 0: HasGradient/Effect, Bit 2: HasBorder, Bit 3: DynamicBindings)
+            // Byte 15: Flags (Bit 2: Border, Bit 6: Shadow)
             let flags = 0;
-            if (node.styles.gradient) flags |= 0x01;
             if (node.styles.borderWidth > 0) flags |= 0x04;
+            if (node.styles.boxShadow) flags |= 0x40;
             if (node.content || node.placeholder) flags |= 0x08;
             packet[15] = flags & 0xFF;
 

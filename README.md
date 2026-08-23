@@ -18,16 +18,24 @@
 
 ---
 
-## ✨ What is DolphinJS?
+## ✨ What is DolphinJS (Danphe-2)?
 
-DolphinJS compiles your UI code into an ultra-compact **24-byte Titan binary format** (.dolp) and streams it to Android devices over a TCP connection. Your app hot-reloads instantly on every save — no build step, no waiting.
+DolphinJS compiles your UI code via a **Direct 2-Stage Single-Pass Titan Pipeline** into an ultra-compact **24-byte Titan binary bytecode format** (`.dolp`) and streams it to Android devices over a low-latency TCP connection. Your app hot-reloads instantly on every save in `< 5ms` — no build step, no waiting.
 
 ```
-Your JSX/HTML  →  DolphinCompiler  →  Titan Binary (24 bytes/component)
-                                              ↓
-                                   Android Runtime (Kotlin)
-                                   renders native Views
+┌─────────────────────────────────────────────────────────────┐
+│  STAGE 1 (Compiler) : JSX ➔ TitanCompiler.js (Single Pass)  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ 📡 (Titan 24-Byte Bytecode)
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│  STAGE 2 (Android)  : TitanEngine.kt (Atomic Native Paint)  │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+* **Web Dashboard**: `http://localhost:7787/dashboard`
+* **Live Hex Dump & Debugger**: `http://localhost:7787/hexdump`
+* **Live TCP Hotpatch Port**: `7788`
 
 ---
 

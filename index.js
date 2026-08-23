@@ -118,3 +118,6 @@ module.exports.GestureRecognizer = _ui2.GestureRecognizer;
 module.exports.Responsive        = _ui2.Responsive;
 module.exports.ResponsiveContext  = _ui2.ResponsiveContext;
 module.exports.BREAKPOINTS       = _ui2.BREAKPOINTS;
+
+// Universal UB 2.0 Engine
+module.exports.ub = require('./src/ub');

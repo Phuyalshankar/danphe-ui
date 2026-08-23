@@ -8,7 +8,7 @@ import android.text.TextWatcher
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import com.google.android.material.textfield.TextInputEditText
+import androidx.appcompat.widget.AppCompatEditText
 
 /**
  * ⌨️ FormInputField — Manages text input edit text creation, input types, gravity, and live state watchers.
@@ -22,8 +22,8 @@ object FormInputField {
         stateKey: String,
         textColor: Int,
         onAction: ((String, Any?) -> Unit)?
-    ): TextInputEditText {
-        return TextInputEditText(ctx).apply {
+    ): androidx.appcompat.widget.AppCompatEditText {
+        return androidx.appcompat.widget.AppCompatEditText(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -45,8 +45,12 @@ object FormInputField {
             setOnClickListener(null)
             setOnFocusChangeListener(null)
 
-            setTextColor(textColor)
+            val effectiveTextColor = if (textColor != 0 && textColor != android.graphics.Color.parseColor("#0f172a")) textColor else android.graphics.Color.WHITE
+            setTextColor(effectiveTextColor)
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15f)
             setHint(hintText)
+            setHintTextColor(android.graphics.Color.parseColor("#94a3b8"))
+            setHighlightColor(android.graphics.Color.parseColor("#38bdf8"))
 
             // Set Input Type
             inputType = when (inputTypeStr.lowercase()) {
@@ -59,12 +63,29 @@ object FormInputField {
                 else -> InputType.TYPE_CLASS_TEXT
             }
 
-            // Sync with initial state
+            setOnTouchListener { v, event ->
+                var p = v.parent
+                while (p != null) {
+                    p.requestDisallowInterceptTouchEvent(event.action == android.view.MotionEvent.ACTION_DOWN || event.action == android.view.MotionEvent.ACTION_MOVE)
+                    p = p.parent
+                }
+                if (event.action == android.view.MotionEvent.ACTION_UP) {
+                    v.post {
+                        v.requestFocus()
+                        val imm = v.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                        imm?.showSoftInput(v, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                    }
+                }
+                false
+            }
+
+            // Sync with initial state & bind reactive updates
             if (stateKey.isNotEmpty()) {
                 val initialValue = DolphinStateEngine.get(stateKey)?.toString() ?: ""
                 if (initialValue.isNotEmpty()) {
                     setText(initialValue)
                 }
+                DolphinStateEngine.bindInput(stateKey, this)
             }
 
             // Real-time TextWatcher for NanoStore & Action handlers

@@ -17,9 +17,9 @@ object ColorParser {
         }
 
         val isDark = DolphinStateEngine.themeLevel > 128
-        val effectiveShade = if (shade > 0) shade else 128
+        val effectiveShade = if (shade > 0 && shade < 250) shade else (if (shade >= 250) 235 else 128)
 
-        return when (colorCode) {
+        val baseColor = when (colorCode) {
             1  -> ColorPalette.resolveBlue(effectiveShade)     // blue, sky, cyan, info
             2  -> ColorPalette.resolveGreen(effectiveShade)    // green, emerald, teal, lime, success
             3  -> ColorPalette.resolveIndigo(effectiveShade)   // primary, indigo, violet
@@ -35,6 +35,16 @@ object ColorParser {
             21 -> ColorTokens.getBackground(isDark)            // Background
             22 -> ColorTokens.getSurface(isDark)               // Surface
             else -> Color.TRANSPARENT
+        }
+
+        // Apply alpha opacity if shade contains alpha token (254 = 90%, 253 = 80%, 252 = 40%)
+        return when (shade) {
+            254 -> ColorUtils.setAlphaComponent(baseColor, (0.90 * 255).toInt())
+            253 -> ColorUtils.setAlphaComponent(baseColor, (0.80 * 255).toInt())
+            252 -> ColorUtils.setAlphaComponent(baseColor, (0.40 * 255).toInt())
+            251 -> ColorUtils.setAlphaComponent(baseColor, (0.60 * 255).toInt())
+            250 -> ColorUtils.setAlphaComponent(baseColor, (0.95 * 255).toInt())
+            else -> baseColor
         }
     }
 

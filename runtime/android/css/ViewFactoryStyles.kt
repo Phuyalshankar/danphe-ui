@@ -160,16 +160,33 @@ fun ViewFactory.applyStyles(v: View, bin: ByteArray) {
         val pr = bin[5].toInt() and 0xFF
         val pb = bin[6].toInt() and 0xFF
         val pl = bin[7].toInt() and 0xFF
-        if (pt > 0 || pr > 0 || pb > 0 || pl > 0) {
-            v.setPadding(dp(pl), dp(pt), dp(pr), dp(pb))
+        val padL = if (pl > 0) dp(pl) else dp(12)
+        val padR = if (pr > 0) dp(pr) else dp(12)
+        val padT = if (pt > 0) dp(pt) else dp(10)
+        val padB = if (pb > 0) dp(pb) else dp(10)
+        v.setPadding(padL, padT, padR, padB)
+
+        val bgCode = bin[3].toInt() and 0xFF
+        val bgShade = bin[2].toInt() and 0xFF
+        val radiusVal = bin[14].toInt() and 0xFF
+        val sig = bin[15].toInt() and 0xFF
+        val hasBorder = (sig and 0x04) != 0
+
+        val gd = android.graphics.drawable.GradientDrawable()
+        val base = if (bgCode != 0) ColorParser.parseColor(bgCode, bgShade) else android.graphics.Color.parseColor("#0f172a")
+        gd.setColor(base)
+        val rad = if (radiusVal > 0) dp(radiusVal).toFloat() else dp(12).toFloat()
+        gd.cornerRadius = rad
+        if (hasBorder) {
+            gd.setStroke(dp(1), android.graphics.Color.parseColor("#334155"))
         }
-        return
+        v.background = gd
     }
 
-    val mt = bin[8].toInt() and 0xFF
-    val mr = bin[9].toInt() and 0xFF
-    val mb = bin[10].toInt() and 0xFF
-    val ml = bin[11].toInt() and 0xFF
+    val mt = bin[8].toByte().toInt()
+    val mr = bin[9].toByte().toInt()
+    val mb = bin[10].toByte().toInt()
+    val ml = bin[11].toByte().toInt()
 
     var lp = v.layoutParams
     if (lp == null) {
@@ -179,10 +196,10 @@ fun ViewFactory.applyStyles(v: View, bin: ByteArray) {
     }
 
     if (lp is ViewGroup.MarginLayoutParams) {
-        val left = if (ml > 0) dp(ml) else lp.leftMargin
-        val top = if (mt > 0) dp(mt) else lp.topMargin
-        val right = if (mr > 0) dp(mr) else lp.rightMargin
-        val bottom = if (mb > 0) dp(mb) else lp.bottomMargin
+        val left = if (ml != 0) (if (ml > 0) dp(ml) else -dp(-ml)) else lp.leftMargin
+        val top = if (mt != 0) (if (mt > 0) dp(mt) else -dp(-mt)) else lp.topMargin
+        val right = if (mr != 0) (if (mr > 0) dp(mr) else -dp(-mr)) else lp.rightMargin
+        val bottom = if (mb != 0) (if (mb > 0) dp(mb) else -dp(-mb)) else lp.bottomMargin
         lp.setMargins(left, top, right, bottom)
     }
 
@@ -542,9 +559,9 @@ fun ViewFactory.applyGravity(l: LinearLayout, bin: ByteArray) {
     val isHorizontal = l.orientation == LinearLayout.HORIZONTAL
 
     l.gravity = when (g) {
-        1 -> if (isHorizontal) Gravity.START or Gravity.CENTER_VERTICAL else Gravity.START
-        2 -> Gravity.CENTER
-        3 -> if (isHorizontal) Gravity.END or Gravity.CENTER_VERTICAL else Gravity.END or Gravity.CENTER_HORIZONTAL
+        1 -> if (isHorizontal) Gravity.START or Gravity.CENTER_VERTICAL else Gravity.START or Gravity.TOP
+        2 -> if (isHorizontal) Gravity.CENTER else Gravity.CENTER_HORIZONTAL or Gravity.TOP
+        3 -> if (isHorizontal) Gravity.END or Gravity.CENTER_VERTICAL else Gravity.END or Gravity.TOP
         else -> Gravity.TOP or Gravity.START
     }
 }

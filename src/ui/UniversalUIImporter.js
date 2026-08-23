@@ -98,31 +98,33 @@ class UniversalUIImporter {
 let compType = comp.props && comp.props.type ? comp.props.type
                          : (normAttributes.type ? normAttributes.type
                          : (comp.type === 'element' ? (comp.tag || '').toLowerCase() : comp.type));
+            const explicitProps = comp.props ? { ...comp.props } : { ...comp, ...normAttributes };
+
+            // Handle custom <state key="..." fallback="..." /> JSX elements
+            if (compType === 'state' || (comp.type === 'element' && comp.tag === 'state')) {
+                const stateKey = explicitProps.key || normAttributes.key || '';
+                const fallbackVal = explicitProps.fallback || normAttributes.fallback || '';
+                compType = 'text';
+                explicitProps.text = `[stateKey:${stateKey}]`;
+                if (!explicitProps.bindings) explicitProps.bindings = {};
+                explicitProps.bindings.text = stateKey;
+            }
+
             if (typeof compType === 'function') {
                 compType = compType.name || '';
             }
             let rawTw = comp.props && comp.props.className ? comp.props.className
                       : (normAttributes.classname ? normAttributes.classname
                       : (comp.tw || comp.className || ''));
-                      
-            const explicitProps = comp.props ? { ...comp.props } : { ...comp, ...normAttributes };
+
             // PLATFORM FILTERING: skip target="web" elements in Mobile Compiler
             const _target = explicitProps.target || comp.target || explicitProps.platform || comp.platform || '';
             if (_target === 'web' || _target === 'browser') {
                 return;
             }
 
-            // Support bracketed [...] responsive CSS classes for TV & Web targets
-            let cleanTw = rawTw;
-            if (typeof rawTw === 'string' && rawTw.includes('[')) {
-                const isTvTarget = (_target === 'tv' || _target === 'desktop' || _target === 'large');
-                if (isTvTarget) {
-                    cleanTw = rawTw.replace(/\[(.*?)\]/g, '$1').replace(/\s+/g, ' ').trim();
-                } else {
-                    cleanTw = rawTw.replace(/\[.*?\]/g, '').trim();
-                }
-            }
-            const tw = cleanTw;
+            // Keep arbitrary Tailwind bracketed classes (like text-[10px], w-[80px])
+            const tw = rawTw || '';
 
             // ── Auto-extract text color from className (e.g. text-red-100, text-white) ──
             const extractTextColorFromClass = (className) => {
@@ -365,7 +367,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
             }
             bin[1] = typeCode & 0xFF;
 
-            const isTextType = (typeCode === 0x1D || typeCode === 0x16 || typeCode === 0x10 || typeCode === 0x23 || typeCode === 0x1A);
+            const isTextType = (typeCode === 0xD0 || typeCode === 0x1D || typeCode === 0x16 || typeCode === 0x10 || typeCode === 0x23 || typeCode === 0x1A);
 
             // Inherit text color if not explicitly defined on text element
             if (isTextType && !props.color && !props.textColor && inheritedColor) {
@@ -420,10 +422,16 @@ let compType = comp.props && comp.props.type ? comp.props.type
             bin[3] = ub.getColor(bg || 'transparent');
 
             // Bytes 4-7: Padding (T, R, B, L)
-            bin[4] = s.t; bin[5] = s.r; bin[6] = s.b; bin[7] = s.l;
+            bin[4] = Math.max(0, s.t || 0) & 0xFF;
+            bin[5] = Math.max(0, s.r || 0) & 0xFF;
+            bin[6] = Math.max(0, s.b || 0) & 0xFF;
+            bin[7] = Math.max(0, s.l || 0) & 0xFF;
 
-            // Bytes 8-11: Margin (T, R, B, L)
-            bin[8] = s.mt; bin[9] = s.mr; bin[10] = s.mb; bin[11] = s.ml;
+            // Bytes 8-11: Margin (T, R, B, L) - supports negative margins via signed 8-bit byte
+            bin[8] = ((s.mt || 0) < 0 ? (256 + s.mt) : (s.mt || 0)) & 0xFF;
+            bin[9] = ((s.mr || 0) < 0 ? (256 + s.mr) : (s.mr || 0)) & 0xFF;
+            bin[10] = ((s.mb || 0) < 0 ? (256 + s.mb) : (s.mb || 0)) & 0xFF;
+            bin[11] = ((s.ml || 0) < 0 ? (256 + s.ml) : (s.ml || 0)) & 0xFF;
 
             // Byte 12: Contextual Packing
             const speed = Math.min(props.animationSpeed || 4, 7);
@@ -517,14 +525,20 @@ let compType = comp.props && comp.props.type ? comp.props.type
 
             // Recursive helper to flatten all text content
             const flattenText = (items) => {
+                if (!items) return '';
+                if (typeof items === 'string') return items;
+                if (typeof items === 'number') return String(items);
+                if (!Array.isArray(items)) items = [items];
                 return items.map(c => {
-                    if (typeof c === 'string' || typeof c === 'number') return String(c);
+                    if (typeof c === 'string') return c;
+                    if (typeof c === 'number') return String(c);
                     if (c && typeof c === 'object') {
                         if (c.text) return c.text;
                         if (c.props && c.props.text) return c.props.text;
+                        if (c.content) return c.content;
+                        if (c.props && c.props.children) return flattenText(c.props.children);
+                        if (c.children) return flattenText(c.children);
                         if (c.value !== undefined && c.value !== null) return String(c.value);
-                        const nested = c.children || (c.props && c.props.children) || [];
-                        if (nested) return flattenText(Array.isArray(nested) ? nested : [nested]);
                     }
                     return '';
                 }).filter(Boolean).join(' ');
@@ -535,7 +549,6 @@ let compType = comp.props && comp.props.type ? comp.props.type
             }
 
             if (props.text) {
-                console.log(`   [UI] ${props.type} text extracted: "${props.text}"`);
                 if (typeof props.text === 'string' && props.text.includes('[stateKey:')) {
                     const match = props.text.match(/\[stateKey:([a-zA-Z0-9_$]+)\]/);
                     if (match) {
@@ -616,7 +629,6 @@ let compType = comp.props && comp.props.type ? comp.props.type
             bin[15] = sig;
             bin[23] = sig;
 
-            console.log(`   [UI] Opcode: 0x${bin[1].toString(16)}, Byte15(Sig): ${bin[15].toString(16)}, Byte12(Shade/Grav): ${bin[12]}, Byte13(Color/Count): ${bin[13]}`);
             binaries.push(bin);
 
             // Byte 16+: String Data (width|height|elevation, then component specific)
@@ -664,12 +676,26 @@ let compType = comp.props && comp.props.type ? comp.props.type
 
             // Advanced Feature Strings (Gradient, Animation) pushed after size
             if (sig & 0x01) {
-                const rawGrad = props.gradient || props.bgGradient || (mobileTwClass.match(/\b(danphe|aurora|gradient-[a-z0-9-]+)\b/i)?.[0]) || '';
+                let rawGrad = props.gradient || props.bgGradient || (mobileTwClass.match(/\b(danphe|aurora|gradient-[a-z0-9-]+)\b/i)?.[0]) || '';
+                if (!rawGrad && mobileTwClass.includes('from-') && mobileTwClass.includes('to-')) {
+                    const fromMatch = mobileTwClass.match(/\bfrom-([a-z]+)(?:-([0-9]+))?\b/);
+                    const toMatch = mobileTwClass.match(/\bto-([a-z]+)(?:-([0-9]+))?\b/);
+                    const dirMatch = mobileTwClass.match(/\bbg-gradient-to-([a-z]+)\b/);
+                    if (fromMatch && toMatch) {
+                        const fromCol = fromMatch[1];
+                        const fromShade = fromMatch[2] ? Math.round((parseInt(fromMatch[2]) / 1000) * 255) : 128;
+                        const toCol = toMatch[1];
+                        const toShade = toMatch[2] ? Math.round((parseInt(toMatch[2]) / 1000) * 255) : 128;
+                        const dir = dirMatch ? dirMatch[1] : 'r';
+                        const dirPrefix = dir === 'r' ? 'horiz-' : (dir === 'b' ? 'vert-' : (dir === 'tr' ? '45deg-' : ''));
+                        rawGrad = `gradient-${dirPrefix}${fromCol}-${fromShade}-${toCol}-${toShade}`;
+                    }
+                }
                 stringPool.push(ub.normalizeGradient(rawGrad));
             }
 
             if (sig & 0x04) {
-                let bWidth = "1px", bStyle = "solid", bColor = "#e2e8f0";
+                let bWidth = "1px", bStyle = "solid", bColor = "";
                 if (props.border && typeof props.border === 'string' && props.border !== 'none') {
                     const parts = props.border.split(' ');
                     if (parts[0]) bWidth = parts[0];
@@ -680,21 +706,50 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 if (props.borderWidth) bWidth = props.borderWidth;
                 if (props.borderStyle) bStyle = props.borderStyle;
 
+                // Extract Tailwind border color from class name
+                const clsStr = String(props.className || tw || '');
+                if (!bColor) {
+                    const bcMatch = clsStr.match(/\bborder-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(\d+)(\/\d+)?\b/);
+                    if (bcMatch) {
+                        bColor = bcMatch[0].replace('border-', '').split('/')[0];
+                    } else if (clsStr.includes('border-white')) {
+                        bColor = '#ffffff';
+                    } else if (clsStr.includes('border-black')) {
+                        bColor = '#000000';
+                    } else if (clsStr.includes('border-transparent')) {
+                        bColor = 'transparent';
+                    }
+                }
+
+                // If border position is specified (border-t, border-b, border-l, border-r)
+                if (clsStr.includes('border-t')) bStyle = 'top';
+                else if (clsStr.includes('border-b')) bStyle = 'bottom';
+                else if (clsStr.includes('border-l')) bStyle = 'left';
+                else if (clsStr.includes('border-r')) bStyle = 'right';
+
                 let hexColor = bColor;
                 if (bColor && !bColor.startsWith('#') && !bColor.startsWith('rgb')) {
                     const resolved = ub && ub.resolveColorToHex ? ub.resolveColorToHex(bColor) : null;
                     if (resolved && typeof resolved === 'string' && resolved.startsWith('#')) {
                         hexColor = resolved;
-                    } else if (bColor.includes('slate-200') || bColor.includes('gray-200') || bColor.includes('zinc-200')) {
-                        hexColor = '#cbd5e1';
-                    } else if (bColor.includes('slate-700') || bColor.includes('gray-700')) {
-                        hexColor = '#334155';
-                    } else if (bColor.includes('blue-500') || bColor.includes('blue-600')) {
-                        hexColor = '#2563eb';
                     } else {
-                        hexColor = '#cbd5e1';
+                        const darkTailwindMap = {
+                            'slate-950': '#020617', 'slate-900': '#0f172a', 'slate-800': '#1e293b', 'slate-700': '#334155', 'slate-600': '#475569',
+                            'gray-950': '#030712', 'gray-900': '#111827', 'gray-800': '#1f2937', 'gray-700': '#374151',
+                            'zinc-950': '#09090b', 'zinc-900': '#18181b', 'zinc-800': '#27272a', 'zinc-700': '#3f3f46',
+                            'cyan-500': '#06b6d4', 'cyan-400': '#22d3ee', 'cyan-800': '#155e75',
+                            'emerald-800': '#065f46', 'emerald-600': '#059669', 'emerald-500': '#10b981',
+                            'amber-800': '#92400e', 'amber-600': '#d97706', 'rose-800': '#9f1239', 'rose-600': '#e11d48'
+                        };
+                        hexColor = darkTailwindMap[bColor] || '#1e293b';
                     }
                 }
+
+                if (!hexColor) {
+                    const isDarkContainer = clsStr.includes('slate-9') || clsStr.includes('slate-8') || clsStr.includes('bg-black') || clsStr.includes('bg-dark');
+                    hexColor = isDarkContainer ? '#1e293b' : '#cbd5e1';
+                }
+
                 stringPool.push(`${bWidth}|${bStyle}|${hexColor}`);
             }
 
@@ -720,12 +775,90 @@ let compType = comp.props && comp.props.type ? comp.props.type
                 stringPool.push(String(animStr || ''));
             }
 
+            const normalizeAction = (act) => {
+                if (!act) return '';
+                if (typeof act === 'string') return act;
+                if (typeof act === 'object') {
+                    const parts = [];
+                    if (act.nav) parts.push(`nav:${act.nav}`);
+                    if (act.drawer) parts.push(`drawer:${act.drawer}`);
+                    if (act.bottom_drawer) parts.push(`bottom_drawer:${act.bottom_drawer}`);
+                    if (act.bus) parts.push(`bus:${act.bus}`);
+                    if (act.key) parts.push(`bus:key:${act.key}`);
+                    if (act.form) parts.push(`form:${act.form}`);
+                    if (act.toggle) parts.push(`state:toggle:${act.toggle}`);
+                    if (act.theme) parts.push(`theme:${act.theme}`);
+                    if (parts.length > 0) return parts.join(';');
+                    
+                    const keys = Object.keys(act);
+                    if (keys.length === 1) {
+                        const k = keys[0];
+                        const v = act[k];
+                        return `form:set:${k}:${v}`;
+                    }
+                    return JSON.stringify(act);
+                }
+                return String(act);
+            };
+
+            if (props.bus) {
+                if (typeof props.bus === 'string') {
+                    props.action = props.bus.startsWith('bus:') ? props.bus : `bus:${props.bus}`;
+                } else if (typeof props.bus === 'object' && props.bus !== null) {
+                    if (props.bus.key) props.action = `bus:key:${props.bus.key}`;
+                    else if (props.bus.dial) props.action = `bus:dial`;
+                    else if (props.bus.backspace) props.action = `bus:backspace`;
+                    else {
+                        const keys = Object.keys(props.bus);
+                        if (keys.length === 1) props.action = `bus:${keys[0]}:${props.bus[keys[0]]}`;
+                        else props.action = `bus:${JSON.stringify(props.bus)}`;
+                    }
+                }
+            }
+
+            if (props.action) props.action = normalizeAction(props.action);
+            if (props.onClick && typeof props.onClick === 'object') props.action = normalizeAction(props.onClick);
+            if (props.onPress && typeof props.onPress === 'object') props.action = normalizeAction(props.onPress);
             switch (typeCode) {
+                case 0x28: // Native Dynamic Drawer: action, backgroundColor
+                    stringPool.push(props.action || '');
+                    stringPool.push(props.backgroundColor || props.bg || '#0f172a');
+                    break;
                 case 0x1D: // AppBar: action, title
                     stringPool.push(props.action || '');
                     let appTitle = props.title || props.text || '';
                     stringPool.push(appTitle || flattenText(childArr).trim());
                     break;
+                // ══════════════════════════════════════════════════════════
+                // DSP 0xD0 — Dolphin State Protocol (World-Class State Bind)
+                // JSX:  <state key="my_ext" />
+                //       <state template="Ext {0} • {1}" keys="my_ext,my_name" />
+                // Binary String Pool:
+                //   Entry 0 = key OR template pattern
+                //   Entry 1 = fallback/initial  OR comma-separated keys (template mode)
+                // Byte[15] flags:
+                //   bit0 = 0:simple  1:template
+                //   bit1 = two_way (input binding)
+                // ══════════════════════════════════════════════════════════
+                case 0xD0: {
+                    const isTemplate = !!(props.template || props.keys);
+                    if (isTemplate) {
+                        // Template mode: "Ext {0} • {1}" + "my_ext,my_name"
+                        bin[15] |= 0x01; // set template bit
+                        stringPool.push(props.template || '');
+                        stringPool.push(props.keys || '');
+                    } else {
+                        // Simple key mode: key + fallback
+                        const stKey  = props.stateKey || props.key || props['data-key'] || '';
+                        const stFall = props.fallback !== undefined ? String(props.fallback)
+                                     : props.initial  !== undefined ? String(props.initial)
+                                     : (flattenText(childArr).trim() || '');
+                        stringPool.push(stKey);
+                        stringPool.push(stFall);
+                    }
+                    break;
+                }
+
                 case 0x16: // Text: content (or stateKey binding)
                     if (props.stateKey) {
                         // Explicit stateKey prop — use initial prop, or children text, or ''
@@ -742,22 +875,9 @@ let compType = comp.props && comp.props.type ? comp.props.type
                         let txt = props.text || props.content || '';
                         if (!txt) txt = flattenText(childArr).trim();
 
-                        // Detect [stateKey:key] inside text
-                        if (txt && typeof txt === 'string' && txt.includes('[stateKey:')) {
-                            const match = txt.match(/\[stateKey:(.*?)\]/);
-                            if (match) {
-                                const key = match[1];
-                                if (txt.trim() === `[stateKey:${key}]`) {
-                                    // No surrounding text — use props.initial or children as default
-                                    const fallbackInit = props.initial !== undefined ? props.initial : '';
-                                    stringPool.push(`stateKey:${key}|${fallbackInit}`);
-                                } else {
-                                    // Surrounding text present — pass as-is, ViewFactory handles regex extraction
-                                    stringPool.push(txt);
-                                }
-                            } else {
-                                stringPool.push(txt);
-                            }
+                        // Detect [stateKey:key] inside text and pass directly for native TextBuilder regex binding
+                        if (txt && typeof txt === 'string' && (txt.includes('[stateKey:') || txt.includes('[bus:'))) {
+                            stringPool.push(txt);
                         } else {
                             const finalTxt = String(txt || '');
                             // Safety: Ensure text content never looks like a meta string accidentally (e.g. 0|0|0|0)
@@ -777,16 +897,14 @@ let compType = comp.props && comp.props.type ? comp.props.type
                         const clickProp = props.onClick || props.onclick || props.onPress || props.onpress || props.onLongPress;
                         if (typeof clickProp === 'function') {
                             // Lambda function detected - store for later registration
-                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                            this.pendingLambdas.set(actionId, clickProp);
-                            btnAction = actionId;
                         } else if (typeof clickProp === 'string') {
                             btnAction = clickProp;
                         }
                     }
                     stringPool.push(btnAction);
                     stringPool.push(props.text || flattenText(childArr).trim() || '');
-                    const btnIcon = props.icon || props.iconName || props.iconLeft || props.iconRight || twProps.icon || twProps.iconLeft || (String(props.className || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/i) || [])[1] || '';
+                    const rawIconMatch = (String(props.className || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/gi) || []).find(m => !['fa-solid', 'fa-regular', 'fa-brands', 'fa-light', 'fa-duotone', 'fa-fw'].includes(m.toLowerCase()));
+                    const btnIcon = props.icon || props.iconName || props.iconLeft || props.iconRight || twProps.icon || twProps.iconLeft || rawIconMatch || '';
                     stringPool.push(btnIcon);
                     break;
                 case 0x12: // Container: action
@@ -817,12 +935,12 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     break;
                   case 0x51: // Mp3Player: action, src
                   case 0x52: // VideoPlayer: action, src
-                      console.log('VIDEOPLAYER PROPS:', props);
+                  case 0x61: // ThorVG: action, svg
+                      console.log('THORVG/VIDEOPLAYER PROPS:', props);
                       stringPool.push(props.action || '');
-                      stringPool.push(props.src || props.url || props.source || '');
+                      stringPool.push(props.svg || props.src || props.url || props.source || '');
                       break;
                 case 0x60: // WebView: src URL
-                case 0x61: // NativeCanvas: server URL / src
                 case 0x62: // MatrixCanvas: base snapshot URL (grid mode)
                     stringPool.push(props.src || props.url || props.source || normAttributes.src || normAttributes.url || explicitProps.src || explicitProps.url || '');
                     break;
@@ -909,28 +1027,39 @@ let compType = comp.props && comp.props.type ? comp.props.type
                     stringPool.push(String(imgSrc || ''));
                     break;
                 case 0x23: // Icon: iconName
-                    const iconVal = props.icon || props.name || props.iconName || props.iconLeft || twProps.icon || twProps.iconLeft || (String(props.className || explicitProps.className || (comp.props && comp.props.className) || comp.className || tw || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/i) || [])[1] || '';
+                    const rawIconMatch2 = (String(props.className || explicitProps.className || (comp.props && comp.props.className) || comp.className || tw || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/gi) || []).find(m => !['fa-solid', 'fa-regular', 'fa-brands', 'fa-light', 'fa-duotone', 'fa-fw'].includes(m.toLowerCase()));
+                    const iconVal = props.icon || props.name || props.iconName || props.iconLeft || twProps.icon || twProps.iconLeft || rawIconMatch2 || '';
                     stringPool.push(iconVal);
                     break;
                 case 0x18: // TextField: stateKey, label, hint, type, variant, icon
-                    stringPool.push(props.stateKey || props.statekey || props.name || props.id || '');
+                    stringPool.push(props.stateKey || props.statekey || props.name || props.id || props.action || '');
                     stringPool.push(props.label || '');
                     stringPool.push(props.placeholder || props.hint || '');
                     const isTextareaTag = compType === 'textarea' || (comp && comp.tag && String(comp.tag).toLowerCase() === 'textarea');
                     stringPool.push(props.type || props.inputType || (isTextareaTag ? 'textarea' : 'text'));
                     let defaultVariant = 'plain';
-                    if (props.label || props.variant === 'outlined' || String(props.className || tw || '').includes('outlined')) {
+                    const classStr = String(props.className || tw || '');
+                    if (props.variant === 'outlined' || /\boutlined\b/.test(classStr)) {
                         defaultVariant = 'outlined';
-                    } else if (props.variant === 'filled' || String(props.className || tw || '').includes('filled')) {
+                    } else if (props.variant === 'filled' || /\bfilled\b/.test(classStr)) {
                         defaultVariant = 'filled';
-                    } else if (props.variant === 'standard' || String(props.className || tw || '').includes('standard')) {
+                    } else if (props.variant === 'standard' || /\bstandard\b/.test(classStr)) {
                         defaultVariant = 'standard';
+                    } else if (props.label) {
+                        defaultVariant = 'outlined';
                     } else if (props.variant) {
                         defaultVariant = props.variant;
                     }
                     stringPool.push(defaultVariant);
-                    const inputIcon = props.icon || props.iconName || twProps.icon || (String(props.className || tw || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/i) || [])[1] || '';
+                    const rightIcon = props.rightIcon || props.endIcon || props.suffixIcon || (String(props.className || tw || '').match(/\b(?:icon-right|suffix-icon|end-icon)-([a-z0-9-]+)\b/i) || [])[1] || '';
+                    const leftIcon = props.leftIcon || props.prefixIcon || props.icon || props.iconName || twProps.icon || (String(props.className || tw || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/i) || [])[1] || '';
+                    const inputIcon = rightIcon ? `${leftIcon}|${rightIcon}` : (leftIcon || '');
                     stringPool.push(inputIcon);
+                    break;
+
+                case 0x61: // ThorVG / NativeCanvas / Vector: action, svg
+                    stringPool.push(props.action || '');
+                    stringPool.push(props.svg || props.src || props.d || props.path || (typeof childArr[0] === 'string' ? childArr[0] : '') || '');
                     break;
 
                 default:
@@ -1084,6 +1213,13 @@ let compType = comp.props && comp.props.type ? comp.props.type
         if (cleanType === 'card' || cleanType === 'cardview' || cleanType === 'card-view') return 0x11;
 
         const map = {
+            // DSP: Dolphin State Protocol
+            'State': 0xD0,
+            'state': 0xD0,
+            'statetext': 0xD0,
+            'state-text': 0xD0,
+            'StateText': 0xD0,
+
             // Native/Flutter Style
             'Button': 0x10,
             'Card': 0x11,
@@ -1095,6 +1231,7 @@ let compType = comp.props && comp.props.type ? comp.props.type
             'Text': 0x16,
             'Image': 0x17,
             'Icon': 0x23,
+            'icon': 0x23,
             'input': 0x18,
             'textarea': 0x18,
             'TextField': 0x18,
@@ -1114,6 +1251,15 @@ let compType = comp.props && comp.props.type ? comp.props.type
             'web': 0x60,
             'NativeCanvas': 0x61,
             'nativecanvas': 0x61,
+            'ThorVG': 0x61,
+            'thorvg': 0x61,
+            'ThorVGView': 0x61,
+            'thorvgview': 0x61,
+            'Gauge': 0x61,
+            'gauge': 0x61,
+            'VectorCanvas': 0x61,
+            'vectorcanvas': 0x61,
+            'svg': 0x61,
             'MatrixCanvas': 0x62,
             'matrixcanvas': 0x62,
             'Switch': 0x1A,
