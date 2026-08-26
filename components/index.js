@@ -11,6 +11,8 @@ const { TitanMasterButton, TitanButton, BUTTON_FLAGS } = require('./TitanMasterB
 const { TitanMasterCard, TitanCard, TitanModal, TitanToast, TitanTabs, CARD_FLAGS } = require('./TitanMasterCard.jsx');
 const { TitanTable } = require('./TitanTable.jsx');
 const { TitanNavbar } = require('./TitanNavbar.jsx');
+const { Titan3DSlider } = require('./Titan3DSlider.jsx');
+const { Titan3DKnob } = require('./Titan3DKnob.jsx');
 const { NepalFlag } = require('./NepalFlag.jsx');
 const { NepaliDateTag } = require('./NepaliDateBadge.jsx');
 const { TITAN_REG, TITAN_ADDRESS } = require('../lib/TitanRegisters');
@@ -36,7 +38,8 @@ module.exports = {
     TitanToast,
     TitanTabs,
     TitanTable,
-    TitanButtonGroup,
+    Titan3DSlider,
+    Titan3DKnob,
     TitanNavbar,
     NepalFlag,
     NepaliDateTag,
@@ -47,4 +50,3 @@ module.exports = {
     TITAN_ICON,
     TITAN_ANIM
 };
-
