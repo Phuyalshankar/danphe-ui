@@ -74,16 +74,19 @@ class TextFieldBuilder : ComponentBuilder {
                 val topMargin = if (mt > 0) factory.dp(mt) else factory.dp(4)
                 val bottomMargin = if (mb > 0) factory.dp(mb) else factory.dp(4)
 
-                val flex = (data[0].toInt() shr 4) and 0x0F
-                val flexWeight = if (flex > 0) flex.toFloat() else 0f
-                val w = if (flexWeight > 0f) 0 else ViewGroup.LayoutParams.MATCH_PARENT
+                // ── Apply Left & Right Native Compound Icons ──
+                if (iconStr.isNotEmpty()) {
+                    val leftIconName = if (iconStr.contains("|")) iconStr.substringBefore("|").trim() else (if (iconStr.startsWith("right:") || iconStr.startsWith("suffix:")) "" else iconStr.trim())
+                    val rightIconName = if (iconStr.contains("|")) iconStr.substringAfter("|").trim() else (if (iconStr.startsWith("right:") || iconStr.startsWith("suffix:")) iconStr.substringAfter(":").trim() else "")
 
-                layoutParams = LinearLayout.LayoutParams(
-                    w,
-                    if (isTextArea) factory.dp(100) else ViewGroup.LayoutParams.WRAP_CONTENT,
-                    flexWeight
-                ).apply {
-                    setMargins(factory.dp(ml), topMargin, factory.dp(mr), bottomMargin)
+                    val iconTint = Color.parseColor("#94a3b8")
+                    val leftDrawable = if (leftIconName.isNotEmpty()) factory.getDynamicIconDrawable(ctx, leftIconName, iconTint) else null
+                    val rightDrawable = if (rightIconName.isNotEmpty()) factory.getDynamicIconDrawable(ctx, rightIconName, iconTint) else null
+
+                    if (leftDrawable != null || rightDrawable != null) {
+                        setCompoundDrawablesWithIntrinsicBounds(leftDrawable, null, rightDrawable, null)
+                        compoundDrawablePadding = factory.dp(8)
+                    }
                 }
             }
             return editText

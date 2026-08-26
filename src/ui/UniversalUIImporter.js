@@ -94,8 +94,7 @@ class UniversalUIImporter {
             });
 
             // Schema format: comp.type='AppBar', comp.children=[...]
-            require("fs").appendFileSync("comp_debug.log", "ELEM: " + (comp.type==="element"?comp.tag:comp.type) + " " + JSON.stringify(comp.attributes||comp.props||{}) + "\n");
-let compType = comp.props && comp.props.type ? comp.props.type
+            let compType = comp.props && comp.props.type ? comp.props.type
                          : (normAttributes.type ? normAttributes.type
                          : (comp.type === 'element' ? (comp.tag || '').toLowerCase() : comp.type));
             const explicitProps = comp.props ? { ...comp.props } : { ...comp, ...normAttributes };
@@ -936,7 +935,6 @@ let compType = comp.props && comp.props.type ? comp.props.type
                   case 0x51: // Mp3Player: action, src
                   case 0x52: // VideoPlayer: action, src
                   case 0x61: // ThorVG: action, svg
-                      console.log('THORVG/VIDEOPLAYER PROPS:', props);
                       stringPool.push(props.action || '');
                       stringPool.push(props.svg || props.src || props.url || props.source || '');
                       break;

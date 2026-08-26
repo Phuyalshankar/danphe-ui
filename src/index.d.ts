@@ -415,4 +415,11 @@ declare module "dolphin-native/src/ui/bootstrap.js" {
     export * from "./ui/bootstrap";
 }
 
+export declare const TitanIcon: (props: { id?: number; name?: string; mode?: string; bit?: number; size?: number; color?: string; className?: string }) => any;
+export declare const PhoneIcon: typeof TitanIcon;
+export declare const ICONS: Record<string, number>;
+export declare const NAME_TO_ID: Record<string, number>;
+export declare function getIconSvg(idOrName: number | string, color?: string): string;
+
+
 

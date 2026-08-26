@@ -188,11 +188,17 @@ fun ViewFactory.applyStyles(v: View, bin: ByteArray) {
     val mb = bin[10].toByte().toInt()
     val ml = bin[11].toByte().toInt()
 
+    val hasBg = (bin[3].toInt() and 0xFF) != 0
+    val ptVal = bin[4].toInt() and 0xFF
+    val pbVal = bin[6].toInt() and 0xFF
+
     var lp = v.layoutParams
     if (lp == null) {
         val isFullWidthView = v is LinearLayout || v is MaterialCardView || v is EditText || v is FrameLayout || v is TitanCanvas || v.javaClass.simpleName.contains("Canvas")
         val w = if (isFullWidthView) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
-        lp = LinearLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT)
+        val isDivider = hasBg && ptVal == 0 && pbVal == 0 && (v is ViewGroup)
+        val h = if (isDivider) dp(1) else ViewGroup.LayoutParams.WRAP_CONTENT
+        lp = LinearLayout.LayoutParams(w, h)
     }
 
     if (lp is ViewGroup.MarginLayoutParams) {
@@ -213,7 +219,6 @@ fun ViewFactory.applyStyles(v: View, bin: ByteArray) {
     }
 
     val base = ColorParser.parseColor(bin[3].toInt() and 0xFF, bin[2].toInt() and 0xFF)
-    val hasBg = (bin[3].toInt() and 0xFF) != 0
     val radiusVal = bin[14].toInt() and 0xFF
     val sig = bin[15].toInt() and 0xFF
     val hasBorder = (sig and 0x04) != 0
@@ -320,6 +325,7 @@ fun ViewFactory.applyStyles(v: View, bin: ByteArray) {
             }
             if (hasBg) {
                 gd.setColor(base)
+                v.minimumHeight = dp(maxOf(ptVal + pbVal, 1))
             }
             if (radiusVal > 0) {
                 if (radiusVal == 254 || radiusVal == 255) {

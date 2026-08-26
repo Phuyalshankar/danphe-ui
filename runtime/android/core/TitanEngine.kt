@@ -117,12 +117,18 @@ object TitanEngine {
                 if (borderWidth > 0) setStroke(factory.dp(borderWidth), borderCol)
             }
             view.background = gd
+
+            // Ensure divider / hairline view has minimum 1dp height so it never collapses to 0
+            view.minimumHeight = factory.dp(maxOf(pt + pb, 1))
         }
 
         // Layout Parameters & Margins
+        val isDivider = (bgPalette != 0 && pt == 0 && pb == 0 && view is LinearLayout)
+        val heightParam = if (isDivider) factory.dp(1) else ViewGroup.LayoutParams.WRAP_CONTENT
+
         val lp = LinearLayout.LayoutParams(
             if (flexWeight > 0) 0 else (if (view is LinearLayout || view is MaterialCardView) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT),
-            ViewGroup.LayoutParams.WRAP_CONTENT,
+            heightParam,
             if (flexWeight > 0) flexWeight.toFloat() else 0f
         ).apply {
             val left = if (ml != 0) (if (ml > 0) factory.dp(ml) else -factory.dp(-ml)) else 0

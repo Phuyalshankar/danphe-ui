@@ -30,7 +30,6 @@ class ThorVGView @JvmOverloads constructor(
     private var onTouchAction: ((x: Float, y: Float, action: String) -> Unit)? = null
 
     init {
-        setBackgroundColor(Color.TRANSPARENT)
         DolphinStateEngine.addListener { key, _ ->
             if (key == "dial_input" && (svgContent.contains("7seg") || svgContent.contains("segment") || svgContent.contains("dial_input"))) {
                 postInvalidate()
@@ -38,10 +37,20 @@ class ThorVGView @JvmOverloads constructor(
         }
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+    }
+
     fun setSvg(svg: String) {
         if (svgContent != svg) {
             svgContent = svg
-            renderThorVGFrame()
+            // Force re-measure now that svgContent is set (onMeasure uses svgContent for default size)
+            requestLayout()
+            invalidate()
+            // Also render the ThorVG frame if we already have a valid size
+            if (width > 0 && height > 0) {
+                renderThorVGFrame()
+            }
         }
     }
 
@@ -57,15 +66,34 @@ class ThorVGView @JvmOverloads constructor(
 
         val density = resources.displayMetrics.density
         val is7Seg = svgContent.contains("7seg") || svgContent.contains("segment") || svgContent.contains("dial_input")
-        val defaultW = (240 * density).toInt()
-        val defaultH = ((if (is7Seg) 32 else 180) * density).toInt()
+        val isIcon = svgContent.contains("titan-adaptive-icon") || svgContent.contains("viewBox=\"0 0 24 24\"") || svgContent.contains("viewBox=\"0 0 32 32\"") || svgContent.length < 1500
+        val isGauge = svgContent.contains("gauge") || svgContent.contains("180 130") || svgContent.contains("200 150")
 
+        // Try extracting width and height from SVG string attributes if present
+        var extractedW = if (isIcon) 32 else if (is7Seg) 240 else if (isGauge) 220 else 240
+        var extractedH = if (isIcon) 32 else if (is7Seg) 32 else if (isGauge) 160 else 180
+
+        val wMatch = Regex("""width="(\d+)"""").find(svgContent)
+        if (wMatch != null) {
+            extractedW = wMatch.groupValues[1].toIntOrNull() ?: extractedW
+        }
+        val hMatch = Regex("""height="(\d+)"""").find(svgContent)
+        if (hMatch != null) {
+            extractedH = hMatch.groupValues[1].toIntOrNull() ?: extractedH
+        }
+
+        val defaultW = (extractedW * density).toInt()
+        val defaultH = (extractedH * density).toInt()
+
+        val lpWidth = layoutParams?.width ?: -1
         val lpHeight = layoutParams?.height ?: -1
+        val explicitW = if (lpWidth > 0) lpWidth else -1
         val explicitH = if (lpHeight > 0) lpHeight else -1
 
-        val finalW = when (wMode) {
-            MeasureSpec.EXACTLY -> wSize
-            MeasureSpec.AT_MOST -> if (wSize > 0) Math.min(defaultW, wSize) else defaultW
+        val finalW = when {
+            explicitW > 0 -> explicitW
+            wMode == MeasureSpec.EXACTLY -> wSize
+            wMode == MeasureSpec.AT_MOST -> if (wSize > 0) Math.min(defaultW, wSize) else defaultW
             else -> defaultW
         }
         val finalH = when {
@@ -87,6 +115,8 @@ class ThorVGView @JvmOverloads constructor(
         }
     }
 
+    private var nativeRenderOk = false
+
     fun renderThorVGFrame() {
         val w = if (width > 0) width else resources.displayMetrics.widthPixels
         val h = if (height > 0) height else (200 * resources.displayMetrics.density).toInt()
@@ -99,9 +129,9 @@ class ThorVGView @JvmOverloads constructor(
 
         val bmp = bufferBitmap
         if (bmp != null && !bmp.isRecycled && svgContent.isNotEmpty()) {
-            val ok = DanpheThorVG.renderSvg(bmp, svgContent)
-            if (!ok) {
-                android.util.Log.w("ThorVGView", "ThorVG C++ native returned false, rendering vector fallback")
+            nativeRenderOk = DanpheThorVG.renderSvg(bmp, svgContent)
+            if (!nativeRenderOk) {
+                android.util.Log.w("ThorVGView", "ThorVG C++ native returned false, using vector fallback")
             }
         }
         postInvalidate()
@@ -109,15 +139,26 @@ class ThorVGView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (width <= 0 || height <= 0) return
 
-        // 1. Hardware 7-Segment Real Polygonal LED Display
+        if (width <= 0 || height <= 0 || svgContent.isEmpty()) {
+            return
+        }
+
+        // 🌟 1. Native ThorVG High-Definition C++ Render Output
+        val bmp = bufferBitmap
+        if (nativeRenderOk && bmp != null && !bmp.isRecycled) {
+            val destRect = RectF(0f, 0f, width.toFloat(), height.toFloat())
+            canvas.drawBitmap(bmp, null, destRect, paint)
+            return
+        }
+
+        // 2. Hardware 7-Segment Real Polygonal LED Display Fallback
         if (svgContent.contains("7seg") || svgContent.contains("segment") || svgContent.contains("led") || svgContent.contains("dial_input")) {
             drawSevenSegmentDisplay(canvas)
             return
         }
 
-        // 2. Hardware Vector Dials & VU Meters
+        // 3. Hardware Vector Dials & VU Meters Fallback
         if (svgContent.contains("64%") || svgContent.contains("180 130") || svgContent.contains("load") || svgContent.contains("station", ignoreCase = true) || svgContent.contains("amber")) {
             drawStationMeter(canvas)
             return
@@ -128,13 +169,12 @@ class ThorVGView @JvmOverloads constructor(
             return
         }
 
-        // 3. Hardware SVG Vector Icons (Danphe-UI & UB)
+        // 4. Hardware SVG Vector Icons Fallback (When C++ native is unavailable)
         if (svgContent.contains("<svg") || svgContent.contains("<icon") || svgContent.contains("viewBox")) {
             drawSvgIcon(canvas)
             return
         }
 
-        val bmp = bufferBitmap
         if (bmp != null && !bmp.isRecycled) {
             canvas.drawBitmap(bmp, 0f, 0f, paint)
         }
@@ -143,223 +183,243 @@ class ThorVGView @JvmOverloads constructor(
     private fun drawSvgIcon(canvas: Canvas) {
         val w = width.toFloat()
         val h = height.toFloat()
-        if (w <= 0f || h <= 0f) return
+        if (w <= 0f || h <= 0f || svgContent.isEmpty()) return
 
-        val strokeCol = when {
-            svgContent.contains("#38bdf8") || svgContent.contains("cyan") -> Color.parseColor("#38bdf8")
-            svgContent.contains("#10b981") || svgContent.contains("emerald") || svgContent.contains("green") -> Color.parseColor("#10b981")
-            svgContent.contains("#f59e0b") || svgContent.contains("amber") || svgContent.contains("yellow") -> Color.parseColor("#f59e0b")
-            svgContent.contains("#ec4899") || svgContent.contains("pink") || svgContent.contains("rose") -> Color.parseColor("#ec4899")
-            svgContent.contains("#6366f1") || svgContent.contains("indigo") || svgContent.contains("purple") -> Color.parseColor("#6366f1")
-            else -> Color.parseColor("#38bdf8")
+        val isCircle32 = svgContent.contains("viewBox=\"0 0 32 32\"") || svgContent.contains("r=\"13.5\"") || svgContent.contains("r=\"15\"")
+        val density = resources.displayMetrics.density
+
+        // 🌟 1. Draw outer circle / glow badge if present in SVG (Same to Same Danphe-UI Theme)
+        if (isCircle32) {
+            val cx = w / 2f
+            val cy = h / 2f
+            val r = Math.min(w, h) / 2f - (1f * density)
+            val glowCol = when {
+                svgContent.contains("#10b981") || svgContent.contains("#34d399") || svgContent.contains("emerald") -> Color.parseColor("#10B981")
+                svgContent.contains("#f43f5e") || svgContent.contains("#ef4444") || svgContent.contains("#f87171") || svgContent.contains("rose") || svgContent.contains("red") -> Color.parseColor("#EF4444")
+                svgContent.contains("#22d3ee") || svgContent.contains("#38bdf8") || svgContent.contains("#06b6d4") || svgContent.contains("cyan") -> Color.parseColor("#22D3EE")
+                svgContent.contains("#f59e0b") || svgContent.contains("#fbbf24") || svgContent.contains("amber") -> Color.parseColor("#F59E0B")
+                svgContent.contains("#a855f7") || svgContent.contains("#c084fc") || svgContent.contains("#6366f1") || svgContent.contains("purple") -> Color.parseColor("#A855F7")
+                else -> Color.parseColor("#64748B")
+            }
+
+            // Dark background disc
+            val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                color = Color.argb(220, (Color.red(glowCol) * 0.12f).toInt(), (Color.green(glowCol) * 0.12f).toInt(), (Color.blue(glowCol) * 0.12f).toInt())
+            }
+            canvas.drawCircle(cx, cy, r * 0.90f, bgPaint)
+
+            // Outer glow border ring
+            val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = Math.max(1.5f * density, 2f)
+                color = glowCol
+            }
+            canvas.drawCircle(cx, cy, r * 0.90f, ringPaint)
         }
 
-        val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = Math.max(2.5f, Math.min(w, h) * 0.08f)
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
-            color = strokeCol
+        // 🌟 2. Parse and render all <path d="..."> elements using Android PathParser
+        val pathRegex = Regex("""<path[^>]*?d="([^"]+)"[^>]*?>""")
+        val strokeColorRegex = Regex("""stroke="([^"]+)"""")
+        val strokeWidthRegex = Regex("""stroke-width="([^"]+)"""")
+        val fillRegex = Regex("""fill="([^"]+)"""")
+
+        val matches = pathRegex.findAll(svgContent).toList()
+        val viewBoxSize = if (isCircle32) 32f else 24f
+        val scale = Math.min(w, h) / viewBoxSize
+        val transX = if (isCircle32) (4f * scale) else 0f
+        val transY = if (isCircle32) (4f * scale) else 0f
+
+        canvas.save()
+        if (isCircle32) {
+            canvas.translate(transX, transY)
+            canvas.scale((24f / 32f) * (w / 24f), (24f / 32f) * (h / 24f))
+        } else {
+            canvas.scale(w / 24f, h / 24f)
         }
 
-        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
-            color = strokeCol
+        val scaleFactorForStroke = if (isCircle32) ((24f / 32f) * (w / 24f)) else (w / 24f)
+
+        for (m in matches) {
+            val fullTag = m.value
+            val d = m.groupValues[1]
+            try {
+                val path = androidx.core.graphics.PathParser.createPathFromPathData(d)
+                val strokeMatch = strokeColorRegex.find(fullTag)
+                val strokeColorStr = strokeMatch?.groupValues?.get(1) ?: "#ffffff"
+                val rawStrokeWidth = strokeWidthRegex.find(fullTag)?.groupValues?.get(1)?.toFloatOrNull() ?: 2f
+                // Counter-scale stroke so it stays visually ~1.8px regardless of canvas scale
+                val strokeWidthScaled = rawStrokeWidth / scaleFactorForStroke
+                val fillMatch = fillRegex.find(fullTag)
+                val fillStr = fillMatch?.groupValues?.get(1) ?: "none"
+
+                if (fillStr != "none" && !fillStr.startsWith("url")) {
+                    val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        style = Paint.Style.FILL
+                        color = try { Color.parseColor(fillStr) } catch (e: Exception) { Color.WHITE }
+                    }
+                    canvas.drawPath(path, fillPaint)
+                }
+
+                if (strokeColorStr != "none") {
+                    val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        style = Paint.Style.STROKE
+                        strokeWidth = strokeWidthScaled
+                        strokeCap = Paint.Cap.ROUND
+                        strokeJoin = Paint.Join.ROUND
+                        color = try { Color.parseColor(strokeColorStr) } catch (e: Exception) { Color.WHITE }
+                    }
+                    canvas.drawPath(path, strokePaint)
+                }
+            } catch (e: Exception) { /* skip invalid path */ }
         }
 
-        val cx = w / 2f
-        val cy = h / 2f
-        val size = Math.min(w, h) * 0.75f
-        val left = cx - size / 2f
-        val top = cy - size / 2f
-        val right = cx + size / 2f
-        val bottom = cy + size / 2f
+        // 🌟 3. Parse and draw <circle> elements (KEYPAD dots, CONTACTS head, SEARCH, SETTINGS centre, CHAT dots)
+        val circleRegex = Regex("""<circle[^>]*?cx="([^"]+)"[^>]*?cy="([^"]+)"[^>]*?r="([^"]+)"[^>]*?>""")
+        for (cm in circleRegex.findAll(svgContent)) {
+            val full = cm.value
+            val cx = cm.groupValues[1].toFloatOrNull() ?: 0f
+            val cy = cm.groupValues[2].toFloatOrNull() ?: 0f
+            val r  = cm.groupValues[3].toFloatOrNull() ?: 0f
+            if (r <= 0f) continue
 
-        val path = Path()
+            val strokeMatch = strokeColorRegex.find(full)
+            val strokeColorStr = strokeMatch?.groupValues?.get(1) ?: "#ffffff"
+            val rawSW = strokeWidthRegex.find(full)?.groupValues?.get(1)?.toFloatOrNull() ?: 2f
+            val fillMatch = fillRegex.find(full)
+            val fillStr = fillMatch?.groupValues?.get(1) ?: "none"
 
-        when {
-            // 🖥️ CPU Chip Icon
-            svgContent.contains("cpu") || (svgContent.contains("rect") && svgContent.contains("M9 1v3")) -> {
-                val chipRect = RectF(left + size * 0.2f, top + size * 0.2f, right - size * 0.2f, bottom - size * 0.2f)
-                canvas.drawRoundRect(chipRect, size * 0.08f, size * 0.08f, iconPaint)
-                val coreRect = RectF(left + size * 0.38f, top + size * 0.38f, right - size * 0.38f, bottom - size * 0.38f)
-                canvas.drawRoundRect(coreRect, size * 0.04f, size * 0.04f, fillPaint)
-                // Pins Top/Bottom
-                canvas.drawLine(left + size * 0.35f, top, left + size * 0.35f, top + size * 0.2f, iconPaint)
-                canvas.drawLine(left + size * 0.65f, top, left + size * 0.65f, top + size * 0.2f, iconPaint)
-                canvas.drawLine(left + size * 0.35f, bottom - size * 0.2f, left + size * 0.35f, bottom, iconPaint)
-                canvas.drawLine(left + size * 0.65f, bottom - size * 0.2f, left + size * 0.65f, bottom, iconPaint)
-                // Pins Left/Right
-                canvas.drawLine(left, top + size * 0.35f, left + size * 0.2f, top + size * 0.35f, iconPaint)
-                canvas.drawLine(left, top + size * 0.65f, left + size * 0.2f, top + size * 0.65f, iconPaint)
-                canvas.drawLine(right - size * 0.2f, top + size * 0.35f, right, top + size * 0.35f, iconPaint)
-                canvas.drawLine(right - size * 0.2f, top + size * 0.65f, right, top + size * 0.65f, iconPaint)
+            // Fill circle (e.g. solid keypad dot)
+            if (fillStr != "none" && fillStr != "transparent" && !fillStr.startsWith("url")) {
+                val circleFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.FILL
+                    color = try { Color.parseColor(fillStr) } catch (e: Exception) { Color.WHITE }
+                }
+                canvas.drawCircle(cx, cy, r, circleFill)
             }
 
-            // 📶 WiFi Icon
-            svgContent.contains("wifi") || svgContent.contains("12.55a11") -> {
-                val r1 = RectF(cx - size * 0.45f, cy - size * 0.35f, cx + size * 0.45f, cy + size * 0.55f)
-                canvas.drawArc(r1, 210f, 120f, false, iconPaint)
-                val r2 = RectF(cx - size * 0.30f, cy - size * 0.18f, cx + size * 0.30f, cy + size * 0.42f)
-                canvas.drawArc(r2, 210f, 120f, false, iconPaint)
-                val r3 = RectF(cx - size * 0.15f, cy - size * 0.02f, cx + size * 0.15f, cy + size * 0.28f)
-                canvas.drawArc(r3, 210f, 120f, false, iconPaint)
-                canvas.drawCircle(cx, cy + size * 0.38f, size * 0.06f, fillPaint)
-            }
-
-            // 🔋 Battery Icon
-            svgContent.contains("battery") || (svgContent.contains("x1=\"23\"") && svgContent.contains("11")) -> {
-                val bodyRect = RectF(left, top + size * 0.22f, right - size * 0.15f, bottom - size * 0.22f)
-                canvas.drawRoundRect(bodyRect, size * 0.08f, size * 0.08f, iconPaint)
-                // Terminal nub
-                canvas.drawLine(right - size * 0.15f, top + size * 0.42f, right, top + size * 0.42f, iconPaint)
-                canvas.drawLine(right - size * 0.15f, bottom - size * 0.42f, right, bottom - size * 0.42f, iconPaint)
-                // Fill bars
-                val chargeRect = RectF(left + size * 0.08f, top + size * 0.30f, right - size * 0.30f, bottom - size * 0.30f)
-                canvas.drawRoundRect(chargeRect, size * 0.04f, size * 0.04f, fillPaint)
-            }
-
-            // 💓 Pulse / Heartbeat Waveform
-            svgContent.contains("pulse") || svgContent.contains("activity") || svgContent.contains("polyline") -> {
-                path.reset()
-                path.moveTo(left, cy)
-                path.lineTo(left + size * 0.22f, cy)
-                path.lineTo(left + size * 0.38f, top + size * 0.1f)
-                path.lineTo(left + size * 0.58f, bottom - size * 0.1f)
-                path.lineTo(left + size * 0.75f, cy)
-                path.lineTo(right, cy)
-                canvas.drawPath(path, iconPaint)
-            }
-
-            // 🖧 Server Rack Icon
-            svgContent.contains("server") || (svgContent.contains("rect x=\"2\" y=\"2\"") || svgContent.contains("y=\"14\"")) -> {
-                val unit1 = RectF(left, top + size * 0.1f, right, top + size * 0.45f)
-                val unit2 = RectF(left, top + size * 0.55f, right, top + size * 0.9f)
-                canvas.drawRoundRect(unit1, size * 0.06f, size * 0.06f, iconPaint)
-                canvas.drawRoundRect(unit2, size * 0.06f, size * 0.06f, iconPaint)
-                canvas.drawCircle(left + size * 0.2f, top + size * 0.275f, size * 0.04f, fillPaint)
-                canvas.drawCircle(left + size * 0.2f, top + size * 0.725f, size * 0.04f, fillPaint)
-            }
-
-            // 🛡️ Shield Security Icon
-            svgContent.contains("shield") || svgContent.contains("12 22s8") -> {
-                path.reset()
-                path.moveTo(cx, top + size * 0.05f)
-                path.lineTo(right - size * 0.05f, top + size * 0.22f)
-                path.lineTo(right - size * 0.05f, cy + size * 0.15f)
-                path.quadTo(cx, bottom + size * 0.05f, cx, bottom + size * 0.05f)
-                path.quadTo(left + size * 0.05f, cy + size * 0.15f, left + size * 0.05f, top + size * 0.22f)
-                path.close()
-                canvas.drawPath(path, iconPaint)
-                // Checkmark inside shield
-                path.reset()
-                path.moveTo(left + size * 0.32f, cy)
-                path.lineTo(cx - size * 0.05f, cy + size * 0.18f)
-                path.lineTo(right - size * 0.30f, cy - size * 0.12f)
-                canvas.drawPath(path, iconPaint)
-            }
-
-            // 📞 Phone Handset Vector Icon
-            svgContent.contains("phone") || svgContent.contains("call") || svgContent.contains("22 16.92") -> {
-                val phPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            // Stroke circle (e.g. CONTACTS head outline, SETTINGS gear hole)
+            if (strokeColorStr != "none") {
+                val circleStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                     style = Paint.Style.STROKE
-                    strokeWidth = Math.max(3.5f, size * 0.11f)
-                    strokeCap = Paint.Cap.ROUND
-                    strokeJoin = Paint.Join.ROUND
-                    color = Color.WHITE
+                    strokeWidth = rawSW / scaleFactorForStroke
+                    color = try { Color.parseColor(strokeColorStr) } catch (e: Exception) { Color.WHITE }
                 }
-                path.reset()
-                path.moveTo(right - size * 0.1f, top + size * 0.65f)
-                path.lineTo(right - size * 0.1f, bottom - size * 0.08f)
-                path.quadTo(left + size * 0.05f, bottom - size * 0.05f, left + size * 0.08f, top + size * 0.1f)
-                path.lineTo(left + size * 0.35f, top + size * 0.1f)
-                path.quadTo(left + size * 0.42f, top + size * 0.25f, left + size * 0.45f, top + size * 0.4f)
-                path.lineTo(left + size * 0.32f, top + size * 0.52f)
-                path.quadTo(cx + size * 0.12f, cy + size * 0.12f, right - size * 0.48f, bottom - size * 0.32f)
-                path.lineTo(right - size * 0.4f, bottom - size * 0.45f)
-                path.quadTo(right - size * 0.25f, bottom - size * 0.42f, right - size * 0.1f, top + size * 0.65f)
-                canvas.drawPath(path, phPaint)
+                canvas.drawCircle(cx, cy, r, circleStroke)
             }
+        }
 
-            // ⌨️ Keyboard Vector Icon
-            svgContent.contains("keyboard") || svgContent.contains("rect x=\"2\" y=\"4\"") -> {
-                val kbRect = RectF(left, top + size * 0.2f, right, bottom - size * 0.2f)
-                canvas.drawRoundRect(kbRect, size * 0.08f, size * 0.08f, iconPaint)
-                canvas.drawCircle(left + size * 0.28f, cy - size * 0.1f, size * 0.04f, fillPaint)
-                canvas.drawCircle(cx, cy - size * 0.1f, size * 0.04f, fillPaint)
-                canvas.drawCircle(right - size * 0.28f, cy - size * 0.1f, size * 0.04f, fillPaint)
-                canvas.drawLine(left + size * 0.3f, cy + size * 0.15f, right - size * 0.3f, cy + size * 0.15f, iconPaint)
+        // 🌟 4. Parse and draw <line> elements
+        val lineRegex = Regex("""<line[^>]*?x1="([^"]+)"[^>]*?y1="([^"]+)"[^>]*?x2="([^"]+)"[^>]*?y2="([^"]+)"[^>]*?>""")
+        for (lm in lineRegex.findAll(svgContent)) {
+            val full = lm.value
+            val x1 = lm.groupValues[1].toFloatOrNull() ?: 0f
+            val y1 = lm.groupValues[2].toFloatOrNull() ?: 0f
+            val x2 = lm.groupValues[3].toFloatOrNull() ?: 0f
+            val y2 = lm.groupValues[4].toFloatOrNull() ?: 0f
+            val strokeMatch = strokeColorRegex.find(full)
+            val strokeColorStr = strokeMatch?.groupValues?.get(1) ?: "#ffffff"
+            val rawSW = strokeWidthRegex.find(full)?.groupValues?.get(1)?.toFloatOrNull() ?: 2f
+            val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = rawSW / scaleFactorForStroke
+                strokeCap = Paint.Cap.ROUND
+                color = try { Color.parseColor(strokeColorStr) } catch (e: Exception) { Color.WHITE }
             }
+            canvas.drawLine(x1, y1, x2, y2, linePaint)
+        }
 
-            // ⌫ Backspace Vector Icon
-            svgContent.contains("backspace") || svgContent.contains("21 4H8") -> {
-                path.reset()
-                path.moveTo(right, top + size * 0.15f)
-                path.lineTo(left + size * 0.3f, top + size * 0.15f)
-                path.lineTo(left, cy)
-                path.lineTo(left + size * 0.3f, bottom - size * 0.15f)
-                path.lineTo(right, bottom - size * 0.15f)
-                path.close()
-                canvas.drawPath(path, iconPaint)
-                canvas.drawLine(left + size * 0.45f, cy - size * 0.15f, right - size * 0.2f, cy + size * 0.15f, iconPaint)
-                canvas.drawLine(right - size * 0.2f, cy - size * 0.15f, left + size * 0.45f, cy + size * 0.15f, iconPaint)
-            }
-
-            // 👤 Contact / Person Vector Icon
-            svgContent.contains("contact") || svgContent.contains("user") || svgContent.contains("address-book") || svgContent.contains("person") || svgContent.contains("20 21v-2") -> {
-                canvas.drawCircle(cx, cy - size * 0.2f, size * 0.18f, iconPaint)
-                val bodyRect = RectF(cx - size * 0.35f, cy, cx + size * 0.35f, cy + size * 0.7f)
-                canvas.drawArc(bodyRect, 180f, 180f, true, iconPaint)
-            }
-
-            // ⚙️ Settings / Gear Vector Icon
-            svgContent.contains("settings") || svgContent.contains("gear") || svgContent.contains("cog") || svgContent.contains("19.4 15") -> {
-                val toothPaint = Paint(iconPaint).apply {
-                    strokeWidth = Math.max(2.5f, size * 0.08f)
-                }
-                for (i in 0 until 6) {
-                    val angle = Math.toRadians((i * 60).toDouble())
-                    val x1 = cx + ((size * 0.18f) * Math.cos(angle)).toFloat()
-                    val y1 = cy + ((size * 0.18f) * Math.sin(angle)).toFloat()
-                    val x2 = cx + ((size * 0.42f) * Math.cos(angle)).toFloat()
-                    val y2 = cy + ((size * 0.42f) * Math.sin(angle)).toFloat()
-                    canvas.drawLine(x1, y1, x2, y2, toothPaint)
-                }
-                canvas.drawCircle(cx, cy, size * 0.28f, iconPaint)
-                canvas.drawCircle(cx, cy, size * 0.12f, fillPaint)
-            }
-
-            // ⌨️ Keypad Grid 3x3 Vector Icon (matching Contact and Settings 2D Canvas rendering)
-            svgContent.contains("keypad") || svgContent.contains("dialpad") || svgContent.contains("M4 4h4v4H4z") -> {
-                val kpPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    style = Paint.Style.STROKE
-                    strokeWidth = Math.max(2.2f, size * 0.07f)
-                    strokeCap = Paint.Cap.ROUND
-                    strokeJoin = Paint.Join.ROUND
-                    color = Color.WHITE
-                }
-                val spacingX = size * 0.28f
-                val spacingY = size * 0.28f
-                val boxSize = size * 0.2f
-                for (row in -1..1) {
-                    for (col in -1..1) {
-                        val bx = cx + col * spacingX - boxSize / 2f
-                        val by = cy + row * spacingY - boxSize / 2f
-                        val boxRect = RectF(bx, by, bx + boxSize, by + boxSize)
-                        canvas.drawRoundRect(boxRect, boxSize * 0.25f, boxSize * 0.25f, kpPaint)
+        val polylineRegex = Regex("""<polyline[^>]*?points="([^"]+)"[^>]*?>""")
+        for (plm in polylineRegex.findAll(svgContent)) {
+            val full = plm.value
+            val pointsStr = plm.groupValues[1].trim()
+            val pts = pointsStr.split(Regex("[\\s,]+")).mapNotNull { it.toFloatOrNull() }
+            if (pts.size >= 4) {
+                val polyPath = Path()
+                polyPath.moveTo(pts[0], pts[1])
+                for (p in 2 until pts.size step 2) {
+                    if (p + 1 < pts.size) {
+                        polyPath.lineTo(pts[p], pts[p + 1])
                     }
                 }
+                val strokeMatch = strokeColorRegex.find(full)
+                val strokeColorStr = strokeMatch?.groupValues?.get(1) ?: "#ffffff"
+                val rawSW = strokeWidthRegex.find(full)?.groupValues?.get(1)?.toFloatOrNull() ?: 2f
+                val polyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.STROKE
+                    strokeWidth = rawSW / scaleFactorForStroke
+                    strokeCap = Paint.Cap.ROUND
+                    strokeJoin = Paint.Join.ROUND
+                    color = try { Color.parseColor(strokeColorStr) } catch (e: Exception) { Color.WHITE }
+                }
+                canvas.drawPath(polyPath, polyPaint)
             }
+        }
 
-            // Default Generic Vector Icon / Buffer Bitmap
-            else -> {
-                val bmp = bufferBitmap
-                if (bmp != null && !bmp.isRecycled) {
-                    canvas.drawBitmap(bmp, 0f, 0f, paint)
-                } else {
-                    canvas.drawCircle(cx, cy, size * 0.4f, iconPaint)
+        val rectRegex = Regex("""<rect[^>]*?x="([^"]+)"[^>]*?y="([^"]+)"[^>]*?width="([^"]+)"[^>]*?height="([^"]+)"[^>]*?>""")
+        for (rm in rectRegex.findAll(svgContent)) {
+            val full = rm.value
+            val rxVal = rm.groupValues[1].toFloatOrNull() ?: 0f
+            val ryVal = rm.groupValues[2].toFloatOrNull() ?: 0f
+            val rwVal = rm.groupValues[3].toFloatOrNull() ?: 0f
+            val rhVal = rm.groupValues[4].toFloatOrNull() ?: 0f
+
+            if (rwVal > 0 && rhVal > 0 && !full.contains("titan-adaptive-icon")) {
+                val strokeMatch = strokeColorRegex.find(full)
+                val strokeColorStr = strokeMatch?.groupValues?.get(1) ?: "#ffffff"
+                val rawSW = strokeWidthRegex.find(full)?.groupValues?.get(1)?.toFloatOrNull() ?: 2f
+                val fillMatch = fillRegex.find(full)
+                val fillStr = fillMatch?.groupValues?.get(1) ?: "none"
+
+                if (fillStr != "none" && !fillStr.startsWith("url")) {
+                    val rectFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        style = Paint.Style.FILL
+                        color = try { Color.parseColor(fillStr) } catch (e: Exception) { Color.WHITE }
+                    }
+                    canvas.drawRect(rxVal, ryVal, rxVal + rwVal, ryVal + rhVal, rectFill)
+                }
+                if (strokeColorStr != "none") {
+                    val rectStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        style = Paint.Style.STROKE
+                        strokeWidth = rawSW / scaleFactorForStroke
+                        strokeCap = Paint.Cap.ROUND
+                        color = try { Color.parseColor(strokeColorStr) } catch (e: Exception) { Color.WHITE }
+                    }
+                    canvas.drawRect(rxVal, ryVal, rxVal + rwVal, ryVal + rhVal, rectStroke)
                 }
             }
+        }
+
+        canvas.restore()
+
+        // 🌟 4. Draw Missed Call Badge & Counter if present (Same to Same Danphe-UI)
+        if (svgContent.contains("Missed Call Badge") || (svgContent.contains("fill=\"#ef4444\"") && svgContent.contains("<text"))) {
+            val badgeX = w * 0.78f
+            val badgeY = h * 0.22f
+            val badgeR = Math.min(w, h) * 0.16f
+
+            val badgeBg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                color = Color.parseColor("#EF4444")
+            }
+            val badgeBorder = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 1.5f * density
+                color = Color.parseColor("#020617")
+            }
+            canvas.drawCircle(badgeX, badgeY, badgeR, badgeBg)
+            canvas.drawCircle(badgeX, badgeY, badgeR, badgeBorder)
+
+            val textMatch = Regex("""<text[^>]*?>([^<]+)</text>""").find(svgContent)
+            val badgeVal = textMatch?.groupValues?.get(1) ?: "1"
+            val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = badgeR * 1.3f
+                textAlign = Paint.Align.CENTER
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+            }
+            val textY = badgeY - ((textPaint.descent() + textPaint.ascent()) / 2f)
+            canvas.drawText(badgeVal, badgeX, textY, textPaint)
         }
     }
 

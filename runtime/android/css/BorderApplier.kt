@@ -57,19 +57,25 @@ object BorderApplier {
                 existingBgColor = currentBg.color
             }
 
-            val gd = GradientDrawable().apply {
+            val bottomStrokeHeight = dpFunc(bWidthDp)
+            val bgDrawable = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setColor(existingBgColor)
-                setStroke(dpFunc(bWidthDp), bColorVal)
             }
-            val inset = android.graphics.drawable.InsetDrawable(
-                gd,
-                -dpFunc(bWidthDp * 4),
-                -dpFunc(bWidthDp * 4),
-                -dpFunc(bWidthDp * 4),
-                0
-            )
-            v.background = inset
+            val lineDrawable = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(bColorVal)
+            }
+            val layerDrawable = android.graphics.drawable.LayerDrawable(arrayOf(bgDrawable, lineDrawable)).apply {
+                setLayerInset(0, 0, 0, 0, 0)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    setLayerHeight(1, bottomStrokeHeight)
+                    setLayerGravity(1, android.view.Gravity.BOTTOM)
+                } else {
+                    setLayerInset(1, 0, 0, 0, 0)
+                }
+            }
+            v.background = layerDrawable
             v.setWillNotDraw(false)
             return
         }

@@ -9,8 +9,8 @@ class ComponentOpcodeMapper {
         const twStr = String(tw || '');
 
         if (typeLower === 'drawer' || typeLower === 'keypaddrawer' || props.type === 'Drawer' || props.type === 'KeypadDrawer') return 0x28;
-        if (typeLower === 'cameraview' || typeLower === 'camera' || props.type === 'CameraView' || props.native === 'camera') return 0x50;
-        if (typeLower === 'nativecanvas' || typeLower === 'canvas' || typeLower === 'vector' || typeLower === 'draw' || typeLower === 'nvr' || typeLower === '0x61' || props.type === 'NativeCanvas' || props.type === 'nativecanvas' || props.type === 'canvas' || props.type === '0x61') return 0x61;
+        if (typeLower === 'thorvg' || typeLower === 'svg' || typeLower === 'nativecanvas' || typeLower === 'canvas' || typeLower === 'vector' || typeLower === 'draw' || typeLower === 'nvr' || typeLower === '0x61' || props.type === 'ThorVG' || props.type === 'thorvg' || props.type === 'NativeCanvas' || props.type === 'nativecanvas' || props.type === 'canvas' || props.type === '0x61') return 0x61;
+        if (typeLower === 'icon' || typeLower === 'i' || props.type === 'Icon' || props.type === 'icon') return 0x23;
         if (typeLower === 'video' || typeLower === 'videoplayer' || props.type === 'VideoPlayer' || props.type === 'video') return 0x52;
         if (typeLower === 'mp3player' || typeLower === 'audioplayer' || props.type === 'Mp3Player' || props.type === 'AudioPlayer') return 0x51;
         if (typeLower === 'webview' || typeLower === 'web' || typeLower === '0x60' || props.type === 'WebView' || props.type === 'webview' || props.type === '0x60') return 0x60;

@@ -50,6 +50,11 @@ class TitanCompiler {
     _compileNode(node, binaries, stringPool) {
         if (!node) return;
 
+        if (typeof node.type === 'function') {
+            const resolved = node.type(node.props || {});
+            return this._compileNode(resolved, binaries, stringPool);
+        }
+
         if (typeof node === 'string' || typeof node === 'number') {
             const textStr = String(node).trim();
             if (textStr.length === 0) return;
@@ -65,7 +70,8 @@ class TitanCompiler {
         const tag = (node.tag || node.type || 'div').toLowerCase();
         const props = node.props || {};
         const className = String(props.className || props.class || '');
-        const children = node.children || [];
+        const rawChildren = node.children || props.children || [];
+        const children = (Array.isArray(rawChildren) ? rawChildren : [rawChildren]).flat(Infinity).filter(c => c !== null && c !== undefined && c !== false);
 
         const bin = new Uint8Array(24);
         let opcode = this.OPCODE_MAP[tag] || 0x12;
@@ -143,7 +149,19 @@ class TitanCompiler {
             else if (t === 'border') {
                 borderWidth = 1;
                 sigFlags |= 0x04;
-            } else if (t.startsWith('border-') && !t.startsWith('border-t-') && !t.startsWith('border-b-') && !t.startsWith('border-l-') && !t.startsWith('border-r-')) {
+            } else if (t === 'border-b' || t === 'border-bottom' || t.startsWith('border-b-')) {
+                borderWidth = 1;
+                sigFlags |= 0x04;
+                const sub = t.startsWith('border-b-') ? t.slice(9) : '';
+                if (sub) {
+                    if (!isNaN(parseInt(sub)) && !sub.includes('-')) {
+                        borderWidth = parseInt(sub);
+                    } else {
+                        const [pal] = this._resolveColorAndShade(sub);
+                        if (pal !== 0) borderPalette = pal;
+                    }
+                }
+            } else if (t.startsWith('border-') && !t.startsWith('border-t-') && !t.startsWith('border-l-') && !t.startsWith('border-r-')) {
                 const sub = t.slice(7);
                 if (!isNaN(parseInt(sub)) && !sub.includes('-')) {
                     borderWidth = parseInt(sub);
@@ -155,6 +173,13 @@ class TitanCompiler {
                         if (borderWidth === 0) borderWidth = 1;
                         sigFlags |= 0x04;
                     }
+                }
+            }
+
+            else if (t === 'divider' || t === 'h-px' || t === 'h-[1px]') {
+                if (bgPalette === 0) {
+                    bgPalette = 7; // Slate
+                    bgShade = 200; // 800
                 }
             }
 

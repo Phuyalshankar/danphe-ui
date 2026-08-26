@@ -1065,25 +1065,20 @@ class DevServer extends EventEmitter {
     }
 
     _findLatestApk() {
-        const primaryDir = path.join(this.watchDir, 'dist');
-        if (fs.existsSync(primaryDir)) {
-            try {
-                const files = fs.readdirSync(primaryDir).filter(f => f.endsWith('.apk'));
-                if (files.length > 0) {
-                    const apks = files.map(file => {
-                        const fullPath = path.join(primaryDir, file);
-                        return { file, path: fullPath, stat: fs.statSync(fullPath) };
-                    }).sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
-                    return apks[0];
-                }
-            } catch(e) {}
-        }
-
         const candidateDirs = [
-            path.join(process.cwd(), 'dist'),
             path.join(this.watchDir, 'dist'),
+            path.join(process.cwd(), 'dist'),
             path.resolve(this.watchDir, '..', 'dist'),
-            path.resolve(process.cwd(), '..', 'dist')
+            path.resolve(process.cwd(), '..', 'dist'),
+            path.join(this.watchDir, '.dolphin-android', 'dist'),
+            path.resolve(this.watchDir, '..', '.dolphin-android', 'dist'),
+            path.join(process.cwd(), '.dolphin-android', 'dist'),
+            path.resolve(process.cwd(), '..', '.dolphin-android', 'dist'),
+            path.join(this.watchDir, '.dolphin-android', 'app', 'build', 'outputs', 'apk', 'debug'),
+            path.resolve(this.watchDir, '..', '.dolphin-android', 'app', 'build', 'outputs', 'apk', 'debug'),
+            path.join(process.cwd(), '.dolphin-android', 'app', 'build', 'outputs', 'apk', 'debug'),
+            path.join(this.watchDir, 'android', 'app', 'build', 'outputs', 'apk', 'debug'),
+            path.join(process.cwd(), 'android', 'app', 'build', 'outputs', 'apk', 'debug')
         ];
 
         const allApks = [];
@@ -1430,7 +1425,7 @@ class DevServer extends EventEmitter {
       </h2>
       <div class="stat-row">
         <span class="stat-label">Package</span>
-        <span class="stat-value">${apk}</span>
+        <span class="stat-value" id="stat-apk-package">${apk || 'No APK Built Yet'}</span>
       </div>
       <div class="stat-row">
         <span class="stat-label">File Size</span>
@@ -1448,7 +1443,7 @@ class DevServer extends EventEmitter {
 
       <a id="apk-download-btn" href="/download-apk" download class="btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
-        Download ${apk} (${apkSize} MB)
+        Download ${apk || 'APK'} (${apkSize} MB)
       </a>
     </div>
 
@@ -1518,13 +1513,17 @@ class DevServer extends EventEmitter {
           const ipList = data.ips && data.ips.length > 0 ? data.ips.join(', ') : '${localIP}';
           document.getElementById('stat-ip').innerText = ipList;
           document.getElementById('stat-tcp').innerText = data.tcpPort || '${this.port}';
-          document.getElementById('stat-relay').innerText = data.relayPort || '9092';
-          document.getElementById('stat-http').innerText = data.httpPort || '${this.httpPort}';
-          document.getElementById('stat-bundle').innerText = (data.bundleSize ? data.bundleSize.toLocaleString() : '539') + ' bytes';
           
-          if (data.apkSize) {
+          if (data.apkName) {
+            const pkgEl = document.getElementById('stat-apk-package');
+            if (pkgEl) pkgEl.innerText = data.apkName;
             const sizeMb = (data.apkSize / (1024 * 1024)).toFixed(1);
-            document.getElementById('stat-apk-size').innerText = sizeMb + ' MB';
+            const sizeEl = document.getElementById('stat-apk-size');
+            if (sizeEl) sizeEl.innerText = sizeMb + ' MB';
+            const dlBtn = document.getElementById('apk-download-btn');
+            if (dlBtn) {
+              dlBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg> Download ' + data.apkName + ' (' + sizeMb + ' MB)';
+            }
           }
 
           if (data.apkMtime) {
@@ -1540,17 +1539,15 @@ class DevServer extends EventEmitter {
           if (!data.devices || data.devices.length === 0) {
             deviceContainer.innerHTML = '<div class="empty-state">No devices currently connected over TCP ${this.port}. Open app on phone to connect.</div>';
           } else {
-            deviceContainer.innerHTML = data.devices.map(dev => {
-              const connectedTime = new Date(dev.connectedAt).toLocaleTimeString();
-              return \`
-                <div class="device-item">
-                  <div class="device-info">
-                    <h4>📱 Device Socket: \${dev.id}</h4>
-                    <p>IP Address: <strong>\${dev.addr}</strong> · Connected: \${connectedTime}</p>
-                  </div>
-                  <span class="badge">🟢 CONNECTED</span>
-                </div>
-              \`;
+            deviceContainer.innerHTML = data.devices.map(function(dev) {
+              var connectedTime = new Date(dev.connectedAt).toLocaleTimeString();
+              return '<div class="device-item">' +
+                '<div class="device-info">' +
+                  '<h4>📱 Device Socket: ' + dev.id + '</h4>' +
+                  '<p>IP Address: <strong>' + dev.addr + '</strong> · Connected: ' + connectedTime + '</p>' +
+                '</div>' +
+                '<span class="badge">🟢 CONNECTED</span>' +
+              '</div>';
             }).join('');
           }
         }

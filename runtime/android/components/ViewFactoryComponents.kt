@@ -408,38 +408,68 @@ fun ViewFactory.getDynamicIconDrawable(ctx: Context, iconName: String, color: In
     val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
 
-    val trimmed = iconName.trim()
-    val cleanName = trimmed.replace(Regex("^(fa-(solid|regular|brands|light|duotone)-?|fa-|icon-)"), "").trim()
+    // Tokenize string to find the exact icon name and custom text color class if any
+    val tokens = iconName.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    var detectedIconToken = ""
+    var resolvedColor = color
+
+    for (t in tokens) {
+        if (t.startsWith("fa-") && t != "fa-solid" && t != "fa-regular" && t != "fa-brands" && t != "fa-light" && t != "fa-duotone" && t != "fa") {
+            detectedIconToken = t
+        } else if (detectedIconToken.isEmpty() && !t.startsWith("fa-") && !t.startsWith("text-") && !t.startsWith("w-") && !t.startsWith("h-") && !t.startsWith("m") && !t.startsWith("p")) {
+            detectedIconToken = t
+        }
+        if (t == "text-emerald-400" || t == "text-emerald-500" || t == "text-green-500") resolvedColor = Color.parseColor("#10B981")
+        else if (t == "text-cyan-400" || t == "text-cyan-500") resolvedColor = Color.parseColor("#22D3EE")
+        else if (t == "text-rose-500" || t == "text-red-500") resolvedColor = Color.parseColor("#F43F5E")
+        else if (t == "text-amber-400" || t == "text-yellow-400") resolvedColor = Color.parseColor("#F59E0B")
+        else if (t == "text-purple-400" || t == "text-indigo-400") resolvedColor = Color.parseColor("#A855F7")
+        else if (t == "text-slate-400" || t == "text-gray-400") resolvedColor = Color.parseColor("#94A3B8")
+        else if (t == "text-white") resolvedColor = Color.WHITE
+    }
+
+    if (detectedIconToken.isEmpty()) {
+        detectedIconToken = tokens.firstOrNull { it != "fa-solid" && it != "fa-regular" } ?: iconName
+    }
+
+    val cleanName = detectedIconToken.replace(Regex("^(fa-(solid|regular|brands|light|duotone)-?|fa-|icon-)"), "").trim()
     
     val hardcodedMap = mapOf(
         "house" to "f015", "home" to "f015",
-        "user" to "f007", "profile" to "f007",
+        "user" to "f007", "profile" to "f007", "contact" to "f2b9", "contacts" to "f2b9", "address-book" to "f2b9",
         "bars" to "f0c9", "menu" to "f0c9", "navicon" to "f0c9",
+        "phone" to "f095", "phone-arrow-down-left" to "f879", "phone-arrow-up-right" to "f87b", "phone-slash" to "f3e2", "phone-flip" to "f879",
+        "mobile-screen" to "f3cf", "mobile" to "f3cf",
+        "video" to "f03d", "comments" to "f086", "chat" to "f086", "comment" to "f075",
+        "voicemail" to "f897", "headset" to "f590", "pause" to "f04c", "arrow-right-arrow-left" to "f0ec",
+        "users" to "f0c0", "conference" to "f0c0", "record-vinyl" to "f8d9", "keypad" to "f11c", "keyboard" to "f11c", "dialpad" to "f11c",
+        "volume-high" to "f028", "microphone-slash" to "f131", "delete-left" to "f55a", "backspace" to "f55a",
+        "clock-rotate-left" to "f1da", "history" to "f1da", "gear" to "f013", "settings" to "f013", "cog" to "f013",
+        "magnifying-glass" to "f002", "search" to "f002", "magnifier" to "f002",
+        "plus" to "f067", "add" to "f067", "arrow-left" to "f060", "xmark" to "f00d", "check" to "f00c",
+        "microchip" to "f2db", "cpu" to "f2db", "wifi" to "f1eb", "battery-full" to "f240", "battery" to "f240",
+        "server" to "f233", "lock" to "f023", "circle-info" to "f05a", "info" to "f05a",
         "gas-pump" to "f52f", "gas" to "f52f", "pump" to "f52f", "fuel" to "f52f", "car" to "f1b9",
-        "mobile-screen" to "f3cf", "mobile" to "f3cf", "phone" to "f095",
         "file-lines" to "f15c", "file" to "f15b", "document" to "f15b", "form" to "f15c",
-        "circle-info" to "f05a", "info" to "f05a", "about" to "f05a",
         "droplet" to "f043", "drop" to "f043", "water" to "f043",
         "bolt" to "f0e7", "flash" to "f0e7",
-        "camera" to "f030", "wifi" to "f1eb", "lightbulb" to "f0eb", "torch" to "f0eb",
+        "camera" to "f030", "lightbulb" to "f0eb", "torch" to "f0eb",
         "location-dot" to "f3c5", "gps" to "f3c5",
-        "battery-full" to "f240", "battery" to "f240",
-        "address-book" to "f2b9", "contacts" to "f2b9",
-        "sliders" to "f1de", "check" to "f00c", "rotate" to "f01e",
-        "keypad" to "f11c", "keyboard" to "f11c", "dialpad" to "f11c"
+        "sliders" to "f1de", "rotate" to "f01e"
     )
 
-    val hexUnicode = cdnIconMap?.get(trimmed)
+    val hexUnicode = cdnIconMap?.get(detectedIconToken)
                   ?: cdnIconMap?.get(cleanName)
                   ?: cdnIconMap?.get("fa-$cleanName")
                   ?: hardcodedMap[cleanName]
+                  ?: hardcodedMap[detectedIconToken]
 
     if (hexUnicode != null && cdnTypeface != null) {
         try {
             val codePoint = hexUnicode.toInt(16)
             val glyphStr = String(Character.toChars(codePoint))
             val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                this.color = color
+                this.color = resolvedColor
                 this.typeface = cdnTypeface
                 this.textSize = 24f * density
                 this.textAlign = android.graphics.Paint.Align.CENTER

@@ -1325,11 +1325,35 @@ ${this.splash ? `    <style name="Theme.Splash" parent="Theme.MaterialComponents
     }
 
     _copyApk(apkPath) {
-        const distDir = path.resolve(process.cwd(), 'dist');
-        fs.mkdirSync(distDir, { recursive: true });
-        const out = path.join(distDir, `${this.appName.replace(/\s+/g, '-')}-${this.versionName}.apk`);
-        fs.copyFileSync(apkPath, out);
-        return out;
+        const targetDirs = new Set();
+        
+        // 1. Primary android output dist
+        targetDirs.add(path.resolve(this.projectDir, 'dist'));
+
+        // 2. Parent root dist if projectDir is inside .dolphin-android
+        if (this.projectDir.includes('.dolphin-android')) {
+            const rootDir = this.projectDir.replace(/[\\\/]\.dolphin-android.*$/, '');
+            targetDirs.add(path.resolve(rootDir, 'dist'));
+            targetDirs.add(path.resolve(rootDir, 'app', 'dist'));
+        }
+
+        // 3. Current working directory dist
+        targetDirs.add(path.resolve(process.cwd(), 'dist'));
+        targetDirs.add(path.resolve(process.cwd(), 'app', 'dist'));
+
+        const apkName = `${this.appName.replace(/\s+/g, '-')}-${this.versionName}.apk`;
+        let primaryOut = '';
+
+        for (const distDir of targetDirs) {
+            try {
+                if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
+                const destFile = path.join(distDir, apkName);
+                fs.copyFileSync(apkPath, destFile);
+                if (!primaryOut) primaryOut = destFile;
+            } catch (e) {}
+        }
+
+        return primaryOut || apkPath;
     }
 
     async _installAndRun(apkPath) {

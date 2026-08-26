@@ -26,7 +26,7 @@ class HTMLParser {
             'IMG', 'INPUT', 'LINK', 'META', 'PARAM', 
             'SOURCE', 'TRACK', 'WBR', 'SLIDER', 'CHECKBOX',
             // 🆕 24-byte: More void elements
-            'VIDEO', 'AUDIO', 'IFRAME', 'CANVAS', 'SVG',
+            'VIDEO', 'AUDIO', 'IFRAME', 'CANVAS', 'SVG', 'THORVG',
             'PATH', 'CIRCLE', 'RECT', 'LINE', 'POLYLINE'
         ]);
     }
