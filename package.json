@@ -1,0 +1,27 @@
+{
+  "name": "danphe-ui",
+  "version": "1.0.0",
+  "description": "World-Class Vector UI, 7-Segment, LCD, OLED Displays, and Animated Component Suite for Danphe-2 & Node.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "keywords": [
+    "danphe",
+    "danphe-ui",
+    "vector-ui",
+    "7segment",
+    "lcd-matrix",
+    "keypad",
+    "telephony",
+    "oklch",
+    "zero-webview",
+    "android",
+    "iot"
+  ],
+  "author": "Phuyalshankar",
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "node test/test.js"
+  },
+  "dependencies": {}
+}
