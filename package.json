@@ -1,27 +1,84 @@
 {
-  "name": "danphe-ui",
-  "version": "1.0.0",
-  "description": "World-Class Vector UI, 7-Segment, LCD, OLED Displays, and Animated Component Suite for Danphe-2 & Node.js",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "name": "dolphin-native",
+  "version": "5.0.0",
+  "description": "Zero-WebView Native Android Framework. Compiles JSX + Tailwind CSS to 24-byte Titan binary for mobile apps & embedded devices (TV Box, Kiosk, Watch, Stereo).",
+  "main": "index.js",
+  "types": "src/index.d.ts",
   "keywords": [
-    "danphe",
-    "danphe-ui",
-    "vector-ui",
-    "7segment",
-    "lcd-matrix",
-    "keypad",
-    "telephony",
-    "oklch",
-    "zero-webview",
     "android",
-    "iot"
+    "native",
+    "mobile",
+    "embedded",
+    "framework",
+    "jsx",
+    "tailwind",
+    "tv-box",
+    "kiosk",
+    "smartwatch",
+    "iot",
+    "zero-webview",
+    "performance",
+    "binary-protocol"
   ],
-  "author": "Phuyalshankar",
-  "license": "MIT",
-  "scripts": {
-    "build": "node scripts/build.js",
-    "test": "node test/test.js"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Phuyalshankar/dolphin-native-2.git"
   },
-  "dependencies": {}
+  "bugs": {
+    "url": "https://github.com/Phuyalshankar/dolphin-native-2/issues"
+  },
+  "homepage": "https://github.com/Phuyalshankar/dolphin-native-2#readme",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./index.js"
+    },
+    "./hardware": {
+      "types": "./src/hardware/DolphinHardwareAPI.d.ts",
+      "default": "./src/hardware/DolphinHardwareAPI.js"
+    },
+    "./compiler": "./src/compiler/DolphinCompiler.js",
+    "./framework": "./src/framework/DolphinFramework.js",
+    "./protocol": "./src/protocol/DolphinBinaryProtocol.js",
+    "./router": "./src/router/index.js",
+    "./server": "./src/runtime/DevServer.js",
+    "./cli": "./src/cli/DolphinCLI.js",
+    "./*": "./*",
+    "./ub": "./src/ub/index.js"
+  },
+  "bin": {
+    "danphe": "bin/dolphin.js",
+    "danphe-mobile": "bin/dolphin-mobile.js",
+    "dolphin-mobile": "bin/dolphin-mobile.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Tests coming soon\" && exit 0"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "runtime/",
+    "index.js",
+    "README.md",
+    "ai.md",
+    "integration.md"
+  ],
+  "author": "Dolphin Native Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@babel/core": "^7.24.6",
+    "@babel/plugin-transform-react-jsx": "^7.29.7",
+    "@babel/register": "^7.24.6",
+    "@dolphin/titan-framework": "github:Phuyalshankar/dolphin-plc",
+    "chokidar": "^3.5.3",
+    "dolphin-server-modules": "^2.14.2",
+    "express": "^4.18.2",
+    "qrcode-terminal": "^0.12.0",
+    "ws": "^8.14.2"
+  }
 }

@@ -1,0 +1,52 @@
+import { EventEmitter } from 'events';
+import { WebSocketClientConfig, ChannelHandler } from './types';
+declare function buildTitanFrame(type: number, channel: string, payload: Buffer | string | unknown): Buffer;
+declare class WebSocketClient extends EventEmitter {
+    host: string;
+    port: number;
+    heartbeatMs: number;
+    maxRetries: number;
+    retryDelay: number;
+    maxDelay: number;
+    binaryMode: boolean;
+    url?: string;
+    private _ws;
+    private _retries;
+    private _queue;
+    private _channels;
+    private _hbTimer;
+    private _connected;
+    private _intentClose;
+    constructor(config?: WebSocketClientConfig);
+    connect(): this;
+    private _dial;
+    private _scheduleRetry;
+    disconnect(): this;
+    private _startHeartbeat;
+    private _stopHeartbeat;
+    subscribe(channel: string, handler: ChannelHandler): () => void;
+    unsubscribe(channel: string): void;
+    publish(channel: string, data: Buffer | string | unknown): boolean;
+    stream(channel: string, binaryBuffer: Buffer): boolean;
+    presence(channel: string, status?: string): boolean;
+    private _sendRaw;
+    private _flushQueue;
+    sendText(text: string): boolean;
+    private _handleFrame;
+    isConnected(): boolean;
+    queueSize(): number;
+    channelCount(): number;
+    static buildFrame: typeof buildTitanFrame;
+    static FRAME: {
+        readonly PING: 48;
+        readonly PONG: 49;
+        readonly SUBSCRIBE: 242;
+        readonly PUBLISH: 243;
+        readonly ACK: 244;
+        readonly ERROR: 245;
+        readonly STREAM: 21;
+        readonly PRESENCE: 247;
+    };
+}
+export default WebSocketClient;
+//# sourceMappingURL=WebSocketClient.d.ts.map

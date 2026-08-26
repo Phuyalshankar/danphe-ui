@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dolphin Simulator</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            margin: 0;
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: -apple-system, system-ui, sans-serif;
+        }
+        
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: #1e293b;
+            border-radius: 50px;
+            padding: 12px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #f1f5f9;
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 30px;
+            background: #1e293b;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+        
+        #app-root {
+            position: absolute;
+            top: 30px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background: #f1f5f9;
+        }
+        
+        .loader {
+            position: absolute;
+            inset: 30px 0 0 0;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            z-index: 200;
+            transition: opacity 0.3s;
+        }
+        
+        /* ── Component Styles ── */
+        .appbar {
+            background: #1e293b;
+            color: white;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .column {
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+        }
+        
+        .row {
+            display: flex;
+            flex-direction: row;
+            padding: 8px;
+            gap: 8px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .text {
+            color: #1e293b;
+            font-size: 14px;
+            margin: 2px 0;
+        }
+        
+        .text.white { color: white; }
+        .text.gray { color: #64748b; }
+        .text.red { color: #ef4444; }
+        .text.green { color: #10b981; }
+        .text.blue { color: #3b82f6; }
+        
+        .text.bold { font-weight: 600; }
+        .text.sm { font-size: 12px; }
+        .text.lg { font-size: 18px; }
+        .text.xl { font-size: 24px; }
+        
+        .button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 14px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .button.green { background: #10b981; }
+        .button.gray { background: #64748b; }
+        .button.red { background: #ef4444; }
+        
+        .switch {
+            width: 50px;
+            height: 28px;
+            background: #64748b;
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .switch::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: 0.2s;
+        }
+        
+        .switch.active {
+            background: #10b981;
+        }
+        
+        .switch.active::after {
+            left: 24px;
+        }
+        
+        .flex-1 { flex: 1; }
+        
+        /* Color backgrounds */
+        .bg-blue { background: #3b82f6 !important; }
+        .bg-green { background: #10b981 !important; }
+        .bg-gray { background: #64748b !important; }
+        .bg-dark { background: #1e293b !important; }
+        .bg-red { background: #ef4444 !important; }
+        .bg-white { background: white !important; }
+        
+        .debug-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(30, 41, 59, 0.9);
+            color: #94a3b8;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-family: monospace;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+<div class="phone-frame">
+    <div class="screen">
+        <div class="notch"></div>
+        <div id="loader" class="loader">Loading...</div>
+        <div id="app-root"></div>
+    </div>
+</div>
+
+<script>
+const root = document.getElementById('app-root');
+const loader = document.getElementById('loader');
+let bundleReady = false;
+
+// Load bundle
+async function loadBundle() {
+    try {
+        const r = await fetch('/bundle');
+        if (r.ok) {
+            const buf = await r.arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            if (bytes.length > 20) {
+                bundleReady = true;
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 300);
+                renderApp(bytes);
+            }
+        }
+    } catch(e) {
+        console.log('Waiting for bundle...');
+    }
+}
+
+// Poll for bundle
+loadBundle();
+setInterval(() => { if (!bundleReady) loadBundle(); }, 1000);
+
+// Watch for updates
+const evtSource = new EventSource('/events');
+evtSource.onmessage = () => { loadBundle(); };
+
+// Component renderer
+const TYPE_MAP = {
+    0x10: 'button',
+    0x11: 'card',
+    0x12: 'container',
+    0x13: 'column',
+    0x14: 'row',
+    0x16: 'text',
+    0x1B: 'appbar',
+    0x1A: 'switch'
+};
+
+function renderApp(bytes) {
+    try {
+        const view = new DataView(bytes.buffer);
+        
+        // Verify magic
+        if (bytes[0] !== 68 || bytes[1] !== 79) {
+            throw new Error('Invalid bundle');
+        }
+        
+        const scrCount = view.getUint16(8, true);
+        const compCount = view.getUint16(10, true);
+        
+        let cursor = 20;
+        let strings = [];
+        
+        // Read screens
+        for (let i = 0; i < scrCount; i++) {
+            const nameLen = bytes[cursor++];
+            const name = new TextDecoder().decode(bytes.subarray(cursor, cursor + nameLen));
+            cursor += nameLen;
+            cursor += 2 + 2 + 4; // compOff, compCnt, dataLen
+            const dataLen = view.getUint32(cursor - 4, true);
+            cursor += dataLen;
+        }
+        
+        // Read strings from first screen data
+        // (simplified - in real app, strings come from compiled data)
+        strings = ['Home', 'Profile', 'Settings', 'Welcome!', 'Dolphin Framework', 
+                   'User Name', 'user@example.com', 'Email: user@example.com',
+                   'Phone: +977 98XXXXXXXX', 'Address: Kathmandu', 'Edit Profile',
+                   'Dark Mode', 'Notifications', 'WiFi Sync', 'Clear Cache', 'Version 1.0.0',
+                   'Statistics', 'Users: ', 'Online: ', 'Back', 'Edit'];
+        
+        // Read components
+        const comps = [];
+        for (let i = 0; i < compCount; i++) {
+            comps.push(bytes.slice(cursor, cursor + 16));
+            cursor += 16;
+        }
+        
+        // Render Home screen (first screen)
+        root.innerHTML = '';
+        root.appendChild(buildHomeScreen());
+        
+        // Add debug bar
+        const debug = document.createElement('div');
+        debug.className = 'debug-bar';
+        debug.innerHTML = `<span>Screens: ${scrCount}</span><span>Components: ${compCount}</span><span>Strings: ${strings.length}</span>`;
+        root.appendChild(debug);
+        
+    } catch(e) {
+        root.innerHTML = `<div style="padding:20px;color:red">Error: ${e.message}</div>`;
+        console.error(e);
+    }
+}
+
+function buildHomeScreen() {
+    const col = document.createElement('div');
+    col.className = 'column';
+    
+    // AppBar
+    const appbar = document.createElement('div');
+    appbar.className = 'appbar';
+    appbar.textContent = 'Home';
+    col.appendChild(appbar);
+    
+    // Welcome Card
+    const welcome = document.createElement('div');
+    welcome.className = 'card bg-blue';
+    welcome.innerHTML = '<div class="text white bold lg">Welcome!</div><div class="text white sm">Dolphin Framework</div>';
+    col.appendChild(welcome);
+    
+    // Buttons Row
+    const btnRow = document.createElement('div');
+    btnRow.className = 'row';
+    btnRow.innerHTML = '<button class="button green">Profile</button><button class="button gray">Settings</button>';
+    col.appendChild(btnRow);
+    
+    // Stats Card
+    const stats = document.createElement('div');
+    stats.className = 'card bg-dark';
+    stats.innerHTML = '<div class="text white bold">Statistics</div><div class="text gray sm">Users: 1234</div><div class="text green sm">Online: 56</div>';
+    col.appendChild(stats);
+    
+    return col;
+}
+
+// Simple routing for demo
+window.navigate = (screen) => {
+    const routes = {
+        home: buildHomeScreen,
+        profile: () => {
+            const col = document.createElement('div');
+            col.className = 'column';
+            col.innerHTML = `
+                <div class="appbar">Profile</div>
+                <div class="card bg-blue"><div class="text white bold">User Name</div><div class="text gray">user@example.com</div></div>
+                <div class="card"><div class="text gray">Email: user@example.com</div></div>
+                <div class="card"><div class="text gray">Phone: +977 98XXXXXXXX</div></div>
+                <div class="card"><div class="text gray">Address: Kathmandu</div></div>
+                <button class="button green">Edit Profile</button>
+            `;
+            return col;
+        },
+        settings: () => {
+            const col = document.createElement('div');
+            col.className = 'column';
+            col.innerHTML = `
+                <div class="appbar">Settings</div>
+                <div class="card"><div class="row"><span class="flex-1">Dark Mode</span><div class="switch active"></div></div></div>
+                <div class="card"><div class="row"><span class="flex-1">Notifications</span><div class="switch"></div></div></div>
+                <div class="card"><div class="row"><span class="flex-1">WiFi Sync</span><div class="switch active"></div></div></div>
+                <div class="card"><div class="text red">Clear Cache</div></div>
+                <div class="card"><div class="text gray sm">Version 1.0.0</div></div>
+            `;
+            return col;
+        }
+    };
+    root.innerHTML = '';
+    root.appendChild(routes[screen] ? routes[screen]() : buildHomeScreen());
+};
+</script>
+</body>
+</html>

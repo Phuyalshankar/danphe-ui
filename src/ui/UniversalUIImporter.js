@@ -1,0 +1,1330 @@
+'use strict';
+
+const path = require('path');
+const fs = require('fs');
+const ComponentOpcodeMapper = require('./ComponentOpcodeMapper');
+const DOMScraperEngine = require('../plugins/dynamic-ui-copier/DOMScraperEngine');
+const { errorPipeline } = require('../errors/ErrorPipeline');
+const ub = require('../framework/ub');
+
+errorPipeline.registerFile('UniversalUIImporter.js', __filename);
+
+/**
+ * 🌐 UniversalUIImporter - Titan 16-byte Protocol Mapper
+ * TRUE 10-day work version with STRICT STRING ALIGNMENT.
+ */
+class UniversalUIImporter {
+    constructor() {
+        this.stringPool = [];
+        this.cdns = [];
+        // ✅ Store lambda functions for later registration
+        this.pendingLambdas = new Map();
+        console.log('🌐 Universal UI Importer Initialized');
+    }
+
+    setCDNs(cdns) {
+        this.cdns = Array.isArray(cdns) ? cdns : [];
+        if (this.cdns.length > 0) {
+            console.log(`📡 Registered ${this.cdns.length} external UI CDNs`);
+        }
+    }
+
+    // ✅ Register pending lambda functions to app
+    registerLambdas(app) {
+        if (this.pendingLambdas.size > 0) {
+            console.log(`⚡ Registering ${this.pendingLambdas.size} lambda onClick handlers...`);
+            for (const [actionId, lambdaFn] of this.pendingLambdas.entries()) {
+                app.action(actionId, lambdaFn);
+            }
+            console.log(`✅ Lambda handlers registered`);
+        }
+        return this.pendingLambdas.size;
+    }
+
+    importSchema(schema, options = {}) {
+        try {
+            return this._importSchemaInternal(schema, options);
+        } catch (error) {
+            errorPipeline.capture(error, {
+                file: 'UniversalUIImporter.js',
+                function: 'importSchema',
+                severity: 'error'
+            });
+            throw error; // Re-throw to fail loudly
+        }
+    }
+
+    _importSchemaInternal(schema, options = {}) {
+        const binaries = [];
+        const stringPool = [];
+
+        const process = (comp, inheritedColor = null) => {
+            if (typeof comp === 'function') {
+                try {
+                    return process(comp(), inheritedColor);
+                } catch (e) {
+                    return;
+                }
+            }
+            if (comp && typeof comp.type === 'function') {
+                try {
+                    return process(comp.type(comp.props || {}), inheritedColor);
+                } catch (e) {
+                    return;
+                }
+            }
+            if (comp && typeof comp.tag === 'function') {
+                try {
+                    return process(comp.tag(comp.props || {}), inheritedColor);
+                } catch (e) {
+                    return;
+                }
+            }
+            // Skip empty/whitespace-only HTML AST text nodes and JSX comments ({/* ... */})
+            if (comp && comp.type === 'text') {
+                const val = String(comp.value || '').trim();
+                if (!val || val.startsWith('{/*') || val.startsWith('/*') || val.startsWith('//')) {
+                    return;
+                }
+            }
+            const rawAttributes = comp.attributes || {};
+            const normAttributes = {};
+            Object.keys(rawAttributes).forEach(k => {
+                normAttributes[k.toLowerCase()] = rawAttributes[k];
+            });
+
+            // Schema format: comp.type='AppBar', comp.children=[...]
+            let compType = comp.props && comp.props.type ? comp.props.type
+                         : (normAttributes.type ? normAttributes.type
+                         : (comp.type === 'element' ? (comp.tag || '').toLowerCase() : comp.type));
+            const explicitProps = comp.props ? { ...comp.props } : { ...comp, ...normAttributes };
+
+            // Handle custom <state key="..." fallback="..." /> JSX elements
+            if (compType === 'state' || (comp.type === 'element' && comp.tag === 'state')) {
+                const stateKey = explicitProps.key || normAttributes.key || '';
+                const fallbackVal = explicitProps.fallback || normAttributes.fallback || '';
+                compType = 'text';
+                explicitProps.text = `[stateKey:${stateKey}]`;
+                if (!explicitProps.bindings) explicitProps.bindings = {};
+                explicitProps.bindings.text = stateKey;
+            }
+
+            if (typeof compType === 'function') {
+                compType = compType.name || '';
+            }
+            let rawTw = comp.props && comp.props.className ? comp.props.className
+                      : (normAttributes.classname ? normAttributes.classname
+                      : (comp.tw || comp.className || ''));
+
+            // PLATFORM FILTERING: skip target="web" elements in Mobile Compiler
+            const _target = explicitProps.target || comp.target || explicitProps.platform || comp.platform || '';
+            if (_target === 'web' || _target === 'browser') {
+                return;
+            }
+
+            // Keep arbitrary Tailwind bracketed classes (like text-[10px], w-[80px])
+            const tw = rawTw || '';
+
+            // ── Auto-extract text color from className (e.g. text-red-100, text-white) ──
+            const extractTextColorFromClass = (className) => {
+                if (!className) return null;
+                const match = className.match(/(?:^|\s)(text-[a-z]+-\d+|text-white|text-black)(?:\s|$)/);
+                return match ? match[1] : null;
+            };
+            const inheritedTextColor = extractTextColorFromClass(tw);
+
+            // --- PSEUDO ELEMENTS EXTRACTION ---
+            let beforeClasses = [];
+            let afterClasses = [];
+            let remainingTw = [];
+            let beforeText = null;
+            let afterText = null;
+            
+            if (typeof tw === 'string') {
+                tw.split(/\s+/).forEach(cls => {
+                    if (cls.startsWith('before:')) {
+                        let bare = cls.replace('before:', '');
+                        if (bare.startsWith("content-['") && bare.endsWith("']")) {
+                            beforeText = bare.substring(10, bare.length - 2);
+                        } else {
+                            beforeClasses.push(bare);
+                        }
+                    } else if (cls.startsWith('after:')) {
+                        let bare = cls.replace('after:', '');
+                        if (bare.startsWith("content-['") && bare.endsWith("']")) {
+                            afterText = bare.substring(10, bare.length - 2);
+                        } else {
+                            afterClasses.push(bare);
+                        }
+                    } else {
+                        remainingTw.push(cls);
+                    }
+                });
+            }
+            const twProps = ub.parseTW(remainingTw.join(' '));
+            
+            // Setup virtual pseudo nodes
+            if (beforeClasses.length > 0 || beforeText !== null) {
+                if (!comp.children) comp.children = [];
+                let bProps = { className: 'absolute ' + beforeClasses.join(' ') };
+                if (beforeText) bProps.text = beforeText;
+                comp.children.unshift({
+                    type: 'element',
+                    tag: beforeText ? 'Text' : 'Container',
+                    props: bProps
+                });
+            }
+            if (afterClasses.length > 0 || afterText !== null) {
+                if (!comp.children) comp.children = [];
+                let aProps = { className: 'absolute ' + afterClasses.join(' ') };
+                if (afterText) aProps.text = afterText;
+                comp.children.push({
+                    type: 'element',
+                    tag: afterText ? 'Text' : 'Container',
+                    props: aProps
+                });
+            }
+
+            const styleProps = explicitProps.style || {};
+
+            // PRIORITY: styleProps > explicitProps > twProps
+            const props = { ...twProps, ...explicitProps, ...styleProps };
+            
+            // Fix: If a Tailwind class explicitly set a layout type (like Row, Column, Card),
+            // it should override generic HTML tags like 'div', 'span', or a Babel-injected 'Container'.
+            if (twProps.type && (explicitProps.type === 'div' || explicitProps.type === 'Container' || !explicitProps.type)) {
+                props.type = twProps.type;
+            }
+            // Deep-merge bindings so className DSL + explicit `bindings={{...}}` can coexist.
+            // Priority: explicit bindings override tw bindings on key conflict.
+            if (twProps.bindings || explicitProps.bindings || styleProps.bindings) {
+                props.bindings = {
+                    ...(twProps.bindings || {}),
+                    ...(explicitProps.bindings || {}),
+                    ...(styleProps.bindings || {}),
+                };
+            }
+            if (compType && compType !== 'div') {
+                // Do not let a generic 'Container' override a specific 'Row' or 'Column' from Tailwind
+                if (compType === 'Container' && (twProps.type === 'Row' || twProps.type === 'Column')) {
+                    // Keep props.type as Row or Column
+                } else if (compType === 'input' && (twProps.type === 'radio' || explicitProps.type === 'radio' || twProps.type === 'checkbox' || explicitProps.type === 'checkbox')) {
+                    // Leave props.type as radio or checkbox so it maps to 0x1F or 0x1B
+                    if (!props.type) props.type = explicitProps.type || twProps.type;
+                } else {
+                    props.type = compType;
+                }
+            }
+            // WebView: pull src from normAttributes or explicitProps if not yet on props
+            if ((compType === 'WebView' || compType === 'webview') && !props.src) {
+                props.src = explicitProps.src || normAttributes.src || normAttributes.url || explicitProps.url || '';
+            }
+            if (props.id === 'ContactsScreen' || props.id === 'ChatListScreen' || props.type === 'Screen') {
+                console.log(`[UniversalUIImporter] Compiling Screen: ${props.id}, type: ${props.type}, className: ${tw}, justify: ${props.justify}`);
+            }
+
+            // ── Native HTML Table, List & Divider Tags Mapping ──
+            if (compType === 'hr' || compType === 'divider' || String(tw).includes('divider')) {
+                compType = 'Column';
+                props.type = 'Column';
+                props.minHeight = 2;
+                props.bg = 'slate-300';
+            }
+            if (compType === 'table' || compType === 'tbody' || compType === 'thead' || compType === 'tfoot') {
+                compType = 'Column';
+                props.type = 'Column';
+                props.orientation = 'vertical';
+            }
+            if (compType === 'tr') {
+                compType = 'Row';
+                props.type = 'Row';
+                props.orientation = 'horizontal';
+            }
+            if (compType === 'th' || compType === 'td') {
+                compType = 'Column';
+                props.type = 'Column';
+                if (!String(tw).includes('flex-')) {
+                    tw = (tw ? tw + ' ' : '') + 'flex-1';
+                }
+            }
+            if (compType === 'ul' || compType === 'ol') {
+                compType = 'Column';
+                props.type = 'Column';
+                props.orientation = 'vertical';
+            }
+            if (compType === 'li') {
+                compType = 'Row';
+                props.type = 'Row';
+                props.orientation = 'horizontal';
+            }
+
+            // ── Bootstrap & Tailwind Flex Container Standard Flow ──
+            // NOTE: flex-1, flex-auto, flex-none, flex-grow, flex-shrink, flex-wrap are sizing/growth
+            // classes — they do NOT define direction. Only explicit direction classes trigger Row.
+            const isFlexSizing = /\bflex-1\b|\bflex-auto\b|\bflex-none\b|\bflex-grow\b|\bflex-shrink\b|\bflex-wrap\b|\bflex-nowrap\b/.test(String(tw));
+            const isExplicitFlexRow = String(tw).includes('d-flex') || String(tw).includes('flex-row') || String(tw).includes('flex-row-center') || String(tw).includes('flex-row-between') || String(tw).includes('flex-row-around') || String(tw).includes('flex-row-evenly') || String(tw).includes('flex-row-start') || String(tw).includes('flex-row-end');
+            // Standalone 'flex' class (exact match) also triggers Row — but NOT flex-1 etc.
+            const isStandaloneFlex = /\bflex\b/.test(String(tw)) && !isFlexSizing;
+            if (isExplicitFlexRow || isStandaloneFlex) {
+                if (!String(tw).includes('flex-column') && !String(tw).includes('flex-col') && !String(tw).includes('flex-vertical') && !String(tw).includes('flex-col-left')) {
+                    props.type = 'Row';
+                    props.orientation = 'horizontal';
+                }
+            }
+
+
+            // ── DolphinCSS & Bootstrap Floating Label Container Folding ──
+            const isFloatingContainer = String(tw).includes('floatinglabel') || String(tw).includes('form-floating') || String(tw).includes('floating-label');
+            if (isFloatingContainer) {
+                const children = props.children || (props.props && props.props.children) || comp.children || [];
+                const arr = Array.isArray(children) ? children : (children ? [children] : []);
+                let labelText = '';
+                let inputType = 'text';
+                let placeholderText = '';
+                let stateKey = props.stateKey || props.name || '';
+
+                const extractNodeText = (node) => {
+                    if (!node) return '';
+                    if (typeof node === 'string' || typeof node === 'number') return String(node);
+                    if (Array.isArray(node)) return node.map(extractNodeText).join(' ');
+                    if (typeof node === 'object') {
+                        if (node.text) return String(node.text);
+                        if (node.props && node.props.text) return String(node.props.text);
+                        if (node.value !== undefined && node.value !== null) return String(node.value);
+                        const children = node.children || (node.props && node.props.children);
+                        if (children) return extractNodeText(children);
+                    }
+                    return '';
+                };
+
+                arr.forEach(c => {
+                    if (!c) return;
+                    const cType = (c.type || c.tagName || '').toLowerCase();
+                    const cProps = c.props || c.attributes || {};
+                    if (cType === 'label' || String(cProps.className || '').includes('label')) {
+                        labelText = extractNodeText(c);
+                    } else if (cType === 'input' || cType === 'textarea' || String(cProps.className || '').includes('input')) {
+                        inputType = cProps.type || cProps.inputType || (cType === 'textarea' ? 'textarea' : 'text');
+                        placeholderText = cProps.placeholder || cProps.hint || '';
+                        if (!stateKey) stateKey = cProps.id || cProps.name || cProps.stateKey || '';
+                    }
+                });
+
+                if (labelText || inputType) {
+                    compType = 'input';
+                    props.type = 'TextField';
+                    props.floatingLabel = labelText.trim();
+                    props.label = labelText.trim();
+                    props.placeholder = placeholderText;
+                    props.inputType = inputType;
+                    props.stateKey = stateKey;
+                    props.children = [];
+                }
+            }
+
+            // DEFAULT ORIENTATIONS for Native Components
+            if (props.type === 'Row' && props.orientation === undefined) props.orientation = 'horizontal';
+            if (props.type === 'Column' && props.orientation === undefined) props.orientation = 'vertical';
+
+            // Extract spacing from both twProps and props
+            const s = { t: 0, r: 0, b: 0, l: 0, mt: 0, mr: 0, mb: 0, ml: 0 };
+
+            // Padding mapping
+            const pVal = props.p !== undefined ? props.p : twProps.p;
+            if (pVal !== undefined) { const ps = ub.parseSpacing(pVal); s.t = ps.t; s.r = ps.r; s.b = ps.b; s.l = ps.l; }
+            if (twProps.pt !== undefined) s.t = twProps.pt;
+            if (twProps.pr !== undefined) s.r = twProps.pr;
+            if (twProps.pb !== undefined) s.b = twProps.pb;
+            if (twProps.pl !== undefined) s.l = twProps.pl;
+            if (props.pt !== undefined) s.t = props.pt;
+            if (props.pr !== undefined) s.r = props.pr;
+            if (props.pb !== undefined) s.b = props.pb;
+            if (props.pl !== undefined) s.l = props.pl;
+
+            // Margin mapping
+            const mVal = props.m !== undefined ? props.m : twProps.m;
+            if (mVal !== undefined) { const ms = ub.parseSpacing(mVal); s.mt = ms.t; s.mr = ms.r; s.mb = ms.b; s.ml = ms.l; }
+            if (twProps.mt !== undefined) s.mt = twProps.mt;
+            if (twProps.mr !== undefined) s.mr = twProps.mr;
+            if (twProps.mb !== undefined) s.mb = twProps.mb;
+            if (twProps.ml !== undefined) s.ml = twProps.ml;
+            if (props.mt !== undefined) s.mt = props.mt;
+            if (props.mr !== undefined) s.mr = props.mr;
+            if (props.mb !== undefined) s.mb = props.mb;
+            if (props.ml !== undefined) s.ml = props.ml;
+
+            const bin = Buffer.alloc(24);
+
+            if (String(tw).includes('flex-row-between')) {
+            }
+
+            // Byte 1: Type Code
+            let typeCode = this.getComponentCode(props.type || compType);
+            const isGridClass = String(tw).includes('grid') || String(tw).includes('grid-cols-') || props.type === 'GridView' || props.type === 'Grid' || compType === 'GridView' || compType === 'Grid';
+            if (isGridClass && (typeCode === 0x12 || typeCode === 0x13 || typeCode === 0x14)) {
+                typeCode = 0x22; // Upgrade container/column/row to GridView opcode (0x22)
+            }
+            bin[1] = typeCode & 0xFF;
+
+            const isTextType = (typeCode === 0xD0 || typeCode === 0x1D || typeCode === 0x16 || typeCode === 0x10 || typeCode === 0x23 || typeCode === 0x1A);
+
+            // Inherit text color if not explicitly defined on text element
+            if (isTextType && !props.color && !props.textColor && inheritedColor) {
+                props.color = inheritedColor.replace('text-', '');
+            }
+
+            // Byte 0: Gravity (0-3) | Flex (4-7)
+            // For text elements, gravity controls text alignment (left/center/right)
+            // For containers, gravity controls child alignment
+            let gravity = 0x01; // default: start/left
+
+            if (isTextType) {
+                // Button (0x10) defaults to center alignment (0x02), Text defaults to left (0x01)
+                if (typeCode === 0x10) {
+                    if (props.align === 'left' || props.align === 'start') gravity = 0x01;
+                    else if (props.align === 'right' || props.align === 'end') gravity = 0x03;
+                    else gravity = 0x02; // center for buttons!
+                } else {
+                    if (props.align === 'center') gravity = 0x02;
+                    else if (props.align === 'right' || props.align === 'end') gravity = 0x03;
+                    else gravity = 0x01; // left/start
+                }
+            } else {
+                // Container alignment: props.items from 'items-center', etc.
+                if (props.items) {
+                    gravity = props.items === 'center' ? 0x02 : (props.items === 'end' ? 0x03 : 0x01);
+                } else {
+                    // Fallback string matching for explicitly written classes
+                    if (String(tw).includes('items-center') || String(tw).includes('flex-center') || String(tw).includes('center')) gravity = 0x02;
+                    else if (String(tw).includes('items-end') || String(tw).includes('flex-right') || String(tw).includes('flex-end') || String(tw).includes('right')) gravity = 0x03;
+                    else gravity = 0x01;
+                }
+            }
+            const flex = Math.min(props.flex !== undefined ? props.flex : (twProps.flex !== undefined ? twProps.flex : (String(tw).includes('flex-1') ? 1 : 0)), 15);
+            bin[0] = gravity | (flex << 4);
+
+            // Byte 2: Shade
+            let bg = props.backgroundColor || props.bg || twProps.bg;
+            if (bg && bg !== 'transparent') {
+                const shadeVal = props.bgShade || props.shade;
+                if (shadeVal && !String(bg).includes('-')) {
+                    bg = `${bg}-${shadeVal}`;
+                }
+            }
+            if (typeCode === 0x10 && (!bg || bg === 'transparent') && !String(tw).includes('outlined') && !String(tw).includes('plain')) {
+                bg = 'indigo-140';
+            }
+            if (!bg && isTextType && typeCode !== 0x10) bg = 'transparent';
+            bin[2] = ub.getShade(bg || 'transparent');
+
+            // Byte 3: Color
+            bin[3] = ub.getColor(bg || 'transparent');
+
+            // Bytes 4-7: Padding (T, R, B, L)
+            bin[4] = Math.max(0, s.t || 0) & 0xFF;
+            bin[5] = Math.max(0, s.r || 0) & 0xFF;
+            bin[6] = Math.max(0, s.b || 0) & 0xFF;
+            bin[7] = Math.max(0, s.l || 0) & 0xFF;
+
+            // Bytes 8-11: Margin (T, R, B, L) - supports negative margins via signed 8-bit byte
+            bin[8] = ((s.mt || 0) < 0 ? (256 + s.mt) : (s.mt || 0)) & 0xFF;
+            bin[9] = ((s.mr || 0) < 0 ? (256 + s.mr) : (s.mr || 0)) & 0xFF;
+            bin[10] = ((s.mb || 0) < 0 ? (256 + s.mb) : (s.mb || 0)) & 0xFF;
+            bin[11] = ((s.ml || 0) < 0 ? (256 + s.ml) : (s.ml || 0)) & 0xFF;
+
+            // Byte 12: Contextual Packing
+            const speed = Math.min(props.animationSpeed || 4, 7);
+
+            // ─── EXTRACT TEXT CONTENT ───
+            const rawChildren = props.children || (props.props && props.props.children) || comp.children || [];
+            const childArr = (Array.isArray(rawChildren) ? rawChildren : (rawChildren ? [rawChildren] : [])).filter(c => {
+                if (c && typeof c === 'object') {
+                    if (c.type === 'text') {
+                        const val = String(c.value || '').trim();
+                        if (!val || val.startsWith('{/*') || val.startsWith('/*') || val.startsWith('//')) return false;
+                    }
+                    const rawA = c.attributes || {};
+                    const normA = {};
+                    Object.keys(rawA).forEach(k => { normA[k.toLowerCase()] = rawA[k]; });
+                    const cp = c.props ? { ...c.props } : { ...normA, ...c };
+                    const ct = cp.target || c.target || cp.platform || c.platform || '';
+                    if (ct === 'web' || ct === 'browser') return false;
+                }
+                return true;
+            });
+
+            // Translate ring to native border before signature calculation
+            if (props.ringWidth) {
+                props.borderWidth = props.ringWidth + 'px';
+                props.borderStyle = 'solid';
+                props.borderColor = props.ringColor || 'blue-500';
+            }
+
+            // Translate divide to child native borders
+            if (props.divide) {
+                let validChildIndex = 0;
+                childArr.forEach(child => {
+                    if (child && typeof child === 'object' && child.type) {
+                        if (validChildIndex > 0) {
+                            child.props = child.props || {};
+                            if (props.divide === 'y') {
+                                child.props.borderWidth = '1px 0px 0px 0px';
+                            } else if (props.divide === 'x') {
+                                child.props.borderWidth = '0px 0px 0px 1px';
+                            }
+                            child.props.borderStyle = 'solid';
+                            child.props.borderColor = props.divideColor || 'slate-200';
+                        }
+                        validChildIndex++;
+                    }
+                });
+            }
+
+            if (isTextType) {
+                let textColor = props.color || props.textColor;
+                if (textColor && textColor !== 'transparent') {
+                    const shadeVal = props.colorShade || props.shade;
+                    if (shadeVal && !String(textColor).includes('-')) {
+                        textColor = `${textColor}-${shadeVal}`;
+                    }
+                }
+                const shade = ub.getShade(textColor || 'white');
+                let shadeSentinel = Math.floor(shade / 8) & 0x1F;
+                if (shade === 254) shadeSentinel = 31;
+                if (shade === 253) shadeSentinel = 30;
+                if (shade === 252) shadeSentinel = 29;
+                // Byte 12: [Speed 3 bits | Shade 5 bits]
+                bin[12] = (shadeSentinel & 0x1F) | ((speed & 0x07) << 5);
+            } else {
+                const activeGap = props.gap !== undefined ? props.gap : twProps.gap;
+                const isGrid = bin[1] === 0x22 || isGridClass;
+                if (isGrid) {
+                    let cols = props.columns || 2;
+                    const gridColMatch = String(tw).match(/grid-cols-(\d+)/);
+                    if (gridColMatch) cols = parseInt(gridColMatch[1]) || 2;
+                    let gapVal = 0;
+                    const gapMatch = String(tw).match(/gap-(\d+)/);
+                    if (gapMatch) {
+                        gapVal = parseInt(gapMatch[1]) || 0;
+                    } else if (activeGap !== undefined) {
+                        gapVal = Math.floor(activeGap / 4);
+                    }
+                    bin[12] = (cols & 0x0F) | ((Math.min(gapVal, 15) & 0x0F) << 4);
+                } else {
+                    const gapVal = Math.min(Math.floor((activeGap || 0) / 4), 15);
+                    let orientation = (props.type === 'Row' || props.orientation === 'horizontal' || String(tw).includes('flex-row')) ? 1 : 0;
+                    bin[12] = (orientation & 0x0F) | ((gapVal & 0x0F) << 4);
+                }
+            }
+
+            // Note: justify-between and justify-around spacing is handled by Native Android
+            // via the 0x20 signature bit. We don't inject spacers manually here.
+            const justifyMode = props.justify || (String(tw).includes('justify-between') || String(tw).includes('flex-between') ? 'between' : String(tw).includes('justify-around') || String(tw).includes('flex-around') ? 'around' : null);
+
+
+            // Recursive helper to flatten all text content
+            const flattenText = (items) => {
+                if (!items) return '';
+                if (typeof items === 'string') return items;
+                if (typeof items === 'number') return String(items);
+                if (!Array.isArray(items)) items = [items];
+                return items.map(c => {
+                    if (typeof c === 'string') return c;
+                    if (typeof c === 'number') return String(c);
+                    if (c && typeof c === 'object') {
+                        if (c.text) return c.text;
+                        if (c.props && c.props.text) return c.props.text;
+                        if (c.content) return c.content;
+                        if (c.props && c.props.children) return flattenText(c.props.children);
+                        if (c.children) return flattenText(c.children);
+                        if (c.value !== undefined && c.value !== null) return String(c.value);
+                    }
+                    return '';
+                }).filter(Boolean).join(' ');
+            };
+
+            if (isTextType && !props.text && !props.content) {
+                props.text = flattenText(childArr).trim();
+            }
+
+            if (props.text) {
+                if (typeof props.text === 'string' && props.text.includes('[stateKey:')) {
+                    const match = props.text.match(/\[stateKey:([a-zA-Z0-9_$]+)\]/);
+                    if (match) {
+                        if (!props.bindings) props.bindings = {};
+                        props.bindings.text = match[1];
+                        console.log(`   ✨ [NanoStore Binding] Extracted text binding: "${match[1]}" for component ${props.type}`);
+                    }
+                }
+            }
+
+            const mobileTwClass = String(tw || '').replace(/\[.*?\]/g, '');
+
+            // Byte 13: Text Color / Child Count
+            if (isTextType) {
+                let textMatch = (mobileTwClass.match(/\btext-([a-z]+-\d+|white|black|transparent)\b/i)?.[1]);
+                let textColor = props.color || props.textColor || twProps.color || twProps.textColor || textMatch;
+                if (textColor && textColor !== 'transparent') {
+                    const shadeVal = props.colorShade || props.shade;
+                    if (shadeVal && !String(textColor).includes('-')) {
+                        textColor = `${textColor}-${shadeVal}`;
+                    }
+                }
+                bin[13] = ub.getColor(textColor);
+            } else {
+                // Count exactly the same children that will be recursively processed
+                let count = 0;
+                childArr.forEach(child => {
+                    if (child && typeof child === 'object' && child.type) {
+                        count++;
+                    } else if (typeof child === 'string' && child.trim().length > 0) {
+                        count++;
+                    }
+                });
+                bin[13] = count & 0xFF;
+            }
+
+            // Byte 14: Radius (Full 8 bits)
+            bin[14] = (props.borderRadius || props.radius || 0) & 0xFF;
+
+            // Byte 15: Signature / Animation / Gradient Bits
+            // Bit 0: Gradient | Bit 4: Animation ACTIVE (0x10) | Bit 7: Loop
+            const hasAnim = Boolean(props.animation || twProps.animation || mobileTwClass.includes('animate-') || mobileTwClass.includes('framer-'));
+            let sig = hasAnim ? 0x10 : 0;
+
+            if (props.scrollX || props.overflowX === 'scroll' || props.overflowX === 'auto' || mobileTwClass.includes('scroll-x') || mobileTwClass.includes('overflow-x-auto') || mobileTwClass.includes('overflow-x-scroll')) {
+                sig |= 0x02;
+                // Upgrade Container, Row, Column, or Table to Native Horizontal ListView for horizontal scroll support (opcode 0x20)
+                if (bin[1] === 0x12 || bin[1] === 0x13 || bin[1] === 0x14) {
+                    bin[1] = 0x20;
+                }
+            } else if (props.scrollable || props.scroll || props.overflow === 'scroll' || props.overflowY === 'auto' || props.overflowY === 'scroll' || props.scrollY || mobileTwClass.includes('scroll-y') || mobileTwClass.includes('scrollable') || mobileTwClass.includes('overflow-y-auto') || mobileTwClass.includes('overflow-y-scroll')) {
+                sig |= 0x02;
+                // Upgrade Container or Column to Native ListView for scroll support
+                if (bin[1] === 0x12 || bin[1] === 0x13 || bin[1] === 0x14) {
+                    bin[1] = 0x1E;
+                }
+            }
+            if (props.gradient || props.bgGradient || mobileTwClass.includes('gradient') || mobileTwClass.includes('danphe') || mobileTwClass.includes('aurora')) sig |= 0x01;
+            
+            // Bit 2: Explicit Border flag — ignore 'none', '0', '0px'
+            const hasValidBorder = (b, bw, bc, twStr) => {
+                if (String(twStr || '').includes('border') && !String(twStr || '').includes('border-none')) return true;
+                if (b === true || b === 'true') return true;
+                if (b && b !== 'none' && b !== '0' && b !== '0px' && b !== 0) return true;
+                if (bw && bw !== '0' && bw !== '0px' && bw !== 0) return true;
+                if (bc && bc !== 'transparent' && bc !== 'none' && bc !== '0') return true;
+                if (String(props.className || '').includes('border') && !String(props.className || '').includes('border-none')) return true;
+                return false;
+            };
+            if (hasValidBorder(props.border, props.borderWidth, props.borderColor, tw)) sig |= 0x04;
+            if (props.justify === 'between' || String(tw).includes('justify-between') || String(tw).includes('flex-between')) sig |= 0x20;
+            if (props.swipeable || props.swipe || mobileTwClass.includes('swipeable') || props.type === 'Screen' || compType === 'Screen') sig |= 0x40;
+
+            // Bit 3: Dynamic Styling — only activate when bindings are genuinely present
+            const hasBindings = props.bindings && typeof props.bindings === 'object' && Object.keys(props.bindings).length > 0;
+            if (hasBindings) sig |= 0x08;
+
+            bin[15] = sig;
+            bin[23] = sig;
+
+            binaries.push(bin);
+
+            // Byte 16+: String Data (width|height|elevation, then component specific)
+            let w = props.width !== undefined ? props.width : (twProps.width !== undefined ? twProps.width : 0);
+            if (!w && (compType === 'card' || String(tw).includes('card') || String(tw).includes('w-full') || String(tw).includes('w-100') || String(tw).includes('w-screen'))) {
+                w = -1;
+            }
+            if (typeof w === 'string') {
+                if (w.includes('%') || w.includes('vw') || w === 'full') w = -1;
+                else w = parseInt(w.replace(/[^0-9-]/g, '')) || 0;
+            }
+            let h = props.height !== undefined ? props.height : (twProps.height !== undefined ? twProps.height : 0);
+            if (!h && (String(tw).includes('h-full') || String(tw).includes('h-screen') || String(tw).includes('h-100') || String(tw).includes('min-h-screen') || String(tw).includes('min-h-full'))) {
+                h = -1;
+            }
+            if (typeof h === 'string') {
+                if (h.includes('%') || h.includes('vh') || h === 'full') h = -1;
+                else h = parseInt(h.replace(/[^0-9-]/g, '')) || 0;
+            }
+            let rawW = w;
+            let rawH = h;
+            if (typeCode === 0x1A) {
+                if (w > 0 && w < 200) w = -1; // Switch container stays 100% width
+                if (h > 0 && h < 100) h = 0;  // Switch container stays WRAP_CONTENT height
+            }
+            const elevation = props.elevation || (String(tw).includes('shadow-sm') ? 2 : (String(tw).includes('shadow-lg') ? 8 : (String(tw).includes('shadow-xl') ? 12 : (String(tw).includes('shadow-2xl') ? 16 : (String(tw).includes('shadow') ? 4 : 0)))));
+            const size = props.size || 0;
+            
+            // Extract opacity
+            let opacityVal = props.opacity !== undefined ? props.opacity : undefined;
+            if (opacityVal === undefined) {
+                const opMatch = String(tw).match(/opacity-(\d+)/);
+                if (opMatch) {
+                    opacityVal = parseInt(opMatch[1]) / 100;
+                } else {
+                    opacityVal = 1.0;
+                }
+            }
+            
+            // Extract Glass and Glow
+            let glassStyle = props.glass || (String(tw).match(/\bglass(-[a-z0-9-]+)?\b/)?.[0]) || '';
+            let glowStyle = props.glow || (String(tw).match(/\bglow(-[a-z0-9-]+)?\b/)?.[0]) || '';
+            
+            stringPool.push(`${Math.round(w)}|${Math.round(h)}|${Math.round(elevation)}|${Math.round(size)}|${opacityVal}|${glassStyle}|${glowStyle}`);
+
+            // Advanced Feature Strings (Gradient, Animation) pushed after size
+            if (sig & 0x01) {
+                let rawGrad = props.gradient || props.bgGradient || (mobileTwClass.match(/\b(danphe|aurora|gradient-[a-z0-9-]+)\b/i)?.[0]) || '';
+                if (!rawGrad && mobileTwClass.includes('from-') && mobileTwClass.includes('to-')) {
+                    const fromMatch = mobileTwClass.match(/\bfrom-([a-z]+)(?:-([0-9]+))?\b/);
+                    const toMatch = mobileTwClass.match(/\bto-([a-z]+)(?:-([0-9]+))?\b/);
+                    const dirMatch = mobileTwClass.match(/\bbg-gradient-to-([a-z]+)\b/);
+                    if (fromMatch && toMatch) {
+                        const fromCol = fromMatch[1];
+                        const fromShade = fromMatch[2] ? Math.round((parseInt(fromMatch[2]) / 1000) * 255) : 128;
+                        const toCol = toMatch[1];
+                        const toShade = toMatch[2] ? Math.round((parseInt(toMatch[2]) / 1000) * 255) : 128;
+                        const dir = dirMatch ? dirMatch[1] : 'r';
+                        const dirPrefix = dir === 'r' ? 'horiz-' : (dir === 'b' ? 'vert-' : (dir === 'tr' ? '45deg-' : ''));
+                        rawGrad = `gradient-${dirPrefix}${fromCol}-${fromShade}-${toCol}-${toShade}`;
+                    }
+                }
+                stringPool.push(ub.normalizeGradient(rawGrad));
+            }
+
+            if (sig & 0x04) {
+                let bWidth = "1px", bStyle = "solid", bColor = "";
+                if (props.border && typeof props.border === 'string' && props.border !== 'none') {
+                    const parts = props.border.split(' ');
+                    if (parts[0]) bWidth = parts[0];
+                    if (parts[1]) bStyle = parts[1];
+                    if (parts[2]) bColor = parts.slice(2).join(' ');
+                }
+                if (props.borderColor) bColor = props.borderColor;
+                if (props.borderWidth) bWidth = props.borderWidth;
+                if (props.borderStyle) bStyle = props.borderStyle;
+
+                // Extract Tailwind border color from class name
+                const clsStr = String(props.className || tw || '');
+                if (!bColor) {
+                    const bcMatch = clsStr.match(/\bborder-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(\d+)(\/\d+)?\b/);
+                    if (bcMatch) {
+                        bColor = bcMatch[0].replace('border-', '').split('/')[0];
+                    } else if (clsStr.includes('border-white')) {
+                        bColor = '#ffffff';
+                    } else if (clsStr.includes('border-black')) {
+                        bColor = '#000000';
+                    } else if (clsStr.includes('border-transparent')) {
+                        bColor = 'transparent';
+                    }
+                }
+
+                // If border position is specified (border-t, border-b, border-l, border-r)
+                if (clsStr.includes('border-t')) bStyle = 'top';
+                else if (clsStr.includes('border-b')) bStyle = 'bottom';
+                else if (clsStr.includes('border-l')) bStyle = 'left';
+                else if (clsStr.includes('border-r')) bStyle = 'right';
+
+                let hexColor = bColor;
+                if (bColor && !bColor.startsWith('#') && !bColor.startsWith('rgb')) {
+                    const resolved = ub && ub.resolveColorToHex ? ub.resolveColorToHex(bColor) : null;
+                    if (resolved && typeof resolved === 'string' && resolved.startsWith('#')) {
+                        hexColor = resolved;
+                    } else {
+                        const darkTailwindMap = {
+                            'slate-950': '#020617', 'slate-900': '#0f172a', 'slate-800': '#1e293b', 'slate-700': '#334155', 'slate-600': '#475569',
+                            'gray-950': '#030712', 'gray-900': '#111827', 'gray-800': '#1f2937', 'gray-700': '#374151',
+                            'zinc-950': '#09090b', 'zinc-900': '#18181b', 'zinc-800': '#27272a', 'zinc-700': '#3f3f46',
+                            'cyan-500': '#06b6d4', 'cyan-400': '#22d3ee', 'cyan-800': '#155e75',
+                            'emerald-800': '#065f46', 'emerald-600': '#059669', 'emerald-500': '#10b981',
+                            'amber-800': '#92400e', 'amber-600': '#d97706', 'rose-800': '#9f1239', 'rose-600': '#e11d48'
+                        };
+                        hexColor = darkTailwindMap[bColor] || '#1e293b';
+                    }
+                }
+
+                if (!hexColor) {
+                    const isDarkContainer = clsStr.includes('slate-9') || clsStr.includes('slate-8') || clsStr.includes('bg-black') || clsStr.includes('bg-dark');
+                    hexColor = isDarkContainer ? '#1e293b' : '#cbd5e1';
+                }
+
+                stringPool.push(`${bWidth}|${bStyle}|${hexColor}`);
+            }
+
+            if (sig & 0x08) {
+                if (props.bindings && typeof props.bindings === 'object') {
+                    const descriptor = Object.entries(props.bindings)
+                        .map(([prop, key]) => {
+                            const finalProp = prop === 'text' ? 'textColor' : prop;
+                            return `${finalProp}:${key}`;
+                        })
+                        .join('|');
+                    stringPool.push(descriptor);
+                } else {
+                    stringPool.push('');
+                }
+            }
+
+            if (sig & 0x10) {
+                let animStr = props.animation || twProps.animation || (mobileTwClass.match(/(animate|framer)-[a-z0-9-]+/)?.[0]) || '';
+                if (typeof animStr === 'object' && animStr !== null) {
+                    animStr = animStr.name || animStr.type || animStr.anim || '';
+                }
+                stringPool.push(String(animStr || ''));
+            }
+
+            const normalizeAction = (act) => {
+                if (!act) return '';
+                if (typeof act === 'string') return act;
+                if (typeof act === 'object') {
+                    const parts = [];
+                    if (act.nav) parts.push(`nav:${act.nav}`);
+                    if (act.drawer) parts.push(`drawer:${act.drawer}`);
+                    if (act.bottom_drawer) parts.push(`bottom_drawer:${act.bottom_drawer}`);
+                    if (act.bus) parts.push(`bus:${act.bus}`);
+                    if (act.key) parts.push(`bus:key:${act.key}`);
+                    if (act.form) parts.push(`form:${act.form}`);
+                    if (act.toggle) parts.push(`state:toggle:${act.toggle}`);
+                    if (act.theme) parts.push(`theme:${act.theme}`);
+                    if (parts.length > 0) return parts.join(';');
+                    
+                    const keys = Object.keys(act);
+                    if (keys.length === 1) {
+                        const k = keys[0];
+                        const v = act[k];
+                        return `form:set:${k}:${v}`;
+                    }
+                    return JSON.stringify(act);
+                }
+                return String(act);
+            };
+
+            if (props.bus) {
+                if (typeof props.bus === 'string') {
+                    props.action = props.bus.startsWith('bus:') ? props.bus : `bus:${props.bus}`;
+                } else if (typeof props.bus === 'object' && props.bus !== null) {
+                    if (props.bus.key) props.action = `bus:key:${props.bus.key}`;
+                    else if (props.bus.dial) props.action = `bus:dial`;
+                    else if (props.bus.backspace) props.action = `bus:backspace`;
+                    else {
+                        const keys = Object.keys(props.bus);
+                        if (keys.length === 1) props.action = `bus:${keys[0]}:${props.bus[keys[0]]}`;
+                        else props.action = `bus:${JSON.stringify(props.bus)}`;
+                    }
+                }
+            }
+
+            if (props.action) props.action = normalizeAction(props.action);
+            if (props.onClick && typeof props.onClick === 'object') props.action = normalizeAction(props.onClick);
+            if (props.onPress && typeof props.onPress === 'object') props.action = normalizeAction(props.onPress);
+            switch (typeCode) {
+                case 0x28: // Native Dynamic Drawer: action, backgroundColor
+                    stringPool.push(props.action || '');
+                    stringPool.push(props.backgroundColor || props.bg || '#0f172a');
+                    break;
+                case 0x1D: // AppBar: action, title
+                    stringPool.push(props.action || '');
+                    let appTitle = props.title || props.text || '';
+                    stringPool.push(appTitle || flattenText(childArr).trim());
+                    break;
+                // ══════════════════════════════════════════════════════════
+                // DSP 0xD0 — Dolphin State Protocol (World-Class State Bind)
+                // JSX:  <state key="my_ext" />
+                //       <state template="Ext {0} • {1}" keys="my_ext,my_name" />
+                // Binary String Pool:
+                //   Entry 0 = key OR template pattern
+                //   Entry 1 = fallback/initial  OR comma-separated keys (template mode)
+                // Byte[15] flags:
+                //   bit0 = 0:simple  1:template
+                //   bit1 = two_way (input binding)
+                // ══════════════════════════════════════════════════════════
+                case 0xD0: {
+                    const isTemplate = !!(props.template || props.keys);
+                    if (isTemplate) {
+                        // Template mode: "Ext {0} • {1}" + "my_ext,my_name"
+                        bin[15] |= 0x01; // set template bit
+                        stringPool.push(props.template || '');
+                        stringPool.push(props.keys || '');
+                    } else {
+                        // Simple key mode: key + fallback
+                        const stKey  = props.stateKey || props.key || props['data-key'] || '';
+                        const stFall = props.fallback !== undefined ? String(props.fallback)
+                                     : props.initial  !== undefined ? String(props.initial)
+                                     : (flattenText(childArr).trim() || '');
+                        stringPool.push(stKey);
+                        stringPool.push(stFall);
+                    }
+                    break;
+                }
+
+                case 0x16: // Text: content (or stateKey binding)
+                    if (props.stateKey) {
+                        // Explicit stateKey prop — use initial prop, or children text, or ''
+                        let initVal = props.initial !== undefined ? props.initial : '';
+                        if (initVal === '' || initVal === 0) {
+                            // Try children text as fallback
+                            const childTxt = flattenText(childArr).trim();
+                            if (childTxt && !childTxt.includes('[stateKey:')) {
+                                initVal = childTxt;
+                            }
+                        }
+                        stringPool.push(`stateKey:${props.stateKey}|${initVal}`);
+                    } else {
+                        let txt = props.text || props.content || '';
+                        if (!txt) txt = flattenText(childArr).trim();
+
+                        // Detect [stateKey:key] inside text and pass directly for native TextBuilder regex binding
+                        if (txt && typeof txt === 'string' && (txt.includes('[stateKey:') || txt.includes('[bus:'))) {
+                            stringPool.push(txt);
+                        } else {
+                            const finalTxt = String(txt || '');
+                            // Safety: Ensure text content never looks like a meta string accidentally (e.g. 0|0|0|0)
+                            // This prevents the runtime from misinterpreting text as layout metadata.
+                            if (finalTxt.match(/^\d+\|\d+\|\d+\|\d+$/)) {
+                                stringPool.push(" " + finalTxt);
+                            } else {
+                                stringPool.push(finalTxt);
+                            }
+                        }
+                    }
+                    break;
+
+                case 0x10: // Button: action, text, icon
+                    let btnAction = props.action || '';
+                    if (!btnAction) {
+                        const clickProp = props.onClick || props.onclick || props.onPress || props.onpress || props.onLongPress;
+                        if (typeof clickProp === 'function') {
+                            // Lambda function detected - store for later registration
+                        } else if (typeof clickProp === 'string') {
+                            btnAction = clickProp;
+                        }
+                    }
+                    stringPool.push(btnAction);
+                    stringPool.push(props.text || flattenText(childArr).trim() || '');
+                    const rawIconMatch = (String(props.className || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/gi) || []).find(m => !['fa-solid', 'fa-regular', 'fa-brands', 'fa-light', 'fa-duotone', 'fa-fw'].includes(m.toLowerCase()));
+                    const btnIcon = props.icon || props.iconName || props.iconLeft || props.iconRight || twProps.icon || twProps.iconLeft || rawIconMatch || '';
+                    stringPool.push(btnIcon);
+                    break;
+                case 0x12: // Container: action
+                case 0x13: // Column: action
+                case 0x14: // Row: action
+                case 0x11: // Card: action
+                case 0x15: // Stack: action
+                case 0x20: // Modal: action
+                case 0x21: // Form: action
+                case 0x22: // GridView: action
+                case 0x1E: // ListView: action
+                    let containerAction = props.action || '';
+                    if (!containerAction) {
+                        const handler = props.onClick || props.onclick || props.onPress || props.onpress || props.onLongPress || props.onSubmit;
+                        if (typeof handler === 'function') {
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            this.pendingLambdas.set(actionId, handler);
+                            containerAction = actionId;
+                        } else if (typeof handler === 'string') {
+                            containerAction = handler;
+                        }
+                    }
+                    stringPool.push(containerAction);
+                    break;
+                case 0x50: // CameraView: cameraId, action
+                    stringPool.push(props.cameraId || props.facing || 'back');
+                    stringPool.push(props.action || '');
+                    break;
+                  case 0x51: // Mp3Player: action, src
+                  case 0x52: // VideoPlayer: action, src
+                  case 0x61: // ThorVG: action, svg
+                      stringPool.push(props.action || '');
+                      stringPool.push(props.svg || props.src || props.url || props.source || '');
+                      break;
+                case 0x60: // WebView: src URL
+                case 0x62: // MatrixCanvas: base snapshot URL (grid mode)
+                    stringPool.push(props.src || props.url || props.source || normAttributes.src || normAttributes.url || explicitProps.src || explicitProps.url || '');
+                    break;
+                case 0x1A: // Switch: action/stateKey, label, trackSize, trackColor
+                    {
+                        const swHandler = props.onChange || props.onchange || props.onToggle || props.ontoggle || props.onClick;
+                        let swAction = props.stateKey || props.action || '';
+                        if (!swAction && typeof swHandler === 'function') {
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            this.pendingLambdas.set(actionId, swHandler);
+                            swAction = actionId;
+                        }
+                        stringPool.push(swAction);
+                        stringPool.push(props.label || '');
+                        const twW = (rawW > 0 ? rawW : (props.trackWidth || props.trackW || props.width || 0));
+                        const twH = (rawH > 0 ? rawH : (props.trackHeight || props.trackH || props.height || 0));
+                        stringPool.push(`${twW}|${twH}`);
+                        stringPool.push(props.trackColor || props.activeColor || props.onColor || props.bg || twProps.bg || props.backgroundColor || '');
+                    }
+                    break;
+                case 0x19: // Slider: action/stateKey, label
+                case 0x1B: // Checkbox: action/stateKey, label
+                case 0x1F: // Radio: action/stateKey, label
+                    {
+                        const inputHandler = props.onChange || props.onchange || props.onInput || props.onCheck || props.onSlide || props.onClick;
+                        let inputAction = props.stateKey || props.action || '';
+                        if (!inputAction && typeof inputHandler === 'function') {
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            this.pendingLambdas.set(actionId, inputHandler);
+                            inputAction = actionId;
+                        }
+                        stringPool.push(inputAction);
+                        let radioLabel = props.label || '';
+                        if (!radioLabel && props.value) {
+                            radioLabel = props.value + "__HIDETEXT__";
+                        }
+                        stringPool.push(radioLabel);
+                    }
+                    break;
+
+                case 0x40: // File Upload: action, label
+                    {
+                        const fileHandler = props.onChange || props.onchange || props.onClick;
+                        let fileAction = props.action || '';
+                        if (!fileAction && typeof fileHandler === 'function') {
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            this.pendingLambdas.set(actionId, fileHandler);
+                            fileAction = actionId;
+                        }
+                        stringPool.push(fileAction);
+                        stringPool.push(props.label || '');
+                    }
+                    break;
+                case 0x1C: // Select: action/stateKey, label, options, initialValue
+                    {
+                        const selectHandler = props.onChange || props.onchange || props.onSelect || props.onClick;
+                        let selectAction = props.stateKey || props.action || '';
+                        if (!selectAction && typeof selectHandler === 'function') {
+                            const actionId = `lambda_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                            this.pendingLambdas.set(actionId, selectHandler);
+                            selectAction = actionId;
+                        }
+                        stringPool.push(selectAction);
+                        stringPool.push(props.label || '');
+                        stringPool.push(Array.isArray(props.options) ? props.options.join(',') : (props.options || ''));
+                        stringPool.push(props.value || '');
+                    }
+                    break;
+                case 0x30: // Camera
+                case 0x31: // Microphone
+                case 0x32: // Location
+                case 0x33: // Bluetooth
+                case 0x34: // Haptics
+                case 0x35: // Battery
+                case 0x36: // Sensors
+                case 0x37: // WebRTCVideo
+                case 0x38: // WebRTCAudio
+                    stringPool.push(props.stateKey || props.action || '');
+                    stringPool.push(props.config || '');
+                    break;
+
+                case 0x17: // Image: src
+                    const imgSrc = typeof props.src === 'object' ? (props.src.uri || props.src.default || '') : (typeof props.source === 'object' ? (props.source.uri || props.source.default || '') : (props.src || props.source || props.url || ''));
+                    stringPool.push(String(imgSrc || ''));
+                    break;
+                case 0x23: // Icon: iconName
+                    const rawIconMatch2 = (String(props.className || explicitProps.className || (comp.props && comp.props.className) || comp.className || tw || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/gi) || []).find(m => !['fa-solid', 'fa-regular', 'fa-brands', 'fa-light', 'fa-duotone', 'fa-fw'].includes(m.toLowerCase()));
+                    const iconVal = props.icon || props.name || props.iconName || props.iconLeft || twProps.icon || twProps.iconLeft || rawIconMatch2 || '';
+                    stringPool.push(iconVal);
+                    break;
+                case 0x18: // TextField: stateKey, label, hint, type, variant, icon
+                    stringPool.push(props.stateKey || props.statekey || props.name || props.id || props.action || '');
+                    stringPool.push(props.label || '');
+                    stringPool.push(props.placeholder || props.hint || '');
+                    const isTextareaTag = compType === 'textarea' || (comp && comp.tag && String(comp.tag).toLowerCase() === 'textarea');
+                    stringPool.push(props.type || props.inputType || (isTextareaTag ? 'textarea' : 'text'));
+                    let defaultVariant = 'plain';
+                    const classStr = String(props.className || tw || '');
+                    if (props.variant === 'outlined' || /\boutlined\b/.test(classStr)) {
+                        defaultVariant = 'outlined';
+                    } else if (props.variant === 'filled' || /\bfilled\b/.test(classStr)) {
+                        defaultVariant = 'filled';
+                    } else if (props.variant === 'standard' || /\bstandard\b/.test(classStr)) {
+                        defaultVariant = 'standard';
+                    } else if (props.label) {
+                        defaultVariant = 'outlined';
+                    } else if (props.variant) {
+                        defaultVariant = props.variant;
+                    }
+                    stringPool.push(defaultVariant);
+                    const rightIcon = props.rightIcon || props.endIcon || props.suffixIcon || (String(props.className || tw || '').match(/\b(?:icon-right|suffix-icon|end-icon)-([a-z0-9-]+)\b/i) || [])[1] || '';
+                    const leftIcon = props.leftIcon || props.prefixIcon || props.icon || props.iconName || twProps.icon || (String(props.className || tw || '').match(/\b(fa-[a-z0-9-]+|bi-[a-z0-9-]+|ri-[a-z0-9-]+|icon-[a-z0-9-]+)\b/i) || [])[1] || '';
+                    const inputIcon = rightIcon ? `${leftIcon}|${rightIcon}` : (leftIcon || '');
+                    stringPool.push(inputIcon);
+                    break;
+
+                case 0x61: // ThorVG / NativeCanvas / Vector: action, svg
+                    stringPool.push(props.action || '');
+                    stringPool.push(props.svg || props.src || props.d || props.path || (typeof childArr[0] === 'string' ? childArr[0] : '') || '');
+                    break;
+
+                default:
+                    // Generic Metadata Payload for Custom Native Plugins
+                    if (typeCode >= 0x60 && typeCode <= 0x7F) {
+                        stringPool.push(props.meta || props.config || '');
+                    }
+                    break;
+            }
+
+            // ─── RECURSIVE PROCESSING (Containers Only) ───
+            // Use the same childArr built above to guarantee count == recursion iterations.
+            // Leaf nodes (Text, Button, Image, etc.) should NOT have their children processed
+            // as separate Titan 16-byte blocks. This maintains strict binary alignment.
+            const CONTAINER_TYPES = new Set([
+                'Screen', 'screen', 'div', 'Column', 'Row', 'Card', 'Container', 'ListView', 'GridView', 'Modal', 'Form', 'Stack',
+                'div', 'ul', 'li', 'ol', 'form', 'a', 'section', 'header', 'footer', 'main',
+                'table', 'tbody', 'thead', 'tfoot', 'tr', 'th', 'td',
+                'column', 'row', 'card', 'container', 'listview', 'gridview', 'modal', 'form', 'stack'
+            ]);
+            if ((CONTAINER_TYPES.has(props.type) || CONTAINER_TYPES.has(compType)) && !isTextType) {
+                const activeInheritedColor = inheritedTextColor || inheritedColor;
+                childArr.forEach(child => {
+                    if (child && typeof child === 'object' && child.type) {
+                        process(child, activeInheritedColor);
+                    } else if (typeof child === 'string' && child.trim().length > 0) {
+                        // Auto-wrap raw strings in Text component
+                        // Inherit text color from parent container's className (e.g. text-red-100)
+                        const textProps = { text: child };
+                        if (activeInheritedColor) {
+                            // Parse color name from class like "text-red-100" → color: "red-100"
+                            textProps.color = activeInheritedColor.replace('text-', '');
+                        }
+                        process({ type: 'Text', props: textProps });
+                    }
+                });
+            }
+        };
+
+        process(schema);
+
+        return {
+            binaries,
+            stringData: Buffer.from(stringPool.length > 0 ? stringPool.join('\0') + '\0' : '', 'utf8')
+        };
+    }
+
+    /**
+     * Import an array of Titan Nodes (from BinCSS/StreamProcessor)
+     */
+    importTitanNodes(nodes, options = {}) {
+        const binaries = [];
+        const stringPool = [];
+
+        nodes.forEach(node => {
+            const bin = Buffer.alloc(24);
+
+            // Byte 1: Type
+            const typeCode = this.getComponentCode(node.type || node.tagName);
+            bin[1] = typeCode;
+
+            // Byte 0: Gravity/Flex (BinCSS nodes usually have absolute x/y, but we map them)
+            bin[0] = 0x01; // Default gravity
+
+            // Style mapping from BinCSS node.styles
+            const styles = node.styles || {};
+
+            // Byte 2 & 3: Color/Shade from backgroundColor
+            const bgColor = styles.backgroundColor || 'transparent';
+            bin[2] = ub.getShade(bgColor);
+            bin[3] = ub.getColor(bgColor);
+
+            // Bytes 4-11: Spacing
+            const p = ub.parseSpacing(styles.padding);
+            const m = ub.parseSpacing(styles.margin);
+            bin[4] = p.t; bin[5] = p.r; bin[6] = p.b; bin[7] = p.l;
+            bin[8] = m.t; bin[9] = m.r; bin[10] = m.b; bin[11] = m.l;
+
+            // Byte 13: Text Color / Child Count
+            if (node.isText || node.isButton) {
+                const textColorVal = styles.color || props.color || props.textColor;
+                if (textColorVal) {
+                    bin[13] = ub.getColor(textColorVal);
+                    bin[12] = ub.getShade(textColorVal);
+                } else {
+                    bin[13] = 0; // 0 = Unset/Auto-contrast
+                }
+            } else {
+                bin[13] = (node.children ? node.children.length : 0) & 0xFF;
+            }
+
+            // Byte 14: Radius
+            bin[14] = parseInt(styles.borderRadius) || 0;
+
+            // Byte 15: Signature
+            let sig = 0x00;
+            if (styles.border || styles.borderColor || styles.borderWidth) sig |= 0x04;
+            bin[15] = sig;
+            bin[23] = sig;
+
+            binaries.push(bin);
+
+            // String Data Alignment
+            const w = node.w || 0;
+            const h = node.h || 0;
+            const x = node.x || 0;
+            const y = node.y || 0;
+
+            // We use the string pool to store coordinates and sizes for absolute positioning
+            stringPool.push(`${x}|${y}|${w}|${h}`);
+
+            if (sig & 0x04) {
+                let bWidth = "1px", bStyle = "solid", bColor = "#cccccc";
+                if (styles.border && typeof styles.border === 'string' && styles.border !== 'none') {
+                    const parts = styles.border.split(' ');
+                    if (parts[0]) bWidth = parts[0];
+                    if (parts[1]) bStyle = parts[1];
+                    if (parts[2]) bColor = parts.slice(2).join(' ');
+                }
+                if (styles.borderColor) bColor = styles.borderColor;
+                if (styles.borderWidth) bWidth = styles.borderWidth;
+                if (styles.borderStyle) bStyle = styles.borderStyle;
+                stringPool.push(`${bWidth}|${bStyle}|${bColor}`);
+            }
+
+            // Component specific strings
+            if (node.isText || node.isButton) {
+                stringPool.push(node.text || '');
+            } else if (node.isImage) {
+                stringPool.push(node.src || '');
+            } else {
+                stringPool.push(''); // Placeholder
+            }
+        });
+
+        return {
+            binaries,
+            stringData: Buffer.from(stringPool.length > 0 ? stringPool.join('\0') + '\0' : '', 'utf8')
+        };
+    }
+
+    getComponentCode(type) {
+        if (!type) return 0x12; // Default to Container
+
+        let typeStr = type;
+        if (typeof type === 'function') {
+            typeStr = type.name || '';
+        }
+
+        const cleanType = String(typeStr).toLowerCase();
+        if (cleanType === 'card' || cleanType === 'cardview' || cleanType === 'card-view') return 0x11;
+
+        const map = {
+            // DSP: Dolphin State Protocol
+            'State': 0xD0,
+            'state': 0xD0,
+            'statetext': 0xD0,
+            'state-text': 0xD0,
+            'StateText': 0xD0,
+
+            // Native/Flutter Style
+            'Button': 0x10,
+            'Card': 0x11,
+            'Container': 0x12,
+            'Column': 0x13,
+            'Row': 0x14,
+            'View': 0x12, // Alias for Container
+            'Stack': 0x15,
+            'Text': 0x16,
+            'Image': 0x17,
+            'Icon': 0x23,
+            'icon': 0x23,
+            'input': 0x18,
+            'textarea': 0x18,
+            'TextField': 0x18,
+            'Slider': 0x19,
+            'CameraView': 0x50,
+            'cameraview': 0x50,
+            'camera': 0x50,
+            'video': 0x52,
+            'videoplayer': 0x52,
+            'VideoPlayer': 0x52,
+            'Mp3Player': 0x51,
+            'mp3player': 0x51,
+            'AudioPlayer': 0x51,
+            'audioplayer': 0x51,
+            'WebView': 0x60,
+            'webview': 0x60,
+            'web': 0x60,
+            'NativeCanvas': 0x61,
+            'nativecanvas': 0x61,
+            'ThorVG': 0x61,
+            'thorvg': 0x61,
+            'ThorVGView': 0x61,
+            'thorvgview': 0x61,
+            'Gauge': 0x61,
+            'gauge': 0x61,
+            'VectorCanvas': 0x61,
+            'vectorcanvas': 0x61,
+            'svg': 0x61,
+            'MatrixCanvas': 0x62,
+            'matrixcanvas': 0x62,
+            'Switch': 0x1A,
+            'Checkbox': 0x1B,
+            'Select': 0x1C,
+            'AppBar': 0x1D,
+            'ListView': 0x1E,
+            'ViewPager': 0x24,
+            'Pager': 0x24,
+            'GridView': 0x22, // Move GridView to 0x22 to avoid conflict with Radio
+            'Radio': 0x1F,
+            'RadioButton': 0x1F,
+            'Modal': 0x20,
+            'Form': 0x21,
+
+            // HTML Style
+            'div': 0x12,
+            'i': 0x23,
+            'header': 0x1D, // Map HTML header to AppBar
+            'span': 0x16, // Treat span as Text
+            'p': 0x16, // Treat p as Text
+            'h1': 0x16, 'h2': 0x16, 'h3': 0x16, 'h4': 0x16, 'h5': 0x16, 'h6': 0x16,
+            'ul': 0x13, // Treat ul as Column
+            'li': 0x14, // Treat li as Row
+            'ol': 0x13,
+            'table': 0x13, // Treat table as Column (vertical stack of rows)
+            'tbody': 0x13,
+            'thead': 0x13,
+            'tfoot': 0x13,
+            'tr': 0x14, // Treat tr as Row (horizontal stack of cells)
+            'th': 0x13, // Treat th as Cell Column
+            'td': 0x13, // Treat td as Cell Column
+            'a': 0x12,
+            'img': 0x17,
+            'button': 0x10,
+
+            'input': 0x18,
+
+            // IoT / Hardware
+            'FileUpload': 0x40,
+            'Camera': 0x30,
+            'Microphone': 0x31,
+            'Location': 0x32,
+            'Bluetooth': 0x33,
+            'Haptics': 0x34,
+            'Battery': 0x35,
+            'Sensors': 0x36,
+            'WebRTCVideo': 0x37,
+            'WebRTCAudio': 0x38
+        };
+        // Handle case-insensitive matching for HTML tags
+        const normalized = (typeof typeStr === 'string') ? typeStr.toLowerCase() : '';
+        const foundKey = Object.keys(map).find(k => k.toLowerCase() === normalized);
+        if (foundKey) return map[foundKey];
+
+        // Support custom opcodes directly from JSX (e.g. type="0x7F")
+        if (typeof typeStr === 'string' && typeStr.startsWith('0x')) { require('fs').appendFileSync('opcode_debug.log', 'HIT OPCODE: ' + typeStr + '\n');
+            return parseInt(typeStr, 16);
+        }
+
+        return map[typeStr] || 0x12;
+    }
+
+    _convertSingleComponent(schema, platform = 'UNIVERSAL') {
+        const result = this.importSchema(schema);
+        return result.binaries[0] || Buffer.alloc(24);
+    }
+}
+
+module.exports = UniversalUIImporter;
