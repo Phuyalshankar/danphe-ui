@@ -50,3 +50,4 @@ module.exports = {
     TITAN_ICON,
     TITAN_ANIM
 };
+export * from './TitanTimelineRuler';
