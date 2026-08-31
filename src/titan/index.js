@@ -13,10 +13,18 @@ const UniversalUIImporter = require('./ui/UniversalUIImporter');
 // Bridge
 const DolphinTitanBridge = require('./bridge/DolphinTitanBridge');
 
+// Event Engine & Hardware Bus
+const TitanEventEngine = require('./TitanEventEngine');
+
 /**
  * Titan Render Engine - Complete System
  */
 const Titan = {
+    // Event Engine & Hardware Bus
+    TitanEventEngine,
+    TitanMicroBus: TitanEventEngine.Bus,
+    TITAN_REG: TitanEventEngine.REG,
+
     // Core Engine
     TitanMainEngine,
     TitanOrchestrator,

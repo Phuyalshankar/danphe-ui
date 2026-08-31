@@ -1,0 +1,17 @@
+<div class="studio-toolbar-rack">
+    <button type="button" class="tool-btn active" onclick="setDrawTool('select')" title="Selection Tool (V)">
+        <svg viewBox="0 0 24 24"><use href="#icon-tool-v"/></svg>
+    </button>
+    <button type="button" class="tool-btn" onclick="splitSelectedTimelineClip()" title="Razor Blade / Split at Playhead (C)">
+        <span style="font-size:13px;">✂️</span>
+    </button>
+    <button type="button" class="tool-btn" onclick="addNewTimelineTextClip()" title="Add Text Clip at Playhead (T)">
+        <span style="font-size:13px;">✍️</span>
+    </button>
+    <button type="button" class="tool-btn" onclick="setDrawTool('hand')" title="Hand Tool (H)">
+        <svg viewBox="0 0 24 24"><use href="#icon-tool-h"/></svg>
+    </button>
+    <button type="button" class="tool-btn" onclick="adjustTimelineZoom(window.timelineZoomLevel + 25)" title="Zoom In (+)">
+        <svg viewBox="0 0 24 24"><use href="#icon-tool-z"/></svg>
+    </button>
+</div>

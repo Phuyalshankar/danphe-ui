@@ -1,0 +1,51 @@
+<div class="studio-modal-backdrop" id="export-modal-backdrop" onclick="closeExportModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div class="modal-title-box">
+                <span class="modal-badge">🦚 MASTER EXPORT CORE</span>
+                <h3>MASTER SEQUENCE EXPORT</h3>
+            </div>
+            <button type="button" class="btn-close-modal" onclick="closeExportModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-2col-row">
+                <div class="modal-col">
+                    <label class="modal-field-lbl">File Name</label>
+                    <input type="text" class="modal-input" id="export-filename" value="Danphe_Master_Sequence.mp4">
+                </div>
+                <div class="modal-col">
+                    <label class="modal-field-lbl">Resolution</label>
+                    <select class="modal-select" id="export-resolution">
+                        <option value="1080x1920" selected>1080 x 1920 (9:16 Vertical)</option>
+                        <option value="1920x1080">1920 x 1080 (16:9 Landscape)</option>
+                        <option value="1080x1080">1080 x 1080 (1:1 Square)</option>
+                        <option value="3840x2160">3840 x 2160 (4K Cinema)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="export-stats-strip" style="margin-top:14px;">
+                <div class="stat-cell"><span>DURATION:</span> <strong id="export-stat-duration">--</strong></div>
+                <div class="stat-cell"><span>CLIPS:</span> <strong id="export-stat-clips">0</strong></div>
+                <div class="stat-cell"><span>RATIO:</span> <strong id="export-stat-ratio" style="color:#38bdf8;">9:16</strong></div>
+                <div class="stat-cell"><span>ENGINE:</span> <strong style="color:#10b981;">🐬 GPU</strong></div>
+            </div>
+
+            <div class="export-progress-cluster" id="export-progress-cluster" style="display:none; margin-top:14px;">
+                <div class="progress-info-row">
+                    <span id="export-progress-task">Encoding...</span>
+                    <span id="export-progress-pct">0%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="export-progressbar-fill" style="width:0%;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="closeExportModal()">Cancel</button>
+            <button type="button" class="btn-primary" id="start-export-btn" onclick="executeStudioExport()">
+                <span>⚡ START RENDER &amp; DOWNLOAD</span>
+            </button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,220 @@
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- 6. VIRTUAL SMARTPHONE MEDIA HUB (TikTok/Shorts Ripper & Post)     -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="smartphone-slide-drawer" id="smartphone-device">
+    <!-- Floating Pull Tab Handle -->
+    <div class="phone-pull-tab" onclick="toggleSmartphoneDrawer()" title="Slide Open/Close Virtual Phone Browser">
+        <span class="phone-tab-icon">📱</span>
+        <span class="phone-tab-txt">PHONE</span>
+    </div>
+
+    <!-- Phone Chassis -->
+    <div class="phone-chassis">
+        <!-- Top Status Bar + Dynamic Island + Zoom Controls -->
+        <div class="phone-top-bar">
+            <span>10:50</span>
+            <div class="dynamic-island">
+                <div class="island-cam"></div>
+                <div class="island-sensor"></div>
+            </div>
+            <div class="phone-zoom-row">
+                <button class="zoom-btn" onclick="setPhoneScale(0.82, this)">80%</button>
+                <button class="zoom-btn active" onclick="setPhoneScale(0.92, this)">90%</button>
+                <button class="zoom-btn" onclick="setPhoneScale(1.0, this)">100%</button>
+            </div>
+        </div>
+
+        <!-- Phone Mode Switcher Bar -->
+        <div class="phone-mode-bar">
+            <button class="pmode-btn active" id="pmode-browser" onclick="switchPhoneMode('browser')">🌐 Web Browser</button>
+            <button class="pmode-btn" id="pmode-downloader" onclick="switchPhoneMode('downloader')">📥 Ripper / Download</button>
+            <button class="pmode-btn" id="pmode-uploader" onclick="switchPhoneMode('uploader')">📤 Direct Post</button>
+        </div>
+
+        <!-- ─── SECTION 1: 📱 100% FIT VIDEO FEED & MOBILE BROWSER ─── -->
+        <div class="phone-section active" id="psec-browser">
+            <div class="phone-browser-nav">
+                <button onclick="switchFeedTab('feed')" style="background:none;border:none;color:#38bdf8;font-weight:bold;font-size:10px;cursor:pointer;">🔥 REELS</button>
+                <div class="browser-url-box">
+                    <span>🔒</span>
+                    <input type="text" class="browser-url-input" id="phone-url-bar" value="https://tiktok.com/@trending" onkeydown="handlePhoneUrlKey(event)">
+                </div>
+                <button onclick="switchFeedTab('web')" style="background:none;border:none;color:#94a3b8;font-size:10px;cursor:pointer;">🌐 WEB</button>
+            </div>
+
+            <!-- 1. Vertical Snap Video Feed (Rigid 100% Height per Video) -->
+            <div class="phone-screen-feed" id="phone-feed-container">
+                <!-- Floating Jump Controls -->
+                <div class="reel-nav-float">
+                    <button class="reel-nav-btn" onclick="jumpReel(-1)" title="Previous Video">▲</button>
+                    <button class="reel-nav-btn" onclick="jumpReel(1)" title="Next Video">▼</button>
+                </div>
+                
+                <!-- Video 1 -->
+                <div class="phone-video-post" data-title="Cyberpunk Tokyo 60FPS">
+                    <div class="video-backdrop" style="background:linear-gradient(180deg, #0284c7 0%, #031533 100%);"></div>
+                    <div class="post-top-meta">
+                        <span class="post-badge">🎵 TikTok · @cyber_creator</span>
+                        <span class="post-badge" style="background:#0284c7;">🔥 1.2M</span>
+                    </div>
+                    <div class="post-bottom-actions">
+                        <div class="post-caption">Cyberpunk Tokyo Rain (4K 60FPS) #viral #reels</div>
+                        <button class="rip-to-timeline-btn" onclick="capturePhoneVideoToTimeline('Cyberpunk Tokyo Rain 9:16', 'TikTok_01.mp4', '#38bdf8')">
+                            ⚡ RIP & USE IN TIMELINE V1
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Video 2 -->
+                <div class="phone-video-post" data-title="Himalayan Drone Sunrise">
+                    <div class="video-backdrop" style="background:linear-gradient(180deg, #059669 0%, #021f15 100%);"></div>
+                    <div class="post-top-meta">
+                        <span class="post-badge">▶️ Shorts · @drone_master</span>
+                        <span class="post-badge" style="background:#059669;">4K RAW</span>
+                    </div>
+                    <div class="post-bottom-actions">
+                        <div class="post-caption">Himalayan Peak Sunrise Drone Shot (60FPS HDR)</div>
+                        <button class="rip-to-timeline-btn" style="background:linear-gradient(135deg, #059669 0%, #10b981 100%); border-color:#34d399;" onclick="capturePhoneVideoToTimeline('Himalayan Sunrise Drone 9:16', 'YT_Short_02.mp4', '#34d399')">
+                            ⚡ RIP & USE IN TIMELINE V1
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Video 3 -->
+                <div class="phone-video-post" data-title="Sora AI Hologram">
+                    <div class="video-backdrop" style="background:linear-gradient(180deg, #7c3aed 0%, #1b0738 100%);"></div>
+                    <div class="post-top-meta">
+                        <span class="post-badge">🤖 Sora AI · @neural_motion</span>
+                        <span class="post-badge" style="background:#7c3aed;">SORA AI</span>
+                    </div>
+                    <div class="post-bottom-actions">
+                        <div class="post-caption">Futuristic Hologram Model (Hyper-Realistic 9:16)</div>
+                        <button class="rip-to-timeline-btn" style="background:linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-color:#c084fc;" onclick="capturePhoneVideoToTimeline('Hologram Model 9:16', 'Sora_AI_03.mp4', '#c084fc')">
+                            ⚡ RIP & USE IN TIMELINE V1
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Webview Sandbox -->
+            <iframe class="browser-sandbox-frame" id="phone-web-frame" src="about:blank" style="display:none;"></iframe>
+        </div>
+
+        <!-- ─── SECTION 2: 📥 1-CLICK VIDEO DOWNLOADER & RIPPER TO TIMELINE ─── -->
+        <div class="phone-section" id="psec-downloader">
+            <div class="downloader-box">
+                <div class="dl-input-group">
+                    <span class="dl-label">🔗 PASTE VIDEO URL (TIKTOK / YT SHORTS / FB / SORA)</span>
+                    <input type="text" class="dl-text-input" id="dl-url-input" placeholder="https://www.tiktok.com/@creator/video/123456789">
+                </div>
+
+                <div class="dl-quality-row">
+                    <div class="dl-input-group">
+                        <span class="dl-label">RESOLUTION</span>
+                        <select class="dl-select-box" id="dl-res-select">
+                            <option value="4k">4K UHD 60FPS</option>
+                            <option value="1080p" selected>1080p Full HD</option>
+                            <option value="audio">Audio WAV Only</option>
+                        </select>
+                    </div>
+                    <div class="dl-input-group">
+                        <span class="dl-label">AUTO-DROP TO</span>
+                        <select class="dl-select-box" id="dl-track-select">
+                            <option value="V1">Timeline Track V1</option>
+                            <option value="V2">Timeline Track V2</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="dl-action-btn" onclick="startVideoDownload()">
+                    ⚡ RIP & INJECT TO TIMELINE
+                </button>
+
+                <!-- Live Download Progress -->
+                <div class="dl-progress-card" id="dl-progress-card">
+                    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fff;">
+                        <span id="dl-status-txt">📥 DOWNLOADING 1080p MP4...</span>
+                        <span id="dl-pct-txt" style="color:#22c55e;">0%</span>
+                    </div>
+                    <div class="progress-bar-well">
+                        <div class="progress-bar-fill" id="dl-progress-bar"></div>
+                    </div>
+                    <div style="font-size:8.5px;color:#64748b;font-family:monospace;" id="dl-speed-txt">Speed: 14.8 MB/s · Codec: H.265 Hardware</div>
+                </div>
+
+                <div style="font-size:9.5px;font-weight:800;color:#38bdf8;margin-top:6px;">🔥 TRENDING 9:16 QUICK PICKS</div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                    <div style="background:#081324;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="quickDownloadClip('Cyberpunk Neon Tokyo 4K', 'Cyberpunk_01.mp4', '#38bdf8')">
+                        <span style="font-size:10px;font-weight:700;">⚡ Cyberpunk Tokyo 60FPS</span>
+                        <button style="background:#0284c7;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:9px;font-weight:800;cursor:pointer;">⚡ USE</button>
+                    </div>
+                    <div style="background:#081324;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="quickDownloadClip('Himalayan Drone Sunrise', 'Himalaya_02.mp4', '#22c55e')">
+                        <span style="font-size:10px;font-weight:700;">🚁 Himalaya Sunrise RAW</span>
+                        <button style="background:#059669;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:9px;font-weight:800;cursor:pointer;">⚡ USE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── SECTION 3: 📤 DIRECT VIDEO UPLOADER & PUBLISHER ─── -->
+        <div class="phone-section" id="psec-uploader">
+            <div class="uploader-box">
+                <div class="dl-input-group">
+                    <span class="dl-label">SELECT DESTINATION PLATFORM</span>
+                    <div class="up-platform-row">
+                        <button class="up-plat-btn active" onclick="selectUploadPlatform(this, 'tiktok')">🎵 TikTok</button>
+                        <button class="up-plat-btn" onclick="selectUploadPlatform(this, 'youtube')">▶️ Shorts</button>
+                        <button class="up-plat-btn" onclick="selectUploadPlatform(this, 'facebook')">📘 FB Reel</button>
+                    </div>
+                </div>
+
+                <div class="dl-input-group">
+                    <span class="dl-label">POST TITLE & CAPTION</span>
+                    <input type="text" class="dl-text-input" id="up-title-input" value="My Cinematic 4K Master #reels #shorts #nepal">
+                </div>
+
+                <div class="dl-input-group">
+                    <span class="dl-label">DESCRIPTION & HASHTAGS</span>
+                    <textarea class="up-textarea" id="up-desc-input">Rendered and mixed live on Dolphin Studio Pro with 10-Band DSP & Titan-Bus 0x5442. #trending #editing #video #4k</textarea>
+                </div>
+
+                <div class="dl-quality-row">
+                    <div class="dl-input-group">
+                        <span class="dl-label">PRIVACY</span>
+                        <select class="dl-select-box" id="up-privacy-select">
+                            <option value="public" selected>Public (Instant Live)</option>
+                            <option value="unlisted">Unlisted</option>
+                            <option value="private">Private</option>
+                        </select>
+                    </div>
+                    <div class="dl-input-group">
+                        <span class="dl-label">AUDIO PRESET</span>
+                        <select class="dl-select-box">
+                            <option>Original + 10-Band EQ</option>
+                            <option>AI Voice Enhance</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="up-action-btn" onclick="startDirectUpload()">
+                    🚀 EXPORT & POST DIRECTLY
+                </button>
+
+                <div class="dl-progress-card" id="up-progress-card">
+                    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fff;">
+                        <span id="up-status-txt">📤 UPLOADING TO TIKTOK...</span>
+                        <span id="up-pct-txt" style="color:#38bdf8;">0%</span>
+                    </div>
+                    <div class="progress-bar-well">
+                        <div class="progress-bar-fill" id="up-progress-bar" style="background:linear-gradient(90deg, #38bdf8, #818cf8);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phone Bottom Home Indicator -->
+        <div class="phone-bottom-home-bar">
+            <div class="phone-home-indicator"></div>
+        </div>
+    </div>
+</div>

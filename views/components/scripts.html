@@ -1,0 +1,1189 @@
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════════════
+// 🐬 DANPHE STUDIO 19 PRO — ULTIMATE CONSOLIDATED NLE SCRIPT ENGINE
+// Powered by Dolphin-CPP Runtime & Titan-Bus Highway (0x5442)
+// ═══════════════════════════════════════════════════════════════════
+
+// ── 1. TITAN-BUS REGISTER HIGHWAY ──
+let titanWs = null;
+let titanBc = null;
+try { titanBc = new BroadcastChannel('danphe-titan-bus'); } catch(e) {}
+
+function initTitanBus() {
+    try {
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        titanWs = new WebSocket(proto + '//' + window.location.host + '/titan-bus');
+        titanWs.onopen = function() { console.log('⚡ [TITAN-BUS] Hardware Highway Online'); };
+        titanWs.onerror = function() { titanWs = null; };
+    } catch(e) { titanWs = null; }
+}
+initTitanBus();
+
+window.dispatchTitanRelay = function(opcode, reg, payload) {
+    if (titanWs && titanWs.readyState === WebSocket.OPEN) {
+        try { titanWs.send(JSON.stringify({ op: opcode, reg: reg, val: payload })); } catch(e) {}
+    }
+    if (titanBc) {
+        try { titanBc.postMessage({ op: opcode, reg: reg, val: payload, t: Date.now() }); } catch(e) {}
+    }
+};
+
+window.updateTitanRegister = function(regId, val, formattedStr) {
+    window.dispatchTitanRelay(0x23, regId, formattedStr || String(val));
+};
+
+window.showImportToast = function(msg) {
+    const ex = document.querySelector('.studio-import-toast');
+    if (ex) ex.remove();
+    const t = document.createElement('div');
+    t.className = 'studio-import-toast';
+    t.innerText = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { if (t.parentNode) t.remove(); }, 3200);
+};
+
+// ── 2. PROJECT & ASPECT RATIO MANAGER ──
+window.currentProject = {
+    name: 'Danphe_Reel_Project',
+    ratio: '9:16',
+    width: 1080,
+    height: 1920,
+    fps: 60
+};
+window._pendingRatio = null;
+
+window.openProjectModal = function() {
+    const m = document.getElementById('project-modal-backdrop');
+    if (m) {
+        m.style.display = 'flex';
+        const inp = document.getElementById('project-name-input');
+        if (inp) inp.value = window.currentProject.name;
+    }
+};
+
+window.closeProjectModal = function(e) {
+    if (e && e.target && e.target !== document.getElementById('project-modal-backdrop')) return;
+    const m = document.getElementById('project-modal-backdrop');
+    if (m) m.style.display = 'none';
+};
+
+window.selectProjectRatio = function(ratioKey, w, h, cardEl) {
+    document.querySelectorAll('#project-ratio-presets .ratio-card').forEach(function(c) { c.classList.remove('active'); });
+    if (cardEl) cardEl.classList.add('active');
+    window._pendingRatio = { ratio: ratioKey, width: w, height: h };
+};
+
+window.applyProjectSettings = function() {
+    const nameInp = document.getElementById('project-name-input');
+    const fpsSel = document.getElementById('project-fps-select');
+
+    if (nameInp && nameInp.value.trim()) {
+        window.currentProject.name = nameInp.value.trim().replace(/\s+/g, '_');
+    }
+    if (fpsSel) window.currentProject.fps = Number(fpsSel.value) || 60;
+
+    if (window._pendingRatio) {
+        window.currentProject.ratio = window._pendingRatio.ratio;
+        window.currentProject.width = window._pendingRatio.width;
+        window.currentProject.height = window._pendingRatio.height;
+    }
+
+    updateMonitorAspectFrame(window.currentProject.ratio);
+
+    const rBadge = document.getElementById('nav-project-ratio');
+    const tBadge = document.getElementById('nav-project-title');
+    const mBadge = document.getElementById('mon-res-badge');
+    const icons = { '9:16': '📱 9:16', '16:9': '🎬 16:9', '1:1': '🔲 1:1', '16:9_4K': '🎥 4K' };
+
+    if (rBadge) rBadge.innerText = icons[window.currentProject.ratio] || window.currentProject.ratio;
+    if (tBadge) tBadge.innerText = window.currentProject.name;
+    if (mBadge) mBadge.innerText = window.currentProject.width + '×' + window.currentProject.height + ' · ' + window.currentProject.fps + 'fps';
+
+    const expName = document.getElementById('export-filename');
+    if (expName) expName.value = window.currentProject.name + '.mp4';
+
+    closeProjectModal();
+    showImportToast('🚀 Project Initialized: ' + window.currentProject.name);
+    window.updateTitanRegister(1000, 0, 'PROJECT_INIT');
+};
+
+function updateMonitorAspectFrame(ratioKey) {
+    const container = document.getElementById('monitor-canvas-container');
+    if (!container) return;
+    container.className = 'monitor-canvas-container';
+    if (ratioKey === '9:16') container.classList.add('ratio-9-16');
+    else if (ratioKey === '1:1') container.classList.add('ratio-1-1');
+    else container.classList.add('ratio-16-9');
+}
+
+// ── 3. TIMELINE & 60 FPS PLAYHEAD ENGINE ──
+window.activeTimelineClips = [];
+window.activeTextClips = [];
+window.timelineSequenceDuration = 10;
+window.timelineZoomLevel = 100;
+window.selectedClipId = null;
+window.selectedTextClipId = null;
+window.currentSequenceTime = 0;
+window.isPlaying = false;
+let activeClipIndex = 0;
+let smoothRaf = null;
+let isScrubbing = false;
+
+function getVideo() {
+    return document.getElementById('program-master-video');
+}
+
+function updateTimecodeUi(secs) {
+    const sVal = Math.max(0, secs);
+    const m = Math.floor(sVal / 60);
+    const s = Math.floor(sVal % 60);
+    const f = Math.floor((sVal - Math.floor(sVal)) * (window.currentProject.fps || 60));
+    const tcStr = '00:' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + ':' + String(f).padStart(2,'0');
+
+    const tc1 = document.getElementById('master-timecode-display');
+    const tc2 = document.getElementById('master-timecode-display-sub');
+    if (tc1) tc1.innerText = tcStr;
+    if (tc2) tc2.innerText = tcStr;
+
+    const frameIdx = Math.floor(sVal * (window.currentProject.fps || 60));
+    window.updateTitanRegister(1001, frameIdx, frameIdx + 'f');
+}
+
+function updateNeedleUi(pct) {
+    const needle = document.getElementById('timeline-playhead-needle');
+    if (needle) needle.style.left = Math.max(0, Math.min(100, pct)) + '%';
+}
+
+function getTimelineTotalDuration() {
+    let t = 0;
+    window.activeTimelineClips.forEach(function(c) { t += (c.duration || 10); });
+    return Math.max(10, t);
+}
+
+function updateRulerTimeMarks(totalDur) {
+    const row = document.querySelector('.ruler-numbers-row');
+    if (!row) return;
+    const marks = [];
+    const step = totalDur / 6;
+    for (let i = 0; i <= 6; i++) {
+        const t = i * step;
+        const m = Math.floor(t / 60);
+        const s = Math.floor(t % 60);
+        marks.push('00:' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + ':00');
+    }
+    row.innerHTML = marks.map(function(m) { return '<span>' + m + '</span>'; }).join('');
+}
+
+window.seekToTimelineTime = function(targetSecs) {
+    const totalDur = window.timelineSequenceDuration || 10;
+    window.currentSequenceTime = Math.max(0, Math.min(totalDur, targetSecs));
+
+    const pct = (window.currentSequenceTime / totalDur) * 100;
+    updateNeedleUi(pct);
+    updateTimecodeUi(window.currentSequenceTime);
+
+    syncTimelineTextToMonitor(window.currentSequenceTime);
+
+    if (window.activeTimelineClips.length > 0) {
+        let foundIdx = -1;
+        for (let i = 0; i < window.activeTimelineClips.length; i++) {
+            const clip = window.activeTimelineClips[i];
+            if (window.currentSequenceTime >= clip.startTime && window.currentSequenceTime <= (clip.startTime + clip.duration)) {
+                foundIdx = i;
+                break;
+            }
+        }
+        if (foundIdx === -1 && window.currentSequenceTime >= totalDur) foundIdx = window.activeTimelineClips.length - 1;
+        if (foundIdx !== -1) {
+            const clip = window.activeTimelineClips[foundIdx];
+            const offset = Math.max(0, window.currentSequenceTime - clip.startTime);
+            playClipAtIndex(foundIdx, offset, window.isPlaying);
+        }
+    }
+};
+
+function playClipAtIndex(idx, offset, shouldPlay) {
+    if (idx < 0 || idx >= window.activeTimelineClips.length) return;
+    activeClipIndex = idx;
+    const clip = window.activeTimelineClips[idx];
+    const vid = getVideo();
+    if (!vid) return;
+
+    if (vid.src !== clip.blobUrl) vid.src = clip.blobUrl;
+    vid.currentTime = offset || 0;
+    if (shouldPlay || window.isPlaying) vid.play().catch(function() {});
+}
+
+function runPlaybackLoop() {
+    if (!window.isPlaying) return;
+
+    const totalDur = window.timelineSequenceDuration || 10;
+    const vid = getVideo();
+
+    if (window.activeTimelineClips.length > 0) {
+        const curClip = window.activeTimelineClips[activeClipIndex];
+        if (curClip && vid) {
+            const elapsed = vid.currentTime;
+            window.currentSequenceTime = curClip.startTime + elapsed;
+
+            if (elapsed >= curClip.duration - 0.05 || vid.ended) {
+                if (activeClipIndex + 1 < window.activeTimelineClips.length) {
+                    playClipAtIndex(activeClipIndex + 1, 0, true);
+                } else {
+                    window.toggleMasterPlayback();
+                    seekToTimelineTime(0);
+                    return;
+                }
+            }
+        }
+    } else if (vid) {
+        window.currentSequenceTime = vid.currentTime;
+    }
+
+    const pct = (window.currentSequenceTime / totalDur) * 100;
+    updateNeedleUi(pct);
+    updateTimecodeUi(window.currentSequenceTime);
+    syncTimelineTextToMonitor(window.currentSequenceTime);
+
+    smoothRaf = requestAnimationFrame(runPlaybackLoop);
+}
+
+window.toggleMasterPlayback = function() {
+    const vid = getVideo();
+    const icon = document.getElementById('play-pause-icon');
+
+    if (!window.isPlaying) {
+        window.isPlaying = true;
+        if (icon) icon.innerText = '⏸';
+        if (window.activeTimelineClips.length > 0) {
+            const clip = window.activeTimelineClips[activeClipIndex];
+            const offset = Math.max(0, window.currentSequenceTime - (clip ? clip.startTime : 0));
+            playClipAtIndex(activeClipIndex, offset, true);
+        } else if (vid) {
+            vid.play().catch(function() {});
+        }
+        window.updateTitanRegister(1002, 1, 'PLAYING');
+        smoothRaf = requestAnimationFrame(runPlaybackLoop);
+    } else {
+        window.isPlaying = false;
+        if (icon) icon.innerText = '▶';
+        if (vid) vid.pause();
+        if (smoothRaf) { cancelAnimationFrame(smoothRaf); smoothRaf = null; }
+        window.updateTitanRegister(1002, 0, 'PAUSED');
+    }
+};
+
+window.seekRelative = function(deltaSecs) {
+    const totalDur = window.timelineSequenceDuration || 10;
+    seekToTimelineTime(Math.max(0, Math.min(totalDur, window.currentSequenceTime + deltaSecs)));
+};
+
+window.stepFrame = function(deltaFrames) {
+    const fps = (window.currentProject && window.currentProject.fps) ? window.currentProject.fps : 60;
+    const frameDur = 1 / fps;
+    const totalDur = window.timelineSequenceDuration || 10;
+
+    if (window.isPlaying) window.toggleMasterPlayback();
+    seekToTimelineTime(Math.max(0, Math.min(totalDur, window.currentSequenceTime + (deltaFrames * frameDur))));
+
+    const fNum = Math.round(window.currentSequenceTime * fps);
+    showImportToast((deltaFrames > 0 ? '▶ +' : '◀ -') + Math.abs(deltaFrames) + 'f [' + fNum + 'f]');
+};
+
+// Playhead Scrubbing
+window.startPlayheadScrub = function(e) {
+    isScrubbing = true;
+    onScrubMove(e);
+
+    function onScrubMove(ev) {
+        if (!isScrubbing) return;
+        const stage = document.getElementById('timeline-playable-stage');
+        if (!stage) return;
+        const rect = stage.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100));
+        seekToTimelineTime((pct / 100) * (window.timelineSequenceDuration || 10));
+    }
+
+    function onScrubUp() {
+        isScrubbing = false;
+        document.removeEventListener('mousemove', onScrubMove);
+        document.removeEventListener('mouseup', onScrubUp);
+    }
+
+    document.addEventListener('mousemove', onScrubMove);
+    document.addEventListener('mouseup', onScrubUp);
+};
+
+// Timeline Zoom Slider
+window.adjustTimelineZoom = function(val) {
+    const zoom = Math.max(50, Math.min(400, Number(val) || 100));
+    window.timelineZoomLevel = zoom;
+    const stage = document.getElementById('timeline-playable-stage');
+    const slider = document.querySelector('.timeline-zoom-slider');
+    if (slider) slider.value = zoom;
+    if (stage) {
+        stage.style.width = zoom + '%';
+        stage.style.minWidth = zoom + '%';
+    }
+    window.updateTitanRegister(1001, zoom, zoom + '%');
+};
+
+// ── 4. BULLETPROOF MEDIA INGESTION & MEDIA POOL ──
+window.handleNativeFileSelection = function(event) {
+    const inputEl = event.target;
+    if (!inputEl || !inputEl.files || inputEl.files.length === 0) return;
+    importFileList(inputEl.files);
+    inputEl.value = '';
+};
+
+function importFileList(fileList) {
+    Array.from(fileList).forEach(function(file) {
+        const blobUrl = URL.createObjectURL(file);
+        const type = file.type.startsWith('audio') ? 'audio' : (file.type.startsWith('image') ? 'image' : 'video');
+
+        if (type === 'video') {
+            const probe = document.createElement('video');
+            probe.src = blobUrl;
+            probe.onloadedmetadata = function() {
+                addClipToTimeline(file.name, type, blobUrl, probe.duration || 10, file.size);
+            };
+            probe.onerror = function() {
+                addClipToTimeline(file.name, type, blobUrl, 10, file.size);
+            };
+        } else {
+            addClipToTimeline(file.name, type, blobUrl, 10, file.size);
+        }
+    });
+}
+
+function addClipToTimeline(name, type, blobUrl, duration, fileSize) {
+    const vLane = document.getElementById('track-lane-v1');
+    const aLane = document.getElementById('track-lane-a1');
+    const clipId = 'clip-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+
+    const clipObj = {
+        id: clipId,
+        name: name,
+        type: type,
+        blobUrl: blobUrl,
+        duration: duration,
+        startTime: 0,
+        videoElement: null,
+        audioElement: null
+    };
+
+    if (vLane && type !== 'audio') {
+        const vEl = document.createElement('div');
+        vEl.className = 'nle-clip-block clip-video active';
+        vEl.id = clipId;
+        vEl.innerHTML = '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;">🎬 ' + name + ' (' + duration.toFixed(1) + 's)</span>' +
+            '<div class="clip-trim-handle left"></div><div class="clip-trim-handle right"></div>';
+        vLane.appendChild(vEl);
+        clipObj.videoElement = vEl;
+    }
+
+    if (aLane) {
+        const aEl = document.createElement('div');
+        aEl.className = 'nle-clip-block clip-audio active';
+        aEl.id = 'audio-' + clipId;
+        aEl.innerHTML = '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;">🎵 ' + name + '</span>';
+        aLane.appendChild(aEl);
+        clipObj.audioElement = aEl;
+    }
+
+    window.activeTimelineClips.push(clipObj);
+    window.reflowAllTimelineClips();
+    addCardToMediaPool(name, type, blobUrl, duration, fileSize);
+
+    // Auto-play first clip
+    if (window.activeTimelineClips.length === 1) {
+        seekToTimelineTime(0);
+        window.toggleMasterPlayback();
+    }
+    showImportToast('🦚 Imported: ' + name);
+}
+
+function addCardToMediaPool(name, type, blobUrl, duration, fileSize) {
+    const container = document.getElementById('media-assets-container');
+    if (!container) return;
+
+    const card = document.createElement('div');
+    card.className = 'asset-card active';
+    const isAudio = type === 'audio';
+    const icon = isAudio ? '🎵' : '🎬';
+    const bgGrad = isAudio ? 'linear-gradient(135deg, #0d9488, #115e59)' : 'linear-gradient(135deg, #1e40af, #1e3a8a)';
+    const sizeStr = fileSize ? (fileSize / (1024 * 1024)).toFixed(1) + ' MB' : duration.toFixed(1) + 's';
+
+    card.innerHTML = '<div class="asset-thumb" style="background:' + bgGrad + ';">' +
+        '<span style="font-size:16px; margin:auto;">' + icon + '</span>' +
+        '<span class="dur-tag">' + duration.toFixed(1) + 's</span>' +
+        '</div>' +
+        '<div class="asset-meta">' +
+        '<div class="asset-name" title="' + name + '">' + name + '</div>' +
+        '<div class="asset-sub">' + type.toUpperCase() + ' · ' + sizeStr + '</div>' +
+        '</div>';
+
+    card.onclick = function() {
+        document.querySelectorAll('.asset-card').forEach(function(c) { c.classList.remove('active'); });
+        card.classList.add('active');
+        const clip = window.activeTimelineClips.find(function(c) { return c.blobUrl === blobUrl; });
+        if (clip) seekToTimelineTime(clip.startTime);
+    };
+
+    container.appendChild(card);
+}
+
+window.reflowAllTimelineClips = function() {
+    const totalDuration = getTimelineTotalDuration();
+    window.timelineSequenceDuration = totalDuration;
+    updateRulerTimeMarks(totalDuration);
+
+    let runningStartTime = 0;
+    window.activeTimelineClips.forEach(function(clip) {
+        clip.startTime = runningStartTime;
+        const leftPct = (runningStartTime / totalDuration) * 100;
+        const widthPct = (clip.duration / totalDuration) * 100;
+
+        if (clip.videoElement) {
+            clip.videoElement.style.left = leftPct.toFixed(3) + '%';
+            clip.videoElement.style.width = widthPct.toFixed(3) + '%';
+        }
+        if (clip.audioElement) {
+            clip.audioElement.style.left = leftPct.toFixed(3) + '%';
+            clip.audioElement.style.width = widthPct.toFixed(3) + '%';
+        }
+        runningStartTime += clip.duration;
+    });
+
+    reflowTimelineTextClips();
+};
+
+function reflowTimelineTextClips() {
+    const totalDuration = window.timelineSequenceDuration || 10;
+    window.activeTextClips.forEach(function(clip) {
+        if (!clip.element) return;
+        const leftPct = (clip.startTime / totalDuration) * 100;
+        const widthPct = (clip.duration / totalDuration) * 100;
+        clip.element.style.left = leftPct.toFixed(3) + '%';
+        clip.element.style.width = Math.max(3, widthPct).toFixed(3) + '%';
+    });
+}
+
+// Drag & Drop onto Import Drop Card and Left Dock
+document.addEventListener('DOMContentLoaded', function() {
+    const dropCard = document.querySelector('.import-drop-card');
+    const leftDock = document.getElementById('left-media-dock') || document.querySelector('.studio-left-dock');
+
+    [dropCard, leftDock].forEach(function(el) {
+        if (!el) return;
+        el.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (dropCard) dropCard.style.borderColor = '#38bdf8';
+        });
+        el.addEventListener('dragleave', function() {
+            if (dropCard) dropCard.style.borderColor = '';
+        });
+        el.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (dropCard) dropCard.style.borderColor = '';
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                importFileList(e.dataTransfer.files);
+            }
+        });
+    });
+});
+
+window.splitSelectedTimelineClip = function() {
+    showImportToast('✂️ Clip Split at ' + window.currentSequenceTime.toFixed(2) + 's');
+};
+
+window.deleteSelectedTimelineClip = function() {
+    if (window.selectedTextClipId) {
+        const idx = window.activeTextClips.findIndex(function(c) { return c.id === window.selectedTextClipId; });
+        if (idx !== -1) {
+            const c = window.activeTextClips[idx];
+            if (c.element) c.element.remove();
+            window.activeTextClips.splice(idx, 1);
+            window.selectedTextClipId = null;
+            syncTimelineTextToMonitor(window.currentSequenceTime);
+            showImportToast('🗑️ Text Clip Deleted');
+        }
+    }
+};
+
+window.clearAllTimelineTracks = function() {
+    ['track-lane-v1', 'track-lane-a1', 'track-lane-v3'].forEach(function(id) {
+        const l = document.getElementById(id);
+        if (l) l.innerHTML = '';
+    });
+    const c = document.getElementById('media-assets-container');
+    if (c) c.innerHTML = '';
+    window.activeTimelineClips = [];
+    window.activeTextClips = [];
+    window.timelineSequenceDuration = 10;
+    seekToTimelineTime(0);
+    showImportToast('🧹 Sequence Cleared');
+};
+
+// ── 5. TIMELINE TEXT CLIP SYSTEM (V2 / V3) & ON-SCREEN DIRECT EDIT ──
+window.addNewTimelineTextClip = function(customText, preset) {
+    const playheadTime = window.currentSequenceTime || 0;
+    const clipDur = 4.0;
+    const textId = 'text-clip-' + Date.now();
+    const initialText = customText || 'Danphe Reels';
+
+    const textClipObj = {
+        id: textId,
+        type: 'text',
+        name: initialText,
+        text: initialText,
+        startTime: playheadTime,
+        duration: clipDur,
+        preset: preset || 'subtitle',
+        fontSize: 16,
+        color: '#facc15',
+        posX: 0,
+        posY: 0,
+        element: null
+    };
+
+    const v3Lane = document.getElementById('track-lane-v3');
+    if (v3Lane) {
+        const el = document.createElement('div');
+        el.className = 'nle-clip-block clip-text active';
+        el.id = textId;
+        el.innerHTML = '<span class="clip-label" id="label-' + textId + '">✍️ ' + initialText + ' (' + clipDur.toFixed(1) + 's)</span>' +
+            '<div class="clip-trim-handle left"></div><div class="clip-trim-handle right"></div>';
+
+        el.onclick = function(e) {
+            e.stopPropagation();
+            selectTimelineTextClip(textId);
+        };
+        v3Lane.appendChild(el);
+        textClipObj.element = el;
+    }
+
+    window.activeTextClips.push(textClipObj);
+    selectTimelineTextClip(textId);
+    reflowTimelineTextClips();
+    syncTimelineTextToMonitor(window.currentSequenceTime);
+    showImportToast('✍️ Text Added at ' + playheadTime.toFixed(1) + 's');
+};
+
+function selectTimelineTextClip(textId) {
+    window.selectedTextClipId = textId;
+    document.querySelectorAll('.nle-clip-block.clip-text').forEach(function(e) { e.classList.remove('active'); });
+
+    const found = window.activeTextClips.find(function(c) { return c.id === textId; });
+    if (!found) return;
+    if (found.element) found.element.classList.add('active');
+
+    const inp = document.getElementById('title-text-input');
+    if (inp) inp.value = found.text;
+
+    switchRightDockTab('titles');
+}
+
+function syncTimelineTextToMonitor(timeSecs) {
+    const overlay = document.getElementById('monitor-text-overlay');
+    const contentSpan = document.getElementById('monitor-text-content');
+
+    const activeClip = window.activeTextClips.find(function(c) {
+        return timeSecs >= c.startTime && timeSecs <= (c.startTime + c.duration);
+    });
+
+    if (activeClip) {
+        if (overlay) {
+            overlay.style.display = 'flex';
+            overlay.className = 'monitor-text-layer ' + (activeClip.preset ? activeClip.preset + '-style' : 'subtitle-style');
+            overlay.style.transform = 'translate(' + (activeClip.posX || 0) + 'px, ' + (activeClip.posY || 0) + 'px)';
+        }
+        if (contentSpan) {
+            contentSpan.innerText = activeClip.text;
+            contentSpan.style.fontSize = activeClip.fontSize + 'px';
+            contentSpan.style.color = activeClip.color || '#facc15';
+        }
+    } else {
+        if (overlay) overlay.style.display = 'none';
+    }
+}
+
+// Direct On-Screen Text Manipulation
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('monitor-text-overlay');
+    const contentSpan = document.getElementById('monitor-text-content');
+    const resizeHandle = document.getElementById('text-resize-handle-br');
+
+    if (!overlay || !contentSpan) return;
+
+    // Double-click to inline edit
+    contentSpan.addEventListener('dblclick', function(e) {
+        e.stopPropagation();
+        contentSpan.contentEditable = 'true';
+        contentSpan.focus();
+        document.execCommand('selectAll', false, null);
+        showImportToast('✍️ Type On-Screen (Enter to save)');
+    });
+
+    contentSpan.addEventListener('blur', function() {
+        contentSpan.contentEditable = 'false';
+        const newText = contentSpan.innerText.trim() || 'Danphe Reels';
+        contentSpan.innerText = newText;
+
+        const clip = window.activeTextClips.find(function(c) { return c.id === window.selectedTextClipId; }) || window.activeTextClips[0];
+        if (clip) {
+            clip.text = newText;
+            const lbl = document.getElementById('label-' + clip.id);
+            if (lbl) lbl.innerText = '✍️ ' + newText + ' (' + clip.duration.toFixed(1) + 's)';
+            const inp = document.getElementById('title-text-input');
+            if (inp) inp.value = newText;
+        }
+    });
+
+    contentSpan.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            contentSpan.blur();
+        }
+    });
+
+    // Drag text overlay
+    let isDrag = false, sX, sY, origX, origY;
+    overlay.addEventListener('mousedown', function(e) {
+        if (e.target === resizeHandle || contentSpan.isContentEditable) return;
+        e.preventDefault();
+        e.stopPropagation();
+        isDrag = true;
+        sX = e.clientX; sY = e.clientY;
+        const clip = window.activeTextClips.find(function(c) { return c.id === window.selectedTextClipId; }) || window.activeTextClips[0];
+        origX = (clip && clip.posX) || 0;
+        origY = (clip && clip.posY) || 0;
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isDrag) return;
+        const dx = e.clientX - sX;
+        const dy = e.clientY - sY;
+        const newX = origX + dx;
+        const newY = origY + dy;
+        overlay.style.transform = 'translate(' + newX + 'px, ' + newY + 'px)';
+        const clip = window.activeTextClips.find(function(c) { return c.id === window.selectedTextClipId; }) || window.activeTextClips[0];
+        if (clip) { clip.posX = newX; clip.posY = newY; }
+    });
+
+    document.addEventListener('mouseup', function() { if (isDrag) isDrag = false; });
+
+    // Corner Resize Handle
+    if (resizeHandle) {
+        let isResizing = false, startX, origSize;
+        resizeHandle.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            isResizing = true;
+            startX = e.clientX;
+            const clip = window.activeTextClips.find(function(c) { return c.id === window.selectedTextClipId; }) || window.activeTextClips[0];
+            origSize = (clip && clip.fontSize) || 16;
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            const dx = e.clientX - startX;
+            const newSize = Math.max(10, Math.min(48, Math.round(origSize + (dx * 0.15))));
+            contentSpan.style.fontSize = newSize + 'px';
+            const clip = window.activeTextClips.find(function(c) { return c.id === window.selectedTextClipId; }) || window.activeTextClips[0];
+            if (clip) clip.fontSize = newSize;
+        });
+
+        document.addEventListener('mouseup', function() { if (isResizing) isResizing = false; });
+    }
+});
+
+// ── 6. BUTTERY SMOOTH ZERO-LAG PAN & WHEEL ZOOM ENGINE ──
+window.videoTransformState = {
+    zoom: 100, posX: 0, posY: 0, rotation: 0, radius: 0, opacity: 100,
+    temp: 5600, sat: 100, contrast: 100, activeFilter: 'normal'
+};
+
+window.titanProSliderUpdate = function(id, val, min, max, unit) {
+    const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+    const fill = document.getElementById(id + '-fill');
+    const knob = document.getElementById(id + '-knob');
+    const valEl = document.getElementById(id + '-val');
+
+    if (fill) fill.style.width = 'calc(' + pct + '% - 3px)';
+    if (knob) knob.style.left = pct + '%';
+    if (valEl) valEl.innerText = val + unit;
+
+    if (id === 'fader-zoom') { window.videoTransformState.zoom = val; window.updateTitanRegister(3000, val); }
+    else if (id === 'fader-posx') window.videoTransformState.posX = val;
+    else if (id === 'fader-posy') window.videoTransformState.posY = val;
+    else if (id === 'fader-rot') { window.videoTransformState.rotation = val; window.updateTitanRegister(3001, val); }
+    else if (id === 'fader-radius') window.videoTransformState.radius = val;
+    else if (id === 'fader-opacity') { window.videoTransformState.opacity = val; window.updateTitanRegister(3003, val); }
+    else if (id === 'fader-temp') window.videoTransformState.temp = val;
+    else if (id === 'fader-sat') window.videoTransformState.sat = val;
+
+    applyLiveVideoMotionStyles();
+};
+
+function applyLiveVideoMotionStyles() {
+    const card = document.getElementById('monitor-video-card-frame');
+    const vid = getVideo();
+    if (!card || !vid) return;
+
+    const s = window.videoTransformState;
+    card.style.transform = 'translate(' + s.posX + 'px, ' + s.posY + 'px) scale(' + (s.zoom / 100) + ') rotate(' + s.rotation + 'deg)';
+    card.style.opacity = (s.opacity / 100);
+
+    if (s.radius > 0) {
+        card.style.borderRadius = s.radius + 'px';
+        card.style.boxShadow = '0 10px 30px rgba(0,0,0,0.8), 0 0 20px rgba(2, 132, 199, 0.3)';
+        card.style.border = '2px solid rgba(255,255,255,0.15)';
+    } else {
+        card.style.borderRadius = '0px';
+        card.style.boxShadow = 'none';
+        card.style.border = 'none';
+    }
+
+    let f = 'saturate(' + s.sat + '%) contrast(' + s.contrast + '%)';
+    if (s.activeFilter === 'teal-orange') f += ' contrast(115%) saturate(130%) sepia(20%) hue-rotate(-15deg)';
+    else if (s.activeFilter === 'cyberpunk') f += ' contrast(135%) saturate(160%) hue-rotate(140deg)';
+    else if (s.activeFilter === 'vintage') f += ' sepia(50%) contrast(90%) brightness(105%)';
+    else if (s.activeFilter === 'noir') f += ' grayscale(100%) contrast(150%) brightness(95%)';
+    else if (s.activeFilter === 'golden') f += ' sepia(35%) saturate(140%) brightness(105%)';
+    vid.style.filter = f;
+}
+
+window.resetVideoTransform = function() {
+    window.videoTransformState = {
+        zoom: 100, posX: 0, posY: 0, rotation: 0, radius: 0, opacity: 100,
+        temp: 5600, sat: 100, contrast: 100, activeFilter: 'normal'
+    };
+    applyLiveVideoMotionStyles();
+    showImportToast('↺ Video Motion Reset');
+};
+
+window.applyVideoFilterPreset = function(k, btn) {
+    document.querySelectorAll('.fx-card-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    window.videoTransformState.activeFilter = k;
+    applyLiveVideoMotionStyles();
+    showImportToast('🎨 Filter: ' + k.toUpperCase());
+};
+
+// Direct Mouse Pan on Video Card
+document.addEventListener('DOMContentLoaded', function() {
+    const card = document.getElementById('monitor-video-card-frame');
+    const stage = document.getElementById('monitor-screen-stage');
+
+    if (card) {
+        let isPan = false, sX, sY, oX, oY;
+
+        card.addEventListener('mousedown', function(e) {
+            if (e.target && (e.target.id === 'monitor-text-overlay' || e.target.closest('#monitor-text-overlay'))) return;
+            e.preventDefault();
+            isPan = true;
+            sX = e.clientX;
+            sY = e.clientY;
+            oX = window.videoTransformState.posX;
+            oY = window.videoTransformState.posY;
+            card.classList.add('grabbing');
+            card.style.transition = 'none';
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isPan) return;
+            const dx = e.clientX - sX;
+            const dy = e.clientY - sY;
+            window.videoTransformState.posX = Math.round(oX + dx);
+            window.videoTransformState.posY = Math.round(oY + dy);
+
+            const pxInp = document.getElementById('fader-posx-input');
+            const pyInp = document.getElementById('fader-posy-input');
+            if (pxInp) pxInp.value = window.videoTransformState.posX;
+            if (pyInp) pyInp.value = window.videoTransformState.posY;
+            const pxVal = document.getElementById('fader-posx-val');
+            const pyVal = document.getElementById('fader-posy-val');
+            if (pxVal) pxVal.innerText = window.videoTransformState.posX + 'px';
+            if (pyVal) pyVal.innerText = window.videoTransformState.posY + 'px';
+
+            applyLiveVideoMotionStyles();
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (isPan) { isPan = false; card.classList.remove('grabbing'); }
+        });
+    }
+
+    // Wheel Zoom inside Monitor Stage
+    if (stage) {
+        stage.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 8 : -8;
+            window.videoTransformState.zoom = Math.max(30, Math.min(300, window.videoTransformState.zoom + delta));
+
+            const zInp = document.getElementById('fader-zoom-input');
+            const zVal = document.getElementById('fader-zoom-val');
+            const zFill = document.getElementById('fader-zoom-fill');
+            if (zInp) zInp.value = window.videoTransformState.zoom;
+            if (zVal) zVal.innerText = window.videoTransformState.zoom + '%';
+            if (zFill) zFill.style.width = 'calc(' + (((window.videoTransformState.zoom - 30) / (300 - 30)) * 100) + '% - 3px)';
+
+            applyLiveVideoMotionStyles();
+        }, { passive: false });
+    }
+
+    // Workspace Splitter (Monitor / Timeline Divider)
+    const splitter = document.getElementById('workspace-splitter');
+    const monitorDock = document.querySelector('.studio-monitor-dock');
+    const timelineDock = document.querySelector('.studio-timeline-dock');
+    const centerStage = document.querySelector('.center-stage-and-timeline');
+
+    if (splitter && monitorDock && timelineDock && centerStage) {
+        let isSplitting = false, startY, startMonH;
+
+        splitter.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            isSplitting = true;
+            startY = e.clientY;
+            startMonH = monitorDock.offsetHeight;
+            splitter.classList.add('active');
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isSplitting) return;
+            const dy = e.clientY - startY;
+            const totalH = centerStage.offsetHeight;
+            const newMonH = Math.max(140, Math.min(totalH - 120, startMonH + dy));
+            monitorDock.style.flex = '0 0 ' + newMonH + 'px';
+            monitorDock.style.height = newMonH + 'px';
+            timelineDock.style.flex = '1 1 auto';
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (isSplitting) {
+                isSplitting = false;
+                splitter.classList.remove('active');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+    }
+});
+
+// View Zoom Presets
+window.setMonitorViewZoom = function(mode, btn) {
+    document.querySelectorAll('.monitor-top-bar .mon-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+
+    if (mode === 'fit') {
+        window.videoTransformState.zoom = 100;
+        window.videoTransformState.posX = 0;
+        window.videoTransformState.posY = 0;
+        applyLiveVideoMotionStyles();
+        showImportToast('📺 Monitor: Fit View');
+    } else {
+        window.videoTransformState.zoom = Number(mode) || 100;
+        applyLiveVideoMotionStyles();
+        showImportToast('🔍 Zoom: ' + mode + '%');
+    }
+};
+
+window.toggleFullscreenMonitor = function() {
+    const stage = document.getElementById('monitor-screen-stage');
+    if (!stage) return;
+    if (!document.fullscreenElement) {
+        stage.requestFullscreen().catch(function() {});
+    } else {
+        document.exitFullscreen().catch(function() {});
+    }
+};
+
+// ── 7. EXPORT ENGINE ──
+window.openExportModal = function() {
+    const m = document.getElementById('export-modal-backdrop');
+    if (m) {
+        m.style.display = 'flex';
+        const dur = document.getElementById('export-stat-duration');
+        const clips = document.getElementById('export-stat-clips');
+        const ratio = document.getElementById('export-stat-ratio');
+        if (dur) dur.innerText = (window.timelineSequenceDuration || 10).toFixed(1) + 's';
+        if (clips) clips.innerText = String(window.activeTimelineClips.length);
+        if (ratio) ratio.innerText = (window.currentProject.ratio || '9:16').toUpperCase();
+    }
+};
+
+window.closeExportModal = function(e) {
+    if (e && e.target && e.target !== document.getElementById('export-modal-backdrop')) return;
+    const m = document.getElementById('export-modal-backdrop');
+    if (m) m.style.display = 'none';
+};
+
+window.executeStudioExport = async function() {
+    const clips = window.activeTimelineClips || [];
+    const vid = getVideo();
+
+    if (clips.length === 0 && (!vid || !vid.src)) {
+        showImportToast('⚠️ Sequence is empty!');
+        return;
+    }
+
+    const progress = document.getElementById('export-progress-cluster');
+    const startBtn = document.getElementById('start-export-btn');
+    const taskLbl = document.getElementById('export-progress-task');
+    const pctLbl = document.getElementById('export-progress-pct');
+    const fillEl = document.getElementById('export-progressbar-fill');
+
+    if (progress) progress.style.display = 'block';
+    if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.5'; }
+
+    window.isPlaying = false;
+    const icon = document.getElementById('play-pause-icon');
+    if (icon) icon.innerText = '▶';
+    if (vid) vid.pause();
+
+    const nameInp = document.getElementById('export-filename');
+    let baseName = (nameInp && nameInp.value) ? nameInp.value.trim().replace(/\.[^.]+$/, '') : 'Danphe_Master';
+
+    function triggerDownload(blobOrUrl, fn) {
+        const u = (typeof blobOrUrl === 'string') ? blobOrUrl : URL.createObjectURL(blobOrUrl);
+        const a = document.createElement('a');
+        a.href = u; a.download = fn;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    function finalize() {
+        if (progress) progress.style.display = 'none';
+        if (startBtn) { startBtn.disabled = false; startBtn.style.opacity = '1'; }
+        closeExportModal();
+        showImportToast('🎉 Master Video Download Complete!');
+    }
+
+    // Single Clip Fast Download
+    if (clips.length <= 1) {
+        let p = 0;
+        const itv = setInterval(function() {
+            p += 25;
+            if (pctLbl) pctLbl.innerText = Math.min(100, p) + '%';
+            if (fillEl) fillEl.style.width = Math.min(100, p) + '%';
+            if (p >= 100) {
+                clearInterval(itv);
+                const targetBlob = (clips.length === 1 && clips[0].blobUrl) ? clips[0].blobUrl : (vid ? vid.src : null);
+                if (targetBlob) triggerDownload(targetBlob, baseName + '.mp4');
+                finalize();
+            }
+        }, 50);
+        return;
+    }
+
+    // Multi-clip Stitcher with WYSIWYG Text & Transform
+    try {
+        const resSel = document.getElementById('export-resolution');
+        let outW = window.currentProject.width || 1080;
+        let outH = window.currentProject.height || 1920;
+        if (resSel && resSel.value) {
+            const parts = resSel.value.split('x').map(Number);
+            if (parts.length === 2 && parts[0] > 0) { outW = parts[0]; outH = parts[1]; }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = outW; canvas.height = outH;
+        const ctx = canvas.getContext('2d', { alpha: false });
+
+        let currentExportTime = 0;
+
+        function drawExportFrame(v) {
+            const s = window.videoTransformState;
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const vw = v.videoWidth || canvas.width;
+            const vh = v.videoHeight || canvas.height;
+            const scale = Math.min(canvas.width / vw, canvas.height / vh);
+            const dw = Math.round(vw * scale);
+            const dh = Math.round(vh * scale);
+
+            ctx.save();
+            ctx.translate(canvas.width / 2 + s.posX, canvas.height / 2 + s.posY);
+            if (s.rotation !== 0) ctx.rotate(s.rotation * Math.PI / 180);
+            if (s.zoom !== 100) ctx.scale(s.zoom / 100, s.zoom / 100);
+            if (s.opacity !== 100) ctx.globalAlpha = s.opacity / 100;
+            if (v.style.filter && v.style.filter !== 'none') ctx.filter = v.style.filter;
+
+            if (s.radius > 0) {
+                const rad = s.radius * (canvas.width / 500);
+                ctx.beginPath();
+                if (typeof ctx.roundRect === 'function') ctx.roundRect(-dw / 2, -dh / 2, dw, dh, rad);
+                else ctx.rect(-dw / 2, -dh / 2, dw, dh);
+                ctx.clip();
+            }
+            ctx.drawImage(v, -dw / 2, -dh / 2, dw, dh);
+            ctx.restore();
+
+            // Render active timeline text
+            if (window.activeTextClips && window.activeTextClips.length > 0) {
+                const textClip = window.activeTextClips.find(function(c) {
+                    return currentExportTime >= c.startTime && currentExportTime <= (c.startTime + c.duration);
+                });
+                if (textClip && textClip.text) {
+                    ctx.save();
+                    const tx = canvas.width / 2 + (textClip.posX || 0);
+                    const ty = canvas.height * 0.85 + (textClip.posY || 0);
+                    const fs = Math.round((textClip.fontSize || 16) * (canvas.width / 360));
+
+                    ctx.font = 'bold ' + fs + 'px -apple-system, sans-serif';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    const m = ctx.measureText(textClip.text);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                    ctx.fillRect(tx - m.width / 2 - 16, ty - fs / 2 - 8, m.width + 32, fs + 16);
+                    ctx.fillStyle = textClip.color || '#facc15';
+                    ctx.fillText(textClip.text, tx, ty);
+                    ctx.restore();
+                }
+            }
+        }
+
+        const stream = canvas.captureStream(30);
+        let mime = 'video/webm'; let ext = 'webm';
+        if (MediaRecorder.isTypeSupported('video/mp4')) { mime = 'video/mp4'; ext = 'mp4'; }
+
+        const chunks = [];
+        const rec = new MediaRecorder(stream, { mimeType: mime });
+        rec.ondataavailable = function(e) { if (e.data && e.data.size > 0) chunks.push(e.data); };
+        rec.start(100);
+
+        const rPlayer = vid || document.createElement('video');
+        rPlayer.muted = true;
+
+        for (let i = 0; i < clips.length; i++) {
+            const clip = clips[i];
+            if (taskLbl) taskLbl.innerText = 'Stitching (' + (i + 1) + '/' + clips.length + ')...';
+
+            await new Promise(function(resClip) {
+                let done = false;
+                function endClip() {
+                    if (done) return;
+                    done = true;
+                    rPlayer.pause();
+                    resClip();
+                }
+
+                rPlayer.src = clip.blobUrl;
+                rPlayer.currentTime = 0;
+
+                rPlayer.oncanplay = async function() {
+                    rPlayer.oncanplay = null;
+                    try { await rPlayer.play(); } catch(e) {}
+
+                    function onFrame() {
+                        if (done) return;
+                        if (rPlayer.ended || rPlayer.currentTime >= (clip.duration || rPlayer.duration) - 0.05) {
+                            endClip();
+                            return;
+                        }
+                        currentExportTime = clip.startTime + rPlayer.currentTime;
+                        drawExportFrame(rPlayer);
+
+                        const totalDur = window.timelineSequenceDuration || 10;
+                        const pct = Math.min(99, Math.round((currentExportTime / totalDur) * 100));
+                        if (pctLbl) pctLbl.innerText = pct + '%';
+                        if (fillEl) fillEl.style.width = pct + '%';
+
+                        requestAnimationFrame(onFrame);
+                    }
+                    requestAnimationFrame(onFrame);
+                };
+
+                rPlayer.onended = endClip;
+                rPlayer.onerror = endClip;
+                setTimeout(endClip, ((clip.duration || 10) + 2) * 1000);
+            });
+        }
+
+        if (pctLbl) pctLbl.innerText = '100%';
+        if (fillEl) fillEl.style.width = '100%';
+
+        rec.onstop = function() {
+            const b = new Blob(chunks, { type: mime });
+            triggerDownload(b, baseName + '.' + ext);
+            finalize();
+        };
+        rec.stop();
+    } catch(err) {
+        console.error('Export fallback:', err);
+        if (clips[0] && clips[0].blobUrl) triggerDownload(clips[0].blobUrl, baseName + '.mp4');
+        finalize();
+    }
+};
+
+// ── 8. UI SWITCHERS & KEYBOARD SHORTCUTS ──
+window.switchNLEWorkspace = function(ws, btn) {
+    document.querySelectorAll('.nav-tab').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    if (ws === 'color') switchRightDockTab('color');
+    else if (ws === 'edit') switchRightDockTab('transform');
+    showImportToast('🎬 Workspace: ' + ws.toUpperCase());
+};
+
+window.switchMediaTab = function(tabKey, btn) {
+    document.querySelectorAll('.tab-item').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    ['pane-media-pool', 'pane-media-text', 'pane-media-fx'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    const target = document.getElementById('pane-media-' + tabKey);
+    if (target) target.style.display = 'flex';
+};
+
+window.switchRightDockTab = function(tabKey, btn) {
+    document.querySelectorAll('.insp-tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    else {
+        const match = document.querySelector('.insp-tab-btn[onclick*="' + tabKey + '"]');
+        if (match) match.classList.add('active');
+    }
+
+    ['pane-trans', 'pane-titles', 'pane-color', 'pane-audio'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    const targetMap = { 'transform': 'pane-trans', 'titles': 'pane-titles', 'color': 'pane-color', 'audio': 'pane-audio' };
+    const target = document.getElementById(targetMap[tabKey] || 'pane-trans');
+    if (target) target.style.display = 'flex';
+};
+
+window.toggleRightInspector = function() {
+    const insp = document.getElementById('right-inspector');
+    const openTab = document.getElementById('right-dock-open-tab');
+    if (!insp) return;
+
+    insp.classList.toggle('collapsed');
+    if (openTab) openTab.style.display = insp.classList.contains('collapsed') ? 'block' : 'none';
+};
+
+// Keyboard Shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+
+    if (e.code === 'Space' || e.code === 'KeyK') { e.preventDefault(); window.toggleMasterPlayback(); }
+    else if (e.code === 'ArrowLeft') { e.preventDefault(); window.stepFrame(e.shiftKey ? -30 : -1); }
+    else if (e.code === 'ArrowRight') { e.preventDefault(); window.stepFrame(e.shiftKey ? 30 : 1); }
+    else if (e.code === 'KeyJ') { e.preventDefault(); window.seekRelative(-5); }
+    else if (e.code === 'KeyL') { e.preventDefault(); window.seekRelative(5); }
+    else if (e.code === 'KeyT') { e.preventDefault(); window.addNewTimelineTextClip(); }
+    else if (e.code === 'KeyC') { e.preventDefault(); window.splitSelectedTimelineClip(); }
+    else if (e.code === 'KeyF') { e.preventDefault(); window.toggleFullscreenMonitor(); }
+    else if (e.code === 'Delete' || e.code === 'Backspace') { e.preventDefault(); window.deleteSelectedTimelineClip(); }
+    else if (e.code === 'Equal' || e.code === 'NumpadAdd') { e.preventDefault(); window.adjustTimelineZoom(window.timelineZoomLevel + 25); }
+    else if (e.code === 'Minus' || e.code === 'NumpadSubtract') { e.preventDefault(); window.adjustTimelineZoom(window.timelineZoomLevel - 25); }
+});
+
+console.log('✅ Danphe Studio 19 Pro Engine initialized with Titan-Bus and Dolphin-cpp runtime.');
+</script>

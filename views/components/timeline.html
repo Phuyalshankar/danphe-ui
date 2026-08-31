@@ -1,0 +1,128 @@
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- 4. REAL DYNAMIC MULTI-TRACK NLE TIMELINE (V1 + A1 PROMINENT TOP)   -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="studio-precision-timeline">
+    <!-- Timeline Upper Control Ribbon -->
+    <div class="timeline-ribbon-bar">
+        <div class="ribbon-tools-left">
+            <button type="button" class="ribbon-btn add-text-btn" onclick="addNewTimelineTextClip()" title="Add Text / Subtitle to Timeline at Playhead (T)" style="background:#8b5cf6; color:#fff; font-weight:800; border-color:#a855f7;">✍️ Add Text (T)</button>
+            <button type="button" class="ribbon-btn" onclick="splitSelectedTimelineClip()" title="Split Clip at Playhead (C)">✂️ Split (C)</button>
+            <button type="button" class="ribbon-btn" onclick="deleteSelectedTimelineClip()" title="Delete Selected Clip (Del)">🗑️ Delete (Del)</button>
+            <button type="button" class="ribbon-btn active" onclick="dispatchTitanRelay(0x23, 303, 'SNAP_TOGGLE')">🧲 Snap</button>
+            <button type="button" class="ribbon-btn" onclick="clearAllTimelineTracks()" title="Clear Timeline">🧹 Clear</button>
+        </div>
+        <div class="ribbon-tools-right">
+            <span style="font-size:9.5px; font-weight:800; color:#64748b;">ZOOM</span>
+            <input type="range" class="timeline-zoom-slider" min="20" max="250" value="100" oninput="adjustTimelineZoom(this.value)">
+        </div>
+    </div>
+
+    <!-- Timeline Workspace -->
+    <div class="timeline-scroll-workspace" id="timeline-workspace-scroll">
+        <div class="timeline-master-grid-split">
+            
+            <!-- LEFT COLUMN: 125PX FIXED TRACK CONTROL HEADERS -->
+            <div class="timeline-headers-stack">
+                <!-- Ruler Corner Box -->
+                <div class="ruler-corner-header">
+                    <span class="track-head-title">TRACKS</span>
+                </div>
+
+                <!-- 1. V1 Header (PRIMARY VIDEO) -->
+                <div class="track-control-header active-target">
+                    <span class="track-badge video-bg">V1</span>
+                    <span class="track-name-lbl">Primary Video</span>
+                    <div class="track-mini-toggles">
+                        <button type="button" class="mini-tog active" title="Mute Track">M</button>
+                        <button type="button" class="mini-tog" title="Lock Track">🔒</button>
+                    </div>
+                </div>
+
+                <!-- 2. A1 Header (PRIMARY AUDIO - MUTE/UNMUTE) -->
+                <div class="track-control-header audio-lane" id="header-track-a1">
+                    <span class="track-badge audio-bg">A1</span>
+                    <span class="track-name-lbl">Master Audio</span>
+                    <div class="track-mini-toggles">
+                        <button type="button" class="mini-tog tog-mute" id="mute-btn-a1" onclick="toggleTrackMute('a1', this)" title="Mute / Unmute Audio (A1)">
+                            <span id="mute-icon-a1">🔊</span> M
+                        </button>
+                        <button type="button" class="mini-tog tog-solo" id="solo-btn-a1" onclick="toggleTrackSolo('a1', this)" title="Solo Audio Track">S</button>
+                    </div>
+                </div>
+
+                <!-- 3. V2 Header (B-Roll / Overlay) -->
+                <div class="track-control-header">
+                    <span class="track-badge broll-bg">V2</span>
+                    <span class="track-name-lbl">B-Roll/Overlay</span>
+                    <div class="track-mini-toggles">
+                        <button type="button" class="mini-tog" title="Mute Track">M</button>
+                        <button type="button" class="mini-tog" title="Lock Track">🔒</button>
+                    </div>
+                </div>
+
+                <!-- 4. A2 Header (Music & Foley) -->
+                <div class="track-control-header audio-lane">
+                    <span class="track-badge sfx-bg">A2</span>
+                    <span class="track-name-lbl">Music/SFX</span>
+                    <div class="track-mini-toggles">
+                        <button type="button" class="mini-tog" title="Mute Audio">M</button>
+                        <button type="button" class="mini-tog" title="Solo Audio">S</button>
+                    </div>
+                </div>
+
+                <!-- 5. V3 Header (Titles / VFX) -->
+                <div class="track-control-header">
+                    <span class="track-badge title-bg">V3</span>
+                    <span class="track-name-lbl">Titles/VFX</span>
+                    <div class="track-mini-toggles">
+                        <button type="button" class="mini-tog" title="Mute Track">M</button>
+                        <button type="button" class="mini-tog" title="Lock Track">🔒</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: 100% PLAYABLE STAGE -->
+            <div class="timeline-playable-stage" id="timeline-playable-stage">
+                <!-- Timecode Ruler Bar -->
+                <div class="timeline-timecode-ruler" id="timeline-timecode-ruler" onmousedown="startPlayheadScrub(event)">
+                    <div class="ruler-numbers-row">
+                        <span>00:00:00:00</span>
+                        <span>00:00:15:00</span>
+                        <span>00:00:30:00</span>
+                        <span>00:00:45:00</span>
+                        <span>00:01:00:00</span>
+                        <span>00:01:15:00</span>
+                        <span>00:01:30:00</span>
+                        <span>00:01:45:00</span>
+                        <span>00:02:00:00</span>
+                    </div>
+                </div>
+
+                <!-- FULL-HEIGHT PLAYHEAD NEEDLE -->
+                <div class="timeline-playhead-needle" id="timeline-playhead-needle" style="left: 0%;" onmousedown="startPlayheadScrub(event)">
+                    <div class="needle-head" title="Drag Playhead"></div>
+                    <div class="needle-body"></div>
+                </div>
+
+                <!-- Track Content Lanes Stack (V1, A1 prominent at top) -->
+                <div class="timeline-lanes-stack" id="timeline-lanes-cluster">
+                    <!-- 1. V1 Content Lane (Primary Video) -->
+                    <div class="track-content-lane" id="track-lane-v1"></div>
+
+                    <!-- 2. A1 Content Lane (Primary Audio - RIGHT BELOW V1) -->
+                    <div class="track-content-lane audio-lane" id="track-lane-a1"></div>
+
+                    <!-- 3. V2 Content Lane (B-Roll) -->
+                    <div class="track-content-lane" id="track-lane-v2"></div>
+
+                    <!-- 4. A2 Content Lane (SFX & Music) -->
+                    <div class="track-content-lane audio-lane" id="track-lane-a2"></div>
+
+                    <!-- 5. V3 Content Lane (Titles) -->
+                    <div class="track-content-lane" id="track-lane-v3"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>

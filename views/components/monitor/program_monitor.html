@@ -1,0 +1,52 @@
+<div class="studio-monitor-dock">
+    <div class="monitor-top-bar">
+        <div class="mon-left">
+            <span class="pulse-dot"></span>
+            <span class="mon-label">PROGRAM MONITOR</span>
+            <span class="res-tag" id="mon-res-badge" onclick="openProjectModal()" title="Click to Change Project Aspect Ratio">📱 9:16 (1080×1920) · 60 FPS</span>
+        </div>
+        <div class="mon-right">
+            <button type="button" class="mon-btn active" onclick="setMonitorViewZoom('fit', this)">Fit</button>
+            <button type="button" class="mon-btn" onclick="setMonitorViewZoom(100, this)">100%</button>
+            <button type="button" class="mon-btn" onclick="setMonitorViewZoom(150, this)">150%</button>
+            <button type="button" class="mon-btn" onclick="resetVideoTransform()" title="Reset Video Pan & Zoom">↺ Reset</button>
+            <button type="button" class="mon-btn" onclick="toggleFullscreenMonitor()" title="Full Screen Preview (F)">⛶ Fullscreen</button>
+        </div>
+    </div>
+
+    <!-- Monitor Stage: Buttery Smooth Direct Mouse Drag Pan & Wheel Zoom -->
+    <div class="monitor-viewport-stage" id="monitor-screen-stage" title="💡 Drag mouse to Pan · Scroll wheel to Zoom">
+        <div class="monitor-canvas-container ratio-9-16" id="monitor-canvas-container">
+            <!-- Video Card Frame -->
+            <div class="monitor-video-card-frame" id="monitor-video-card-frame">
+                <video id="program-master-video" class="native-master-video" playsinline controls="false"
+                       src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4">
+                </video>
+            </div>
+
+            <!-- On-Screen Direct Draggable Text Layer -->
+            <div class="monitor-text-layer subtitle-style" id="monitor-text-overlay" style="display: none;" title="Double-click to edit · Drag to move · Corner handle to resize">
+                <span class="text-content-span" id="monitor-text-content" contenteditable="false" spellcheck="false">Danphe Reels</span>
+                <div class="text-resize-handle br" id="text-resize-handle-br" title="Drag to Resize Font Size"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transport Bar -->
+    <div class="monitor-transport-bar">
+        <div class="transport-group">
+            <button type="button" class="trans-btn" onclick="seekRelative(-5)" title="Step Back 5s (J)">⏮ -5s</button>
+            <button type="button" class="trans-btn" onclick="stepFrame(-1)" title="Step 1 Frame Back (←)">◀ 1f</button>
+            <button type="button" class="trans-play-circle" id="master-play-pause-btn" onclick="toggleMasterPlayback()" title="Play / Pause (Space)">
+                <span id="play-pause-icon">▶</span>
+            </button>
+            <button type="button" class="trans-btn" onclick="stepFrame(1)" title="Step 1 Frame Forward (→)">1f ▶</button>
+            <button type="button" class="trans-btn" onclick="seekRelative(5)" title="Step Forward 5s (L)">+5s ⏭</button>
+        </div>
+        <div class="timecode-lcd-box" id="master-timecode-display-sub">00:00:00:00</div>
+    </div>
+</div>
+<!-- Resizable Splitter Bar between Monitor and Timeline -->
+<div class="studio-workspace-splitter" id="workspace-splitter" title="Drag up/down to adjust Monitor & Timeline size">
+    <div class="splitter-knob-line"></div>
+</div>

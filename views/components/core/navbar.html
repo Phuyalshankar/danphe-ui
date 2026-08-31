@@ -1,0 +1,41 @@
+<header class="studio-top-navbar">
+    <div class="nav-cluster-left">
+        <div class="studio-brand">
+            <svg class="brand-logo" viewBox="0 0 32 32"><use href="#danphe-logo"/></svg>
+            <span class="brand-name">DANPHE</span>
+            <span class="brand-tag">19 PRO</span>
+        </div>
+
+        <button type="button" class="btn-new-project" onclick="openProjectModal()" title="Start New Project / Define Ratio">
+            <span>➕ NEW PROJECT</span>
+        </button>
+
+        <div class="nav-project-pill" onclick="openProjectModal()" title="Sequence Aspect Ratio Settings">
+            <span class="pill-icon" id="nav-project-ratio">📱 9:16</span>
+            <span class="pill-text" id="nav-project-title">Danphe_Reel_Project</span>
+        </div>
+    </div>
+
+    <!-- Center: Sleek Minimal Workspaces -->
+    <div class="nav-cluster-center">
+        <button type="button" class="nav-tab active" onclick="switchNLEWorkspace('edit', this)">🎬 EDIT</button>
+        <button type="button" class="nav-tab" onclick="switchNLEWorkspace('color', this)">🎨 COLOR</button>
+        <button type="button" class="nav-tab" onclick="openExportModal()">🚀 DELIVER</button>
+    </div>
+
+    <!-- Right: Telemetry & Actions -->
+    <div class="nav-cluster-right">
+        <div class="nav-fps-badge">
+            <span class="fps-dot"></span>
+            <span>60 FPS</span>
+        </div>
+        <div class="nav-timecode-lcd" id="master-timecode-display">00:00:00:00</div>
+        <button type="button" class="btn-popout-monitor" onclick="openDetachedStudioMonitor()" title="Detach Monitor to Resizable Window / 2nd Screen">
+            <span>🗗 POP OUT</span>
+        </button>
+        <button type="button" class="btn-export-master" onclick="openExportModal()" title="Render and Download Master Video">
+            <svg viewBox="0 0 24 24" style="width:13px; height:13px; fill:currentColor; vertical-align:middle;"><use href="#icon-export"/></svg>
+            <span>EXPORT</span>
+        </button>
+    </div>
+</header>

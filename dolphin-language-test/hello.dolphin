@@ -1,0 +1,23 @@
+// hello.dolphin - Dolphin Language Hello World
+// danphe-ui test folder
+
+print("=================================")
+print("   Hello from Dolphin Language!")
+print("   danphe-ui x Dolphin 2.0.0")
+print("=================================")
+print("")
+
+var name = "Danphe UI"
+var version = 2
+
+print("Project: " + name)
+print("Version: " + JSON.stringify(version))
+print("")
+
+print("Counting 0 to 4:")
+loop (i, 0, 5) {
+    print("  Count: " + JSON.stringify(i))
+}
+print("")
+
+print("Test Passed!")

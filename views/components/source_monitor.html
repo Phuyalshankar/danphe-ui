@@ -1,0 +1,40 @@
+﻿<div class="pane-box" style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+    <div class="pane-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg> Source Monitor (Raw Media)</span>
+            <span id="source-media-badge" style="background:rgba(250,204,21,0.15); color:#facc15; border:1px solid #ca8a04; font-size:9px; padding:1px 6px; border-radius:3px; font-weight:700;">RAW PREVIEW</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:4px;">
+            <button class="m-btn" onclick="insertSourceToTimeline()" title="Insert Source Clip to Timeline (',')" style="color:#4ade80; border-color:#059669; background:#062816;">+ Insert (,)</button>
+            <button class="m-btn" onclick="overwriteSourceToTimeline()" title="Overwrite to Timeline ('.')" style="color:#38bdf8; border-color:#0284c7; background:#08213b;">Overwrite (.)</button>
+        </div>
+    </div>
+    
+    <div class="pane-content" style="padding:4px; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#000; position:relative; overflow:hidden;">
+        <canvas id="source-canvas" width="640" height="360" style="width:100%; height:100%; max-height:calc(100vh - 40px - 36px - 220px - 70px); object-fit:contain; background:#000; cursor:pointer;" onclick="toggleSourcePlay()" title="Click Source Monitor to Play/Pause Raw Media"></canvas>
+    </div>
+
+    <!-- 🌟 Danphe-UI Source Transport & Mark In/Out Controls -->
+    <div style="height:32px; background:#0b1120; border-top:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; padding:0 8px;">
+        <div style="display:flex; align-items:center; gap:3px;">
+            <!-- Mark IN Point (I) -->
+            <button class="p-tool" onclick="markSourceIn()" title="Mark In Point ('I')" style="color:#38bdf8;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4v16"/><path d="M4 12h10"/><polyline points="10 7 15 12 10 17"/></svg>
+            </button>
+            <!-- Source Play/Pause -->
+            <button class="p-tool" id="source-play-btn" onclick="toggleSourcePlay()" style="width:28px; height:22px; background:#0f172a; border-color:#334155; color:#38bdf8;" title="Play/Pause Source (Spacebar)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <!-- Mark OUT Point (O) -->
+            <button class="p-tool" onclick="markSourceOut()" title="Mark Out Point ('O')" style="color:#facc15;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 4v16"/><path d="M20 12H10"/><polyline points="14 7 9 12 14 17"/></svg>
+            </button>
+        </div>
+
+        <!-- In/Out Timecode Tags -->
+        <div style="display:flex; align-items:center; gap:6px;">
+            <span id="source-in-tag" style="font-family:monospace; font-size:9.5px; font-weight:700; color:#38bdf8; background:#070d1a; padding:1px 5px; border-radius:3px; border:1px solid #1e293b;">IN: 00:00:00</span>
+            <span id="source-out-tag" style="font-family:monospace; font-size:9.5px; font-weight:700; color:#facc15; background:#070d1a; padding:1px 5px; border-radius:3px; border:1px solid #1e293b;">OUT: 00:30:00</span>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,422 @@
+<!-- 🎨 PROFESSIONAL EFFECTS BROWSER - DaVinci Resolve Style -->
+<div class="effects-browser glass-panel" style="
+    width: 280px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+">
+    <!-- Header -->
+    <div class="effects-header" style="
+        padding: 12px;
+        border-bottom: 1px solid #30363d;
+        background: linear-gradient(180deg, #1c2128 0%, #161b22 100%);
+    ">
+        <h3 class="gradient-text font-bold text-sm" style="margin-bottom: 8px;">
+            Effects Library
+        </h3>
+        
+        <!-- Search Bar -->
+        <div class="search-container" style="position: relative;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7d8590" stroke-width="2" style="
+                position: absolute;
+                left: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                pointer-events: none;
+            ">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input 
+                type="text" 
+                class="input text-sm" 
+                placeholder="Search effects..." 
+                id="effects-search"
+                oninput="filterEffects(this.value)"
+                style="
+                    height: 32px;
+                    padding-left: 36px;
+                    font-size: 12px;
+                "
+            />
+        </div>
+    </div>
+
+    <!-- Category Tabs -->
+    <div class="category-tabs flex" style="
+        padding: 8px;
+        gap: 4px;
+        border-bottom: 1px solid #21262d;
+        background: #0d1117;
+        overflow-x: auto;
+        flex-wrap: wrap;
+    ">
+        <button class="category-tab active" data-category="all" onclick="switchCategory('all', this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+            </svg>
+            All
+        </button>
+        <button class="category-tab" data-category="video" onclick="switchCategory('video', this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="23 7 16 12 23 17 23 7"/>
+                <rect x="1" y="5" width="15" height="14" rx="2"/>
+            </svg>
+            Video
+        </button>
+        <button class="category-tab" data-category="transition" onclick="switchCategory('transition', this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="7" cy="12" r="4"/>
+                <circle cx="17" cy="12" r="4"/>
+            </svg>
+            Transitions
+        </button>
+        <button class="category-tab" data-category="color" onclick="switchCategory('color', this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a10 10 0 0 0 0 20"/>
+            </svg>
+            Color
+        </button>
+        <button class="category-tab" data-category="audio" onclick="switchCategory('audio', this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18V5l12-2v13"/>
+                <circle cx="6" cy="18" r="3"/>
+                <circle cx="18" cy="16" r="3"/>
+            </svg>
+            Audio
+        </button>
+        <button class="category-tab" data-category="text" onclick="switchCategory('text', this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 7 4 4 20 4 20 7"/>
+                <line x1="9" y1="20" x2="15" y2="20"/>
+                <line x1="12" y1="4" x2="12" y2="20"/>
+            </svg>
+            Text
+        </button>
+    </div>
+
+    <!-- Effects Grid -->
+    <div class="effects-grid" id="effects-grid" style="
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        align-content: start;
+    ">
+        <!-- Video Effects -->
+        <div class="effect-card glass-card" data-category="video" data-name="Gaussian Blur" draggable="true" ondragstart="dragEffect(event, 'Gaussian Blur')">
+            <div class="effect-icon">🌫️</div>
+            <div class="effect-name">Gaussian Blur</div>
+            <div class="effect-badge badge badge-primary">Video</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="video" data-name="Sharpen" draggable="true" ondragstart="dragEffect(event, 'Sharpen')">
+            <div class="effect-icon">✨</div>
+            <div class="effect-name">Sharpen</div>
+            <div class="effect-badge badge badge-primary">Video</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="video" data-name="Vignette" draggable="true" ondragstart="dragEffect(event, 'Vignette')">
+            <div class="effect-icon">🌗</div>
+            <div class="effect-name">Vignette</div>
+            <div class="effect-badge badge badge-primary">Video</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="video" data-name="Lens Flare" draggable="true" ondragstart="dragEffect(event, 'Lens Flare')">
+            <div class="effect-icon">☀️</div>
+            <div class="effect-name">Lens Flare</div>
+            <div class="effect-badge badge badge-primary">Video</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="video" data-name="Film Grain" draggable="true" ondragstart="dragEffect(event, 'Film Grain')">
+            <div class="effect-icon">📽️</div>
+            <div class="effect-name">Film Grain</div>
+            <div class="effect-badge badge badge-primary">Video</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="video" data-name="Glow" draggable="true" ondragstart="dragEffect(event, 'Glow')">
+            <div class="effect-icon">✨</div>
+            <div class="effect-name">Glow</div>
+            <div class="effect-badge badge badge-primary">Video</div>
+        </div>
+
+        <!-- Transitions -->
+        <div class="effect-card glass-card" data-category="transition" data-name="Cross Dissolve" draggable="true" ondragstart="dragEffect(event, 'Cross Dissolve')">
+            <div class="effect-icon">〰️</div>
+            <div class="effect-name">Cross Dissolve</div>
+            <div class="effect-badge badge" style="background: rgba(188, 140, 255, 0.2); color: #bc8cff; border-color: #bc8cff;">Transition</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="transition" data-name="Dip to Black" draggable="true" ondragstart="dragEffect(event, 'Dip to Black')">
+            <div class="effect-icon">⬛</div>
+            <div class="effect-name">Dip to Black</div>
+            <div class="effect-badge badge" style="background: rgba(188, 140, 255, 0.2); color: #bc8cff; border-color: #bc8cff;">Transition</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="transition" data-name="Push" draggable="true" ondragstart="dragEffect(event, 'Push')">
+            <div class="effect-icon">➡️</div>
+            <div class="effect-name">Push</div>
+            <div class="effect-badge badge" style="background: rgba(188, 140, 255, 0.2); color: #bc8cff; border-color: #bc8cff;">Transition</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="transition" data-name="Zoom" draggable="true" ondragstart="dragEffect(event, 'Zoom')">
+            <div class="effect-icon">🔍</div>
+            <div class="effect-name">Zoom</div>
+            <div class="effect-badge badge" style="background: rgba(188, 140, 255, 0.2); color: #bc8cff; border-color: #bc8cff;">Transition</div>
+        </div>
+
+        <!-- Color Effects -->
+        <div class="effect-card glass-card" data-category="color" data-name="Color Wheels" draggable="true" ondragstart="dragEffect(event, 'Color Wheels')">
+            <div class="effect-icon">🎨</div>
+            <div class="effect-name">Color Wheels</div>
+            <div class="effect-badge badge badge-warning">Color</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="color" data-name="LUT" draggable="true" ondragstart="dragEffect(event, 'LUT')">
+            <div class="effect-icon">🎬</div>
+            <div class="effect-name">LUT</div>
+            <div class="effect-badge badge badge-warning">Color</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="color" data-name="Temperature" draggable="true" ondragstart="dragEffect(event, 'Temperature')">
+            <div class="effect-icon">🌡️</div>
+            <div class="effect-name">Temperature</div>
+            <div class="effect-badge badge badge-warning">Color</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="color" data-name="Vibrance" draggable="true" ondragstart="dragEffect(event, 'Vibrance')">
+            <div class="effect-icon">💎</div>
+            <div class="effect-name">Vibrance</div>
+            <div class="effect-badge badge badge-warning">Color</div>
+        </div>
+
+        <!-- Audio Effects -->
+        <div class="effect-card glass-card" data-category="audio" data-name="EQ" draggable="true" ondragstart="dragEffect(event, 'EQ')">
+            <div class="effect-icon">🎚️</div>
+            <div class="effect-name">EQ</div>
+            <div class="effect-badge badge badge-success">Audio</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="audio" data-name="Compressor" draggable="true" ondragstart="dragEffect(event, 'Compressor')">
+            <div class="effect-icon">📊</div>
+            <div class="effect-name">Compressor</div>
+            <div class="effect-badge badge badge-success">Audio</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="audio" data-name="Reverb" draggable="true" ondragstart="dragEffect(event, 'Reverb')">
+            <div class="effect-icon">🏛️</div>
+            <div class="effect-name">Reverb</div>
+            <div class="effect-badge badge badge-success">Audio</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="audio" data-name="Denoise" draggable="true" ondragstart="dragEffect(event, 'Denoise')">
+            <div class="effect-icon">🎙️</div>
+            <div class="effect-name">AI Denoise</div>
+            <div class="effect-badge badge badge-success">Audio</div>
+        </div>
+
+        <!-- Text Effects -->
+        <div class="effect-card glass-card" data-category="text" data-name="Basic Title" draggable="true" ondragstart="dragEffect(event, 'Basic Title')">
+            <div class="effect-icon">📝</div>
+            <div class="effect-name">Basic Title</div>
+            <div class="effect-badge badge" style="background: rgba(210, 153, 34, 0.2); color: #d29922; border-color: #d29922;">Text</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="text" data-name="Lower Third" draggable="true" ondragstart="dragEffect(event, 'Lower Third')">
+            <div class="effect-icon">📌</div>
+            <div class="effect-name">Lower Third</div>
+            <div class="effect-badge badge" style="background: rgba(210, 153, 34, 0.2); color: #d29922; border-color: #d29922;">Text</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="text" data-name="Subtitle" draggable="true" ondragstart="dragEffect(event, 'Subtitle')">
+            <div class="effect-icon">💬</div>
+            <div class="effect-name">Subtitle</div>
+            <div class="effect-badge badge" style="background: rgba(210, 153, 34, 0.2); color: #d29922; border-color: #d29922;">Text</div>
+        </div>
+
+        <div class="effect-card glass-card" data-category="text" data-name="Kinetic" draggable="true" ondragstart="dragEffect(event, 'Kinetic')">
+            <div class="effect-icon">🎭</div>
+            <div class="effect-name">Kinetic Type</div>
+            <div class="effect-badge badge" style="background: rgba(210, 153, 34, 0.2); color: #d29922; border-color: #d29922;">Text</div>
+        </div>
+    </div>
+
+    <!-- Footer Stats -->
+    <div class="effects-footer" style="
+        padding: 8px 12px;
+        border-top: 1px solid #30363d;
+        background: #0d1117;
+        font-size: 11px;
+        color: #7d8590;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    ">
+        <span id="effects-count">20 effects</span>
+        <span class="badge badge-primary" style="font-size: 10px;">PRO</span>
+    </div>
+</div>
+
+<style>
+.effects-browser {
+    transition: width 0.3s;
+}
+
+.category-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+    color: #7d8590;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.category-tab:hover {
+    background: #161b22;
+    color: #e6edf3;
+}
+
+.category-tab.active {
+    background: #58a6ff;
+    color: #010409;
+    border-color: #58a6ff;
+    box-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
+}
+
+.category-tab svg {
+    flex-shrink: 0;
+}
+
+.effect-card {
+    padding: 12px;
+    cursor: grab;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.effect-card:active {
+    cursor: grabbing;
+}
+
+.effect-card:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 12px rgba(88, 166, 255, 0.2);
+}
+
+.effect-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.effect-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: #e6edf3;
+    line-height: 1.3;
+}
+
+.effect-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+}
+
+.category-tabs::-webkit-scrollbar {
+    height: 0;
+}
+</style>
+
+<script>
+let currentCategory = 'all';
+
+function switchCategory(category, button) {
+    currentCategory = category;
+    
+    // Update active tab
+    document.querySelectorAll('.category-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    button.classList.add('active');
+    
+    // Filter effects
+    const cards = document.querySelectorAll('.effect-card');
+    let visibleCount = 0;
+    
+    cards.forEach(card => {
+        const cardCategory = card.getAttribute('data-category');
+        if (category === 'all' || cardCategory === category) {
+            card.style.display = 'flex';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Update count
+    document.getElementById('effects-count').textContent = `${visibleCount} effects`;
+    
+    // Update Titan Bus
+    if (window.TitanBus) {
+        TitanBus.write(0x2000, category);
+    }
+    
+    console.log('🎨 Switched to category:', category);
+}
+
+function filterEffects(searchQuery) {
+    const query = searchQuery.toLowerCase();
+    const cards = document.querySelectorAll('.effect-card');
+    let visibleCount = 0;
+    
+    cards.forEach(card => {
+        const name = card.getAttribute('data-name').toLowerCase();
+        const category = card.getAttribute('data-category');
+        
+        const matchesSearch = name.includes(query);
+        const matchesCategory = currentCategory === 'all' || category === currentCategory;
+        
+        if (matchesSearch && matchesCategory) {
+            card.style.display = 'flex';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Update count
+    document.getElementById('effects-count').textContent = `${visibleCount} effects`;
+}
+
+function dragEffect(event, effectName) {
+    event.dataTransfer.setData('effect', effectName);
+    event.dataTransfer.effectAllowed = 'copy';
+    
+    console.log('🎬 Dragging effect:', effectName);
+    
+    // Visual feedback
+    event.target.style.opacity = '0.5';
+    setTimeout(() => {
+        event.target.style.opacity = '1';
+    }, 100);
+}
+
+// Initialize
+switchCategory('all', document.querySelector('.category-tab[data-category="all"]'));
+</script>

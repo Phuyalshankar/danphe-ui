@@ -1,0 +1,180 @@
+<aside class="studio-right-inspector" id="right-inspector">
+    <div class="inspector-header">
+        <div class="insp-tabs">
+            <button class="insp-tab-btn active" onclick="switchRightDockTab('transform', this)">🎬 Motion</button>
+            <button class="insp-tab-btn" onclick="switchRightDockTab('titles', this)">✍️ Text</button>
+            <button class="insp-tab-btn" onclick="switchRightDockTab('color', this)">🎨 Color</button>
+            <button class="insp-tab-btn" onclick="switchRightDockTab('audio', this)">🎙️ Audio</button>
+        </div>
+        <button class="insp-collapse-btn" onclick="toggleRightInspector()" title="Collapse Panel">▶</button>
+    </div>
+
+    <div class="inspector-scroll-body">
+        <!-- TAB 1: MOTION & CARD TRANSFORM -->
+        <div class="insp-pane active" id="pane-trans">
+            <div class="insp-card">
+                <div class="insp-card-title-row">
+                    <span>CARD &amp; MOTION TRANSFORM</span>
+                    <button type="button" class="btn-card-reset" onclick="resetVideoTransform()">↺ Reset</button>
+                </div>
+
+                <!-- Zoom -->
+                <div class="insp-slider-group">
+                    <div class="slider-meta"><span>Zoom / Scale</span><strong id="fader-zoom-val" class="cyan">100%</strong></div>
+                    <div class="slider-track-wrap">
+                        <div class="slider-led-fill cyan" id="fader-zoom-fill" style="width:calc(44.4% - 3px)"></div>
+                        <div class="slider-knob" id="fader-zoom-knob" style="left:44.4%"></div>
+                        <input type="range" min="30" max="300" value="100" id="fader-zoom-input" oninput="titanProSliderUpdate('fader-zoom',+this.value,30,300,'%',16641)" class="slider-native">
+                    </div>
+                </div>
+
+                <!-- Pan X -->
+                <div class="insp-slider-group">
+                    <div class="slider-meta"><span>Pan X</span><strong id="fader-posx-val" class="cyan">0px</strong></div>
+                    <div class="slider-track-wrap">
+                        <div class="slider-led-fill cyan" id="fader-posx-fill" style="width:calc(50% - 3px)"></div>
+                        <div class="slider-knob" id="fader-posx-knob" style="left:50%"></div>
+                        <input type="range" min="-600" max="600" value="0" id="fader-posx-input" oninput="titanProSliderUpdate('fader-posx',+this.value,-600,600,'px',16643)" class="slider-native">
+                    </div>
+                </div>
+
+                <!-- Pan Y -->
+                <div class="insp-slider-group">
+                    <div class="slider-meta"><span>Pan Y</span><strong id="fader-posy-val" class="cyan">0px</strong></div>
+                    <div class="slider-track-wrap">
+                        <div class="slider-led-fill cyan" id="fader-posy-fill" style="width:calc(50% - 3px)"></div>
+                        <div class="slider-knob" id="fader-posy-knob" style="left:50%"></div>
+                        <input type="range" min="-600" max="600" value="0" id="fader-posy-input" oninput="titanProSliderUpdate('fader-posy',+this.value,-600,600,'px',16644)" class="slider-native">
+                    </div>
+                </div>
+
+                <!-- Corner Radius -->
+                <div class="insp-slider-group">
+                    <div class="slider-meta"><span>Card Corner Radius</span><strong id="fader-radius-val" class="purple">0px</strong></div>
+                    <div class="slider-track-wrap">
+                        <div class="slider-led-fill purple" id="fader-radius-fill" style="width:0%"></div>
+                        <div class="slider-knob purple" id="fader-radius-knob" style="left:0%"></div>
+                        <input type="range" min="0" max="60" value="0" id="fader-radius-input" oninput="titanProSliderUpdate('fader-radius',+this.value,0,60,'px',16645)" class="slider-native">
+                    </div>
+                </div>
+
+                <!-- Rotation -->
+                <div class="insp-slider-group">
+                    <div class="slider-meta"><span>Rotation</span><strong id="fader-rot-val" class="amber">0°</strong></div>
+                    <div class="slider-track-wrap">
+                        <div class="slider-led-fill amber" id="fader-rot-fill" style="width:calc(50% - 3px)"></div>
+                        <div class="slider-knob amber" id="fader-rot-knob" style="left:50%"></div>
+                        <input type="range" min="-180" max="180" value="0" id="fader-rot-input" oninput="titanProSliderUpdate('fader-rot',+this.value,-180,180,'°',16642)" class="slider-native">
+                    </div>
+                </div>
+
+                <div class="insp-tip">
+                    💡 <strong>Direct Pan:</strong> Program Monitor भित्र माउसले ड्रग गरेर भिडियोलाई सिधै Pan गर्न सक्नुहुन्छ!
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: TEXT & SUBTITLES -->
+        <div class="insp-pane" id="pane-titles" style="display:none;">
+            <div class="insp-card">
+                <div class="insp-card-title-row">
+                    <span>ON-SCREEN TEXT &amp; TITLES</span>
+                    <label class="insp-toggle-lbl">
+                        <input type="checkbox" id="text-enabled-toggle" onchange="toggleTextOverlay(this.checked)"> Enable
+                    </label>
+                </div>
+
+                <label class="insp-param-lbl">Text Content</label>
+                <textarea class="insp-textarea" id="title-text-input" oninput="updateLiveTextOverlay(this.value)" rows="2">Danphe Reels</textarea>
+
+                <label class="insp-param-lbl" style="margin-top:10px;">Preset Style</label>
+                <div class="insp-btn-grid">
+                    <button type="button" class="preset-pill-btn active" onclick="applyTextStylePreset('subtitle', this)">📱 Subtitle</button>
+                    <button type="button" class="preset-pill-btn" onclick="applyTextStylePreset('neon', this)">✨ Neon</button>
+                    <button type="button" class="preset-pill-btn" onclick="applyTextStylePreset('headline', this)">🎬 Cinema</button>
+                    <button type="button" class="preset-pill-btn" onclick="applyTextStylePreset('badge', this)">🏷️ Badge</button>
+                </div>
+
+                <div class="insp-2col-row" style="margin-top:10px;">
+                    <div class="insp-col">
+                        <label class="insp-param-lbl">Font Size</label>
+                        <select class="insp-select" id="text-fontsize-select" onchange="updateTextStyling()">
+                            <option value="12">12px (Small)</option>
+                            <option value="15" selected>15px (Standard)</option>
+                            <option value="18">18px (Medium)</option>
+                            <option value="22">22px (Title)</option>
+                            <option value="28">28px (Headline)</option>
+                        </select>
+                    </div>
+                    <div class="insp-col">
+                        <label class="insp-param-lbl">Color</label>
+                        <select class="insp-select" id="text-color-select" onchange="updateTextStyling()">
+                            <option value="#ffffff">White</option>
+                            <option value="#facc15" selected>Yellow (Reel)</option>
+                            <option value="#38bdf8">Cyan</option>
+                            <option value="#f43f5e">Coral Red</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="insp-tip" style="margin-top:12px;">
+                    💡 <strong>Double-Click Edit:</strong> स्क्रिनमा देखिएको टेक्स्टमा २ पटक क्लिक गरेर सिधै त्यहीँ टाइप गर्न सकिन्छ!
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: COLOR & EFFECTS -->
+        <div class="insp-pane" id="pane-color" style="display:none;">
+            <div class="insp-card">
+                <span class="insp-card-title">COLOR GRADING</span>
+                <div class="color-wheels-cluster">
+                    <div class="wheel-box"><div class="wheel-ring"><div class="wheel-dot"></div></div><span>LIFT</span></div>
+                    <div class="wheel-box"><div class="wheel-ring"><div class="wheel-dot"></div></div><span>GAMMA</span></div>
+                    <div class="wheel-box"><div class="wheel-ring"><div class="wheel-dot"></div></div><span>GAIN</span></div>
+                </div>
+
+                <!-- Temperature -->
+                <div class="insp-slider-group" style="margin-top:12px;">
+                    <div class="slider-meta"><span>Temperature</span><strong id="fader-temp-val" class="amber">5600K</strong></div>
+                    <div class="slider-track-wrap">
+                        <div class="slider-led-fill amber" id="fader-temp-fill" style="width:calc(44.2% - 3px)"></div>
+                        <div class="slider-knob amber" id="fader-temp-knob" style="left:44.2%"></div>
+                        <input type="range" min="2500" max="9500" value="5600" id="fader-temp-input" oninput="titanProSliderUpdate('fader-temp',+this.value,2500,9500,'K',16384)" class="slider-native">
+                    </div>
+                </div>
+
+                <!-- Saturation -->
+                <div class="insp-slider-group">
+                    <div class="slider-meta"><span>Saturation</span><strong id="fader-sat-val" class="emerald">100%</strong></div>
+                    <div class="slider-track-wrap">
+                        <div class="slider-led-fill emerald" id="fader-sat-fill" style="width:calc(50% - 3px)"></div>
+                        <div class="slider-knob emerald" id="fader-sat-knob" style="left:50%"></div>
+                        <input type="range" min="0" max="250" value="100" id="fader-sat-input" oninput="titanProSliderUpdate('fader-sat',+this.value,0,250,'%',16384)" class="slider-native">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: AUDIO EQ -->
+        <div class="insp-pane" id="pane-audio" style="display:none;">
+            <div class="insp-card">
+                <span class="insp-card-title">10-BAND DSP EQ</span>
+                <div class="eq-bars-strip">
+                    <div class="eq-band"><div class="eq-bar"><div class="eq-fill" style="height:60%"></div></div><span>32</span></div>
+                    <div class="eq-band"><div class="eq-bar"><div class="eq-fill" style="height:50%"></div></div><span>64</span></div>
+                    <div class="eq-band"><div class="eq-bar"><div class="eq-fill" style="height:55%"></div></div><span>125</span></div>
+                    <div class="eq-band"><div class="eq-bar"><div class="eq-fill" style="height:65%"></div></div><span>250</span></div>
+                    <div class="eq-band"><div class="eq-bar"><div class="eq-fill" style="height:70%"></div></div><span>500</span></div>
+                    <div class="eq-band"><div class="eq-bar"><div class="eq-fill" style="height:75%"></div></div><span>1k</span></div>
+                    <div class="eq-band"><div class="eq-bar"><div class="eq-fill" style="height:80%"></div></div><span>2k</span></div>
+                    <div class="eq-band"><div class="eq-bar"><div class="eq-fill" style="height:85%"></div></div><span>4k</span></div>
+                    <div class="eq-band"><div class="eq-bar"><div class="eq-fill" style="height:90%"></div></div><span>8k</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<div class="insp-collapsed-tab" id="right-dock-open-tab" onclick="toggleRightInspector()" title="Open Inspector">
+    <span>🎛️</span>
+</div>

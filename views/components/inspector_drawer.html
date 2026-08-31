@@ -1,0 +1,299 @@
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- 🎚️ PRO DANPHE-UI MOTION CANVAS & EFFECTS INSPECTOR                  -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<aside class="studio-right-inspector" id="right-inspector">
+    <div class="dock-header">
+        <div class="dock-tabs-cluster">
+            <button class="dock-tab-btn active" onclick="switchRightDockTab('transform', this)">🎬 Motion</button>
+            <button class="dock-tab-btn" onclick="switchRightDockTab('color', this)">🎨 Filters</button>
+            <button class="dock-tab-btn" onclick="switchRightDockTab('titles', this)">✍️ Text</button>
+            <button class="dock-tab-btn" onclick="switchRightDockTab('audio', this)">🎙️ Audio</button>
+        </div>
+        <button class="dock-toggle-btn" onclick="toggleRightInspector()" title="Collapse Panel">▶</button>
+    </div>
+
+    <div class="inspector-content-scroll">
+        <!-- TAB 1: TRANSFORM & CARD MOTION -->
+        <div class="inspector-tab-pane active" id="pane-trans">
+            <div class="insp-section-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span class="insp-sec-title">CARD & MOTION TRANSFORM</span>
+                    <button type="button" onclick="resetVideoTransform()" style="background:#1e293b; color:#38bdf8; border:1px solid #334155; border-radius:4px; font-size:10px; padding:2px 8px; cursor:pointer; font-weight:bold;">↺ Reset</button>
+                </div>
+
+                <!-- Zoom Slider (20% to 300%) -->
+                <div id="fader-zoom-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none">
+                    <div class="flex items-center justify-between text-xs mb-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Zoom / Scale</span>
+                            <span class="text-[9px] text-slate-600 font-bold">0x4101</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span id="fader-zoom-val" class="font-black text-xs text-cyan-400">100%</span>
+                        </div>
+                    </div>
+                    <div class="titan-slider-channel" id="fader-zoom-channel">
+                        <div id="fader-zoom-fill" class="titan-slider-led-fill cyan" style="width:calc(44.4% - 3px)"></div>
+                        <div id="fader-zoom-knob" class="titan-knob-grip" style="left:44.4%"><div class="ridge"></div><div class="ridge"></div><div class="ridge"></div></div>
+                        <input type="range" min="30" max="300" value="100" id="fader-zoom-input" oninput="titanProSliderUpdate('fader-zoom',+this.value,30,300,'%',16641)" class="titan-slider-native-input">
+                    </div>
+                </div>
+
+                <!-- Pan X Slider (-600px to +600px) -->
+                <div id="fader-posx-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none">
+                    <div class="flex items-center justify-between text-xs mb-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Pan X</span>
+                            <span class="text-[9px] text-slate-600 font-bold">0x4103</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span id="fader-posx-val" class="font-black text-xs text-cyan-400">0px</span>
+                        </div>
+                    </div>
+                    <div class="titan-slider-channel" id="fader-posx-channel">
+                        <div id="fader-posx-fill" class="titan-slider-led-fill cyan" style="width:calc(50% - 3px)"></div>
+                        <div id="fader-posx-knob" class="titan-knob-orb" style="left:50%"></div>
+                        <input type="range" min="-600" max="600" value="0" id="fader-posx-input" oninput="titanProSliderUpdate('fader-posx',+this.value,-600,600,'px',16643)" class="titan-slider-native-input">
+                    </div>
+                </div>
+
+                <!-- Pan Y Slider (-600px to +600px) -->
+                <div id="fader-posy-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none">
+                    <div class="flex items-center justify-between text-xs mb-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Pan Y</span>
+                            <span class="text-[9px] text-slate-600 font-bold">0x4104</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span id="fader-posy-val" class="font-black text-xs text-cyan-400">0px</span>
+                        </div>
+                    </div>
+                    <div class="titan-slider-channel" id="fader-posy-channel">
+                        <div id="fader-posy-fill" class="titan-slider-led-fill cyan" style="width:calc(50% - 3px)"></div>
+                        <div id="fader-posy-knob" class="titan-knob-orb" style="left:50%"></div>
+                        <input type="range" min="-600" max="600" value="0" id="fader-posy-input" oninput="titanProSliderUpdate('fader-posy',+this.value,-600,600,'px',16644)" class="titan-slider-native-input">
+                    </div>
+                </div>
+
+                <!-- Card Radius Slider (0px to 60px) -->
+                <div id="fader-radius-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none">
+                    <div class="flex items-center justify-between text-xs mb-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Card Corner Radius</span>
+                            <span class="text-[9px] text-slate-600 font-bold">0x4105</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span id="fader-radius-val" class="font-black text-xs text-purple-400">0px</span>
+                        </div>
+                    </div>
+                    <div class="titan-slider-channel" id="fader-radius-channel">
+                        <div id="fader-radius-fill" class="titan-slider-led-fill purple" style="width:0%;"></div>
+                        <div id="fader-radius-knob" class="titan-knob-lens purple" style="left:0%;"></div>
+                        <input type="range" min="0" max="60" value="0" id="fader-radius-input" oninput="titanProSliderUpdate('fader-radius',+this.value,0,60,'px',16645)" class="titan-slider-native-input">
+                    </div>
+                </div>
+
+                <!-- Rotation Slider (-180° to +180°) -->
+                <div id="fader-rot-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none">
+                    <div class="flex items-center justify-between text-xs mb-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Rotation</span>
+                            <span class="text-[9px] text-slate-600 font-bold">0x4102</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span id="fader-rot-val" class="font-black text-xs text-amber-400">0°</span>
+                        </div>
+                    </div>
+                    <div class="titan-slider-channel" id="fader-rot-channel">
+                        <div id="fader-rot-fill" class="titan-slider-led-fill amber" style="width:calc(50% - 3px)"></div>
+                        <div id="fader-rot-knob" class="titan-knob-orb" style="left:50%"></div>
+                        <input type="range" min="-180" max="180" value="0" id="fader-rot-input" oninput="titanProSliderUpdate('fader-rot',+this.value,-180,180,'°',16642)" class="titan-slider-native-input">
+                    </div>
+                </div>
+
+                <!-- Opacity Slider (0% to 100%) -->
+                <div id="fader-opacity-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none">
+                    <div class="flex items-center justify-between text-xs mb-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Opacity</span>
+                            <span class="text-[9px] text-slate-600 font-bold">0x4100</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span id="fader-opacity-val" class="font-black text-xs text-emerald-400">100%</span>
+                        </div>
+                    </div>
+                    <div class="titan-slider-channel" id="fader-opacity-channel">
+                        <div id="fader-opacity-fill" class="titan-slider-led-fill emerald" style="width:calc(100% - 3px)"></div>
+                        <div id="fader-opacity-knob" class="titan-knob-lens emerald" style="left:100%"><div class="center-led"></div></div>
+                        <input type="range" min="0" max="100" value="100" id="fader-opacity-input" oninput="titanProSliderUpdate('fader-opacity',+this.value,0,100,'%',16640)" class="titan-slider-native-input">
+                    </div>
+                </div>
+
+                <div style="background:#0b1324; border-radius:8px; padding:8px 12px; margin-top:10px; font-size:10px; color:#64748b; line-height:1.5;">
+                    💡 <strong style="color:#38bdf8;">Mouse Pan Shortcut:</strong> Program Monitor भित्र माउसले ड्रग गरेर भिडियोलाई जुनसुकै दिशामा Pan गर्न सक्नुहुन्छ!
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: CINEMATIC FILTERS & EFFECTS -->
+        <div class="inspector-tab-pane" id="pane-color">
+            <div class="insp-section-card">
+                <span class="insp-sec-title">CINEMATIC PRESET FILTERS</span>
+                <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin-bottom:14px;">
+                    <button type="button" class="preset-filter-btn active" onclick="applyVideoFilterPreset('normal', this)">🎬 Normal</button>
+                    <button type="button" class="preset-filter-btn" onclick="applyVideoFilterPreset('teal-orange', this)">🌊 Teal &amp; Orange</button>
+                    <button type="button" class="preset-filter-btn" onclick="applyVideoFilterPreset('cyberpunk', this)">⚡ Cyberpunk</button>
+                    <button type="button" class="preset-filter-btn" onclick="applyVideoFilterPreset('vintage', this)">📼 90s Vintage</button>
+                    <button type="button" class="preset-filter-btn" onclick="applyVideoFilterPreset('noir', this)">🖤 Noir B&amp;W</button>
+                    <button type="button" class="preset-filter-btn" onclick="applyVideoFilterPreset('golden', this)">🌅 Golden Hour</button>
+                </div>
+
+                <span class="insp-sec-title" style="margin-top:12px;">FINE TUNING</span>
+                <!-- Temperature -->
+                <div id="fader-temp-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none">
+                    <div class="flex items-center justify-between text-xs mb-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Temperature</span>
+                        </div>
+                        <span id="fader-temp-val" class="font-black text-xs text-amber-400">5600K</span>
+                    </div>
+                    <div class="titan-slider-channel" id="fader-temp-channel">
+                        <div id="fader-temp-fill" class="titan-slider-led-fill amber" style="width:calc(44.2% - 3px)"></div>
+                        <div id="fader-temp-knob" class="titan-knob-lens amber" style="left:44.2%"><div class="center-led"></div></div>
+                        <input type="range" min="2500" max="9500" value="5600" id="fader-temp-input" oninput="titanProSliderUpdate('fader-temp',+this.value,2500,9500,'K',16384)" class="titan-slider-native-input">
+                    </div>
+                </div>
+
+                <!-- Saturation -->
+                <div id="fader-sat-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none">
+                    <div class="flex items-center justify-between text-xs mb-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Saturation</span>
+                        </div>
+                        <span id="fader-sat-val" class="font-black text-xs text-emerald-400">100%</span>
+                    </div>
+                    <div class="titan-slider-channel" id="fader-sat-channel">
+                        <div id="fader-sat-fill" class="titan-slider-led-fill emerald" style="width:calc(50% - 3px)"></div>
+                        <div id="fader-sat-knob" class="titan-knob-lens emerald" style="left:50%"><div class="center-led"></div></div>
+                        <input type="range" min="0" max="250" value="100" id="fader-sat-input" oninput="titanProSliderUpdate('fader-sat',+this.value,0,250,'%',16384)" class="titan-slider-native-input">
+                    </div>
+                </div>
+
+                <!-- Contrast -->
+                <div id="fader-contrast-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none">
+                    <div class="flex items-center justify-between text-xs mb-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Contrast</span>
+                        </div>
+                        <span id="fader-contrast-val" class="font-black text-xs text-cyan-400">100%</span>
+                    </div>
+                    <div class="titan-slider-channel" id="fader-contrast-channel">
+                        <div id="fader-contrast-fill" class="titan-slider-led-fill cyan" style="width:calc(40% - 3px)"></div>
+                        <div id="fader-contrast-knob" class="titan-knob-lens cyan" style="left:40%"></div>
+                        <input type="range" min="50" max="200" value="100" id="fader-contrast-input" oninput="titanProSliderUpdate('fader-contrast',+this.value,50,200,'%',16384)" class="titan-slider-native-input">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: TEXT & TITLES OVERLAY -->
+        <div class="inspector-tab-pane" id="pane-titles">
+            <div class="insp-section-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span class="insp-sec-title">ON-SCREEN TEXT OVERLAY</span>
+                    <label style="font-size:11px; color:#38bdf8; display:flex; align-items:center; gap:4px; cursor:pointer;">
+                        <input type="checkbox" id="text-enabled-toggle" onchange="toggleTextOverlay(this.checked)"> Enable
+                    </label>
+                </div>
+
+                <label class="param-label" style="font-size:10.5px; margin-bottom:4px;">Overlay Text Content</label>
+                <textarea class="insp-textarea" id="title-text-input" oninput="updateLiveTextOverlay(this.value)" rows="2">Danphe Reels</textarea>
+
+                <div style="margin-top:12px;">
+                    <label class="param-label" style="font-size:10.5px; margin-bottom:6px;">Text Preset Style</label>
+                    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:6px;">
+                        <button type="button" class="preset-filter-btn active" onclick="applyTextStylePreset('subtitle', this)">📱 Reel Subtitle</button>
+                        <button type="button" class="preset-filter-btn" onclick="applyTextStylePreset('neon', this)">✨ Neon Glow</button>
+                        <button type="button" class="preset-filter-btn" onclick="applyTextStylePreset('headline', this)">🎬 Cinema Title</button>
+                        <button type="button" class="preset-filter-btn" onclick="applyTextStylePreset('badge', this)">🏷️ Lower-Third</button>
+                    </div>
+                </div>
+
+                <div class="export-params-grid" style="margin-top:12px; gap:8px;">
+                    <div class="param-col">
+                        <label class="param-label">Font Size</label>
+                        <select class="param-select" id="text-fontsize-select" onchange="updateTextStyling()">
+                            <option value="12">12px (Small)</option>
+                            <option value="15" selected>15px (Standard Reel)</option>
+                            <option value="18">18px (Medium)</option>
+                            <option value="22">22px (Large Title)</option>
+                            <option value="28">28px (Headline)</option>
+                        </select>
+                    </div>
+                    <div class="param-col">
+                        <label class="param-label">Color</label>
+                        <select class="param-select" id="text-color-select" onchange="updateTextStyling()">
+                            <option value="#ffffff" selected>White (Standard)</option>
+                            <option value="#facc15">Yellow (Reels)</option>
+                            <option value="#38bdf8">Cyan (Studio)</option>
+                            <option value="#f43f5e">Coral Red</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="export-params-grid" style="margin-top:8px; gap:8px;">
+                    <div class="param-col">
+                        <label class="param-label">Position</label>
+                        <select class="param-select" id="text-position-select" onchange="updateTextPositionPreset(this.value)">
+                            <option value="bottom" selected>Bottom (Subtitle)</option>
+                            <option value="center">Center (Headline)</option>
+                            <option value="top">Top (Header)</option>
+                        </select>
+                    </div>
+                    <div class="param-col">
+                        <label class="param-label">Font Weight</label>
+                        <select class="param-select" id="text-fontweight-select" onchange="updateTextStyling()">
+                            <option value="900" selected>Black 900</option>
+                            <option value="700">Bold 700</option>
+                            <option value="500">Medium 500</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="background:#0b1324; border-radius:8px; padding:8px 12px; margin-top:12px; font-size:10px; color:#64748b; line-height:1.5;">
+                    💡 <strong style="color:#38bdf8;">Direct Drag:</strong> स्क्रिनमा देखिने टेक्स्टलाई माउसले समातेर भिडियोको जुनसुकै स्थानमा सार्न सक्नुहुन्छ!
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: AUDIO EQ -->
+        <div class="inspector-tab-pane" id="pane-audio">
+            <div class="insp-section-card">
+                <div class="insp-header-flex">
+                    <span class="insp-sec-title">10-BAND DSP EQ</span>
+                    <select class="insp-select" onchange="applyEqPreset(this.value)">
+                        <option value="cinema">Cinema</option>
+                        <option value="flat">Studio</option>
+                        <option value="vocal">Vocal</option>
+                    </select>
+                </div>
+                <div class="eq-sliders-row">
+                    <div class="eq-band-slider"><div class="band-track"><div class="band-fill" style="height:65%"></div></div><span class="band-lbl">32</span></div>
+                    <div class="eq-band-slider"><div class="band-track"><div class="band-fill" style="height:55%"></div></div><span class="band-lbl">64</span></div>
+                    <div class="eq-band-slider"><div class="band-track"><div class="band-fill" style="height:45%"></div></div><span class="band-lbl">125</span></div>
+                    <div class="eq-band-slider"><div class="band-track"><div class="band-fill" style="height:50%"></div></div><span class="band-lbl">250</span></div>
+                    <div class="eq-band-slider"><div class="band-track"><div class="band-fill" style="height:60%"></div></div><span class="band-lbl">500</span></div>
+                    <div class="eq-band-slider"><div class="band-track"><div class="band-fill" style="height:65%"></div></div><span class="band-lbl">1k</span></div>
+                    <div class="eq-band-slider"><div class="band-track"><div class="band-fill" style="height:70%"></div></div><span class="band-lbl">2k</span></div>
+                    <div class="eq-band-slider"><div class="band-track"><div class="band-fill" style="height:80%"></div></div><span class="band-lbl">4k</span></div>
+                    <div class="eq-band-slider"><div class="band-track"><div class="band-fill" style="height:85%"></div></div><span class="band-lbl">8k</span></div>
+                    <div class="eq-band-slider"><div class="band-track"><div class="band-fill" style="height:90%"></div></div><span class="band-lbl">16k</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<div class="right-dock-collapsed-tab" id="right-dock-open-tab" onclick="toggleRightInspector()" title="Open Inspector">
+    <span>🎛️</span>
+</div>

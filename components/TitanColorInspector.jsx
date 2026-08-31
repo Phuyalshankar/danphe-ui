@@ -1,0 +1,1 @@
+import React from "react"; export function TitanColorInspector(props) { return <div {...props} />; }\n

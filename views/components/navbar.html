@@ -1,0 +1,50 @@
+<header class="studio-top-header">
+    <div class="header-left-cluster">
+        <div class="studio-brand-badge">
+            <svg class="danphe-logo-svg" viewBox="0 0 32 32"><use href="#danphe-logo"/></svg>
+            <span class="studio-brand-title">DANPHE</span>
+            <span class="studio-version-tag">19 PRO</span>
+        </div>
+
+        <button type="button" class="new-project-btn" onclick="openProjectModal()" title="Start a New Project / Define Aspect Ratio">
+            <span>➕ NEW PROJECT</span>
+        </button>
+
+        <div class="project-pill-badge" id="nav-project-badge" onclick="openProjectModal()" title="Click to Change Project Aspect Ratio">
+            <span class="pill-ratio" id="nav-project-ratio">📱 9:16</span>
+            <span class="pill-title" id="nav-project-title">Danphe_Reel_Project</span>
+        </div>
+
+        <nav class="studio-menu-nav">
+            <button type="button" class="menu-btn" onclick="openProjectModal()">Project</button>
+            <button type="button" class="menu-btn" onclick="openExportModal()">Export</button>
+            <button type="button" class="menu-btn" onclick="switchNLEWorkspace('color')">Color</button>
+            <button type="button" class="menu-btn" onclick="switchNLEWorkspace('audio')">Fairlight</button>
+            <button type="button" class="menu-btn" onclick="openDetachedStudioMonitor()">Preview</button>
+        </nav>
+    </div>
+
+    <!-- Center: Sleek Compact Icon-First Workspace Switcher -->
+    <div class="header-center-workspaces">
+        <button type="button" class="ws-pill-btn active" onclick="switchNLEWorkspace('edit', this)" title="Edit Sequence"><span>🎬</span> EDIT</button>
+        <button type="button" class="ws-pill-btn" onclick="switchNLEWorkspace('color', this)" title="Color Grading"><span>🎨</span> COLOR</button>
+        <button type="button" class="ws-pill-btn" onclick="switchNLEWorkspace('motion', this)" title="Motion & VFX"><span>✨</span> FX</button>
+        <button type="button" class="ws-pill-btn" onclick="switchNLEWorkspace('audio', this)" title="Fairlight Audio"><span>🎙️</span> AUDIO</button>
+        <button type="button" class="ws-pill-btn" onclick="openExportModal()" title="Deliver & Export"><span>🚀</span> DELIVER</button>
+    </div>
+
+    <div class="header-right-cluster">
+        <div class="titan-relay-chip">
+            <span class="pulse-led-live"></span>
+            <span>60 FPS</span>
+        </div>
+        <div class="master-timecode-lcd" id="master-timecode-display">00:00:00:00</div>
+        <button type="button" class="native-preview-btn" id="master-preview-btn" onclick="openDetachedStudioMonitor()" title="Open Sequence in Native Cinema Player">
+            <span>🎬 PREVIEW</span>
+        </button>
+        <button type="button" class="export-master-btn" id="master-export-btn" onclick="openExportModal()" title="Export & Download Video">
+            <svg viewBox="0 0 24 24" style="width:13px; height:13px; display:inline-block; vertical-align:middle; pointer-events:none;"><use href="#icon-export"/></svg>
+            <span style="pointer-events:none;">EXPORT</span>
+        </button>
+    </div>
+</header>

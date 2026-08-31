@@ -1,0 +1,67 @@
+<aside class="studio-left-dock" id="left-media-dock">
+    <div class="dock-header-tabs">
+        <button type="button" class="tab-item active" onclick="switchMediaTab('pool', this)">📁 Media</button>
+        <button type="button" class="tab-item" onclick="switchMediaTab('text', this)">✍️ Text</button>
+        <button type="button" class="tab-item" onclick="switchMediaTab('fx', this)">✨ FX</button>
+    </div>
+
+    <!-- Tab 1: Media Pool & Import -->
+    <div class="dock-tab-pane active" id="pane-media-pool">
+        <div class="import-drop-card" onclick="document.getElementById('native-file-picker').click()">
+            <input type="file" id="native-file-picker" multiple accept="video/*,audio/*,image/*" style="display:none;" onchange="handleNativeFileSelection(event)">
+            <div class="import-icon">📥</div>
+            <div class="import-title">IMPORT MEDIA</div>
+            <div class="import-sub">Click or Drag Videos, Audios, Images</div>
+        </div>
+
+        <div class="media-assets-grid" id="media-assets-container">
+            <!-- Asset Cards dynamically injected here -->
+        </div>
+    </div>
+
+    <!-- Tab 2: Text & Title Templates -->
+    <div class="dock-tab-pane" id="pane-media-text" style="display:none;">
+        <div class="preset-templates-list">
+            <div class="text-template-card" onclick="addNewTimelineTextClip('Reel Subtitle', 'subtitle')">
+                <span class="tmpl-icon">📱</span>
+                <div class="tmpl-info">
+                    <span class="tmpl-name">Viral Reel Subtitle</span>
+                    <span class="tmpl-desc">Yellow with dark outline pill</span>
+                </div>
+            </div>
+            <div class="text-template-card" onclick="addNewTimelineTextClip('CINEMATIC TITLE', 'headline')">
+                <span class="tmpl-icon">🎬</span>
+                <div class="tmpl-info">
+                    <span class="tmpl-name">Cinema Headline</span>
+                    <span class="tmpl-desc">Bold 3D outline uppercase</span>
+                </div>
+            </div>
+            <div class="text-template-card" onclick="addNewTimelineTextClip('Neon Glow Title', 'neon')">
+                <span class="tmpl-icon">✨</span>
+                <div class="tmpl-info">
+                    <span class="tmpl-name">Neon Glow</span>
+                    <span class="tmpl-desc">Cyan electric glow</span>
+                </div>
+            </div>
+            <div class="text-template-card" onclick="addNewTimelineTextClip('Lower Third Title', 'badge')">
+                <span class="tmpl-icon">🏷️</span>
+                <div class="tmpl-info">
+                    <span class="tmpl-name">Lower-Third Badge</span>
+                    <span class="tmpl-desc">Gradient badge pill</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Effects & Filters -->
+    <div class="dock-tab-pane" id="pane-media-fx" style="display:none;">
+        <div class="fx-presets-grid">
+            <button type="button" class="fx-card-btn active" onclick="applyVideoFilterPreset('normal', this)">🎬 Normal</button>
+            <button type="button" class="fx-card-btn" onclick="applyVideoFilterPreset('teal-orange', this)">🌊 Teal &amp; Orange</button>
+            <button type="button" class="fx-card-btn" onclick="applyVideoFilterPreset('cyberpunk', this)">⚡ Cyberpunk</button>
+            <button type="button" class="fx-card-btn" onclick="applyVideoFilterPreset('vintage', this)">📼 90s Vintage</button>
+            <button type="button" class="fx-card-btn" onclick="applyVideoFilterPreset('noir', this)">🖤 Noir B&amp;W</button>
+            <button type="button" class="fx-card-btn" onclick="applyVideoFilterPreset('golden', this)">🌅 Golden Hour</button>
+        </div>
+    </div>
+</aside>

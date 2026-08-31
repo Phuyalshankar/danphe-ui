@@ -1,0 +1,71 @@
+<section class="studio-timeline-dock">
+    <!-- Ribbon -->
+    <div class="timeline-ribbon-bar">
+        <div class="ribbon-left">
+            <button type="button" class="ribbon-btn btn-add-text" onclick="addNewTimelineTextClip()" title="Add Text Clip at Playhead (T)">
+                <span>✍️ Add Text (T)</span>
+            </button>
+            <button type="button" class="ribbon-btn" onclick="splitSelectedTimelineClip()" title="Split Clip at Playhead (C)">✂️ Split (C)</button>
+            <button type="button" class="ribbon-btn" onclick="deleteSelectedTimelineClip()" title="Delete Selected Clip (Del)">🗑️ Delete (Del)</button>
+            <button type="button" class="ribbon-btn active" onclick="dispatchTitanRelay(0x23, 303, 'SNAP_TOGGLE')">🧲 Snap</button>
+            <button type="button" class="ribbon-btn" onclick="clearAllTimelineTracks()" title="Clear Sequence">🧹 Clear</button>
+        </div>
+        <div class="ribbon-right">
+            <span class="zoom-lbl">ZOOM</span>
+            <input type="range" class="timeline-zoom-slider" min="50" max="400" value="100" oninput="adjustTimelineZoom(this.value)">
+        </div>
+    </div>
+
+    <!-- Timeline Workspace -->
+    <div class="timeline-scroll-workspace" id="timeline-workspace-scroll">
+        <div class="timeline-grid-split">
+            <!-- Left Track Headers -->
+            <div class="timeline-headers-stack">
+                <div class="ruler-corner-cell"><span>TRACKS</span></div>
+                <!-- V2: Titles / Text -->
+                <div class="track-header-row header-v2">
+                    <span class="track-tag tag-text">V2</span>
+                    <span class="track-title">Titles / Text</span>
+                </div>
+                <!-- V1: Primary Video -->
+                <div class="track-header-row header-v1 active">
+                    <span class="track-tag tag-video">V1</span>
+                    <span class="track-title">Primary Video</span>
+                </div>
+                <!-- A1: Master Audio -->
+                <div class="track-header-row header-a1">
+                    <span class="track-tag tag-audio">A1</span>
+                    <span class="track-title">Master Audio</span>
+                    <button type="button" class="btn-track-mute" id="mute-btn-a1" onclick="toggleTrackMute('a1', this)" title="Mute / Unmute Track">🔊</button>
+                </div>
+            </div>
+
+            <!-- Right Playable Stage -->
+            <div class="timeline-playable-stage" id="timeline-playable-stage">
+                <!-- Ruler -->
+                <div class="timeline-timecode-ruler" id="timeline-timecode-ruler" onmousedown="startPlayheadScrub(event)">
+                    <div class="ruler-numbers-row">
+                        <span>00:00:00:00</span><span>00:00:15:00</span><span>00:00:30:00</span>
+                        <span>00:00:45:00</span><span>00:01:00:00</span><span>00:01:15:00</span>
+                    </div>
+                </div>
+
+                <!-- Playhead Needle -->
+                <div class="timeline-playhead-needle" id="timeline-playhead-needle" style="left: 0%;" onmousedown="startPlayheadScrub(event)">
+                    <div class="needle-head"></div>
+                    <div class="needle-body"></div>
+                </div>
+
+                <!-- Tracks Stack -->
+                <div class="timeline-lanes-stack" id="timeline-lanes-cluster">
+                    <!-- V2: Titles Lane -->
+                    <div class="track-lane-row lane-v2" id="track-lane-v3"></div>
+                    <!-- V1: Video Lane -->
+                    <div class="track-lane-row lane-v1" id="track-lane-v1"></div>
+                    <!-- A1: Audio Lane -->
+                    <div class="track-lane-row lane-a1" id="track-lane-a1"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

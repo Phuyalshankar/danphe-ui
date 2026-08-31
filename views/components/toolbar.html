@@ -1,0 +1,44 @@
+<aside class="studio-toolbar-rack">
+    <button class="tool-btn" onclick="dispatchTitanRelay(0x10, 101, 'UNDO')" title="Undo (Ctrl+Z)">
+        <svg viewBox="0 0 24 24"><use href="#icon-undo"/></svg>
+    </button>
+    <button class="tool-btn" onclick="dispatchTitanRelay(0x10, 102, 'REDO')" title="Redo (Ctrl+Y)">
+        <svg viewBox="0 0 24 24"><use href="#icon-redo"/></svg>
+    </button>
+
+    <div class="tool-divider"></div>
+
+    <button class="tool-btn active" data-tool="V" onclick="selectTool(this, 'V', 10001)" title="Selection (V)">
+        <svg viewBox="0 0 24 24"><use href="#icon-tool-v"/></svg>
+    </button>
+    <button class="tool-btn" data-tool="C" onclick="selectTool(this, 'C', 10002)" title="Razor Blade Cut (C)">
+        <svg viewBox="0 0 24 24"><use href="#icon-cut-razor"/></svg>
+    </button>
+    <button class="tool-btn" data-tool="X" onclick="selectTool(this, 'X', 10003)" title="Rate Stretch (X)">
+        <svg viewBox="0 0 24 24"><use href="#icon-tool-x"/></svg>
+    </button>
+    <button class="tool-btn" data-tool="T" onclick="selectTool(this, 'T', 10004)" title="Text Type Tool (T)">
+        <svg viewBox="0 0 24 24"><use href="#icon-tool-t"/></svg>
+    </button>
+    <button class="tool-btn" data-tool="H" onclick="selectTool(this, 'H', 10005)" title="Hand Pan (H)">
+        <svg viewBox="0 0 24 24"><use href="#icon-tool-h"/></svg>
+    </button>
+    <button class="tool-btn" data-tool="Z" onclick="selectTool(this, 'Z', 10006)" title="Zoom Tool (Z)">
+        <svg viewBox="0 0 24 24"><use href="#icon-tool-z"/></svg>
+    </button>
+
+    <div class="tool-divider"></div>
+
+    <button class="tool-btn" data-tool="AI_CUT" onclick="selectTool(this, 'AI_CUT', 10007)" title="AI Smart Cutout">
+        <svg viewBox="0 0 24 24"><use href="#icon-ai-cutout"/></svg>
+    </button>
+    <button class="tool-btn" data-tool="AI_RAMP" onclick="selectTool(this, 'AI_RAMP', 10008)" title="AI Speed Ramp">
+        <svg viewBox="0 0 24 24"><use href="#icon-ai-ramp"/></svg>
+    </button>
+    <button class="tool-btn" data-tool="KEYFRAME" onclick="selectTool(this, 'KEYFRAME', 10009)" title="Keyframe Node">
+        <svg viewBox="0 0 24 24"><use href="#icon-keyframe"/></svg>
+    </button>
+    <button class="tool-btn" data-tool="MAGNET" onclick="selectTool(this, 'MAGNET', 10010)" title="Snap Magnet">
+        <svg viewBox="0 0 24 24"><use href="#icon-magnet"/></svg>
+    </button>
+</aside>

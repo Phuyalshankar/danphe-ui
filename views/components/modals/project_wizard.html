@@ -1,0 +1,64 @@
+<div class="studio-modal-backdrop" id="project-modal-backdrop" onclick="closeProjectModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div class="modal-title-box">
+                <span class="modal-badge">🦚 DANPHE 19 PRO</span>
+                <h3>CREATE NEW PROJECT / SEQUENCE</h3>
+            </div>
+            <button type="button" class="btn-close-modal" onclick="closeProjectModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <label class="modal-field-lbl">Project / Sequence Name</label>
+            <input type="text" class="modal-input" id="project-name-input" value="Danphe_Reel_Project">
+
+            <label class="modal-field-lbl" style="margin-top:14px;">Select Aspect Ratio &amp; Target Format</label>
+            <div class="ratio-presets-row" id="project-ratio-presets">
+                <div class="ratio-card active" onclick="selectProjectRatio('9:16', 1080, 1920, this)">
+                    <div class="ratio-icon">📱</div>
+                    <div class="ratio-name">9:16 Vertical</div>
+                    <div class="ratio-spec">1080×1920 · Reels / TikTok / Shorts</div>
+                </div>
+                <div class="ratio-card" onclick="selectProjectRatio('16:9', 1920, 1080, this)">
+                    <div class="ratio-icon">🎬</div>
+                    <div class="ratio-name">16:9 Landscape</div>
+                    <div class="ratio-spec">1920×1080 · YouTube / Widescreen</div>
+                </div>
+                <div class="ratio-card" onclick="selectProjectRatio('1:1', 1080, 1080, this)">
+                    <div class="ratio-icon">🔲</div>
+                    <div class="ratio-name">1:1 Square</div>
+                    <div class="ratio-spec">1080×1080 · Instagram / Feed</div>
+                </div>
+                <div class="ratio-card" onclick="selectProjectRatio('16:9_4K', 3840, 2160, this)">
+                    <div class="ratio-icon">🎥</div>
+                    <div class="ratio-name">4K Master</div>
+                    <div class="ratio-spec">3840×2160 · ProRes Master</div>
+                </div>
+            </div>
+
+            <div class="modal-2col-row" style="margin-top:14px;">
+                <div class="modal-col">
+                    <label class="modal-field-lbl">Target Frame Rate</label>
+                    <select class="modal-select" id="project-fps-select">
+                        <option value="60" selected>60 FPS (Ultra Smooth HDR)</option>
+                        <option value="30">30 FPS (Standard Digital)</option>
+                        <option value="24">24 FPS (Cinematic Motion)</option>
+                    </select>
+                </div>
+                <div class="modal-col">
+                    <label class="modal-field-lbl">Color Space</label>
+                    <select class="modal-select" id="project-color-select">
+                        <option value="rec709">Rec.709 Standard HD</option>
+                        <option value="rec2020">Rec.2020 Wide Color Gamut</option>
+                        <option value="oklch">OKLCH Perceptual Engine</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="closeProjectModal()">Cancel</button>
+            <button type="button" class="btn-primary" onclick="applyProjectSettings()">
+                <span>🚀 INITIALIZE PROJECT</span>
+            </button>
+        </div>
+    </div>
+</div>
