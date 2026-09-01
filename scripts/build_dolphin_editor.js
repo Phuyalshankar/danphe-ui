@@ -23,19 +23,19 @@ html = html.replace(/<!-- 1\. TOP NAVBAR -->[\s\S]*?<\/header>/, '');
 // 2. Remove Old Sub-Toolbar (32px) completely from the top
 html = html.replace(/<!-- 2\. SUB-TOOLBAR -->[\s\S]*?<!-- 3\. MAIN WORKSPACE DECK -->/, '<!-- 3. MAIN WORKSPACE DECK -->');
 
-// 3. Left Media Dock: EXACT 360px width, starting at top: 0 with NO header, NO dropzone
+// 3. Left Media Dock: EXACT 310px width, starting at top: 0 with NO header, NO dropzone
 const mediaCardSvg = renderTitanSvgMediaCard({ id: 'dolphin-media-card', isFrameMode: false });
 const cleanMediaDock = `
-<aside class="media-dock" id="media-pool-dock" style="width:360px; min-width:360px; max-width:360px; background:#050914; border-right:1px solid #142036; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; padding:0; margin:0; z-index:10;">
+<aside class="media-dock" id="media-pool-dock" style="width:310px; min-width:310px; max-width:310px; background:#050914; border-right:1px solid #142036; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; padding:0; margin:0; z-index:10;">
     <input type="file" id="native-file-input" multiple accept=".mp4,.mov,.webm,.mkv,.avi,.mp3,.wav,.m4a,.aac,.flac,.ogg,.png,.jpg,.jpeg,.webp,.gif,video/*,audio/*,image/*" style="display:none;" onchange="handleNativeFileSelection(this.files)">
-    <div id="titan-media-card-slot" style="width:100%; max-width:360px; display:flex; justify-content:center;">
+    <div id="titan-media-card-slot" style="width:100%; max-width:310px; display:flex; justify-content:center;">
         ${mediaCardSvg}
     </div>
 </aside>
 `;
 html = html.replace(/<!-- Left: Media Pool -->[\s\S]*?<!-- Center: Program Monitor -->/, cleanMediaDock + '\n<!-- Center: Program Monitor -->');
 
-// 4. Right Inspector Dock: EXACT 360px width, starting at top: 0, NO outer dock tabs
+// 4. Right Inspector Dock: EXACT 310px width, starting at top: 0, NO outer dock tabs
 const typoSvg = renderTitanSvgTypoCard({ id: 'dolphin-typo-card', isFrameMode: false });
 const trsfSvg = renderTitanSvgTransformCard({ id: 'dolphin-transform-card', isFrameMode: false });
 const colorSvg = renderTitanSvgColorCard({ id: 'dolphin-color-card', isFrameMode: false });
@@ -44,7 +44,7 @@ const vfxSvg = renderTitanSvgEffectCard({ id: 'dolphin-vfx-card', isFrameMode: f
 const thumbSvg = renderTitanSvgThumbnailCard({ id: 'dolphin-thumb-card', isFrameMode: false });
 
 const cleanInspectorDock = `
-<aside class="inspector-dock" id="studio-inspector-dock" style="width:360px; min-width:360px; max-width:360px; background:#050914; border-left:1px solid #142036; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; padding:0; margin:0; z-index:10;">
+<aside class="inspector-dock" id="studio-inspector-dock" style="width:310px; min-width:310px; max-width:310px; background:#050914; border-left:1px solid #142036; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; padding:0; margin:0; z-index:10;">
     <div class="dock-body" style="flex:1; width:100%; overflow-y:auto; overflow-x:hidden; padding:0; display:flex; flex-direction:column;">
         <div class="insp-pane active" id="pane-insp-text" style="width:100%; display:flex; justify-content:center;">
             ${typoSvg}
@@ -103,4 +103,4 @@ const cleanTimelineLeft = `
 html = html.replace(/<div class="tl-left">[\s\S]*?<\/div>\s*<div class="tl-mid">/, cleanTimelineLeft + '\n        <div class="tl-mid">');
 
 fs.writeFileSync(targetPath, html, 'utf8');
-console.log('✅ Successfully moved Filmstrip Toolbar to Timeline Bar and removed top toolbar!');
+console.log('✅ Successfully updated Dolphin Video Editor to 310px compact symmetrical docks!');

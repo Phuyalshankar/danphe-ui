@@ -329,9 +329,9 @@ function renderFullPage() {
         <!-- Top 3-Column Studio Deck -->
         <div class="flex flex-col lg:flex-row items-start justify-center gap-4 w-full px-2">
             
-            <!-- LEFT COLUMN (360px): LEFT MEDIA HUB -->
-            <div class="w-full lg:w-[360px] flex-shrink-0 flex flex-col items-center justify-start">
-                <div id="inspector-card-media-slot" class="w-full max-w-[360px] shadow-2xl">
+            <!-- LEFT COLUMN (310px): LEFT MEDIA HUB -->
+            <div class="w-full lg:w-[310px] flex-shrink-0 flex flex-col items-center justify-start">
+                <div id="inspector-card-media-slot" class="w-full max-w-[310px] shadow-2xl">
                     ${renderTitanSvgMediaCard()}
                 </div>
             </div>
@@ -382,26 +382,26 @@ function renderFullPage() {
 
             </div>
 
-            <!-- RIGHT COLUMN (360px): RIGHT TITAN 6-CARD INSPECTOR & CREATIVE SUITE -->
-            <div class="w-full lg:w-[360px] flex-shrink-0 flex flex-col items-center justify-start gap-0">
+            <!-- RIGHT COLUMN (310px): RIGHT TITAN 6-CARD INSPECTOR & CREATIVE SUITE -->
+            <div class="w-full lg:w-[310px] flex-shrink-0 flex flex-col items-center justify-start gap-0">
                 <input type="file" id="native-media-file-input" multiple accept="video/*,image/*,audio/*" class="hidden" onchange="handleNativeMediaFileChange(event)">
 
-                <div id="inspector-card-anim-slot" class="relative transition-all duration-300 w-full max-w-[360px]">
+                <div id="inspector-card-anim-slot" class="relative transition-all duration-300 w-full max-w-[310px]">
                     ${renderTitanSvgAnimationCard()}
                 </div>
-                <div id="inspector-card-transform-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
+                <div id="inspector-card-transform-slot" class="relative transition-all duration-300 w-full max-w-[310px] hidden">
                     ${renderTitanSvgTransformCard()}
                 </div>
-                <div id="inspector-card-color-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
+                <div id="inspector-card-color-slot" class="relative transition-all duration-300 w-full max-w-[310px] hidden">
                     ${renderTitanSvgColorCard()}
                 </div>
-                <div id="inspector-card-typo-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
+                <div id="inspector-card-typo-slot" class="relative transition-all duration-300 w-full max-w-[310px] hidden">
                     ${renderTitanSvgTypoCard()}
                 </div>
-                <div id="inspector-card-vfx-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
+                <div id="inspector-card-vfx-slot" class="relative transition-all duration-300 w-full max-w-[310px] hidden">
                     ${renderTitanSvgEffectCard()}
                 </div>
-                <div id="inspector-card-thumb-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
+                <div id="inspector-card-thumb-slot" class="relative transition-all duration-300 w-full max-w-[310px] hidden">
                     ${renderTitanSvgThumbnailCard()}
                 </div>
             </div>
