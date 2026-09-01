@@ -1001,326 +1001,161 @@ function renderFullPage() {
 
         </section>
 
-        <!-- ═══════════════════════════════════════════════════════════════════════════════
-             🎬 SECTION 2.7: CLEAN 3-SLIDER TITAN ANIMATION INSPECTOR
-        ═══════════════════════════════════════════════════════════════════════════════ -->
-        <section id="section-video-inspector" class="p-6 bg-slate-950/95 rounded-3xl border border-slate-800 flex flex-col gap-6 shadow-2xl backdrop-blur-2xl">
+    <!-- 🐬 PURE 3-COLUMN PROFESSIONAL VIDEO STUDIO WORKSPACE -->
+    <main class="w-full min-h-screen p-3 sm:p-5 flex flex-col gap-4 max-w-[1920px] mx-auto">
+        
+        <!-- Top 3-Column Studio Deck -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full">
             
-            <!-- Section Header -->
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-cyan-950/80 border border-cyan-500/50 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                    </div>
-                    <div>
-                        <h2 class="text-base sm:text-lg font-black uppercase tracking-wider text-white font-mono flex items-center gap-2">
-                            <span>⚡</span> Titan Video Animation Inspector (&lt;TitanAnimationInspector /&gt;)
-                        </h2>
-                        <p class="text-xs text-slate-400 font-mono">Clean 3-Slider Architecture: Text &bull; Color/Backdrop &bull; Normal Vector</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-mono bg-cyan-950 text-cyan-300 px-3 py-1 rounded-xl border border-cyan-700 font-bold">120 FPS ENGINE</span>
+            <!-- ═══════════════════════════════════════════════════════════════════════
+                 LEFT COLUMN (3.5 Cols): LEFT MEDIA HUB, 360 LENS, OVERLAY & HEAD SWAP
+            ════════════════════════════════════════════════════════════════════════ -->
+            <div class="lg:col-span-3 xl:col-span-3 flex flex-col items-center justify-start gap-2">
+                <!-- Left Media & Overlay Card Slot -->
+                <div id="inspector-card-media-slot" class="w-full max-w-[360px] shadow-2xl">
+                    ${renderTitanSvgMediaCard()}
                 </div>
             </div>
 
-            <!-- Two-Column Layout: Left Main Video Project Canvas + Right Self-Contained Animation Inspector -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <!-- ═══════════════════════════════════════════════════════════════════════
+                 CENTER COLUMN (5.5 Cols): MAIN PROGRAM MONITOR & 120 FPS COMPOSITOR
+            ════════════════════════════════════════════════════════════════════════ -->
+            <div class="lg:col-span-6 xl:col-span-6 flex flex-col gap-3">
                 
-                <!-- Left (7 Cols): MAIN VIDEO CANVAS (Project Stage) -->
-                <div class="lg:col-span-7 flex flex-col gap-3">
-                    <div class="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-black">
-                        <!-- Main Canvas Backdrop -->
-                        <canvas id="main-video-canvas" width="640" height="360" class="absolute inset-0 w-full h-full object-cover block"></canvas>
-                        
-                        <!-- Main Canvas Media / Icon -->
-                        <div id="main-media-layer" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div id="main-media-icon" class="text-cyan-300 drop-shadow-[0_0_25px_rgba(6,182,212,0.8)]">
-                                <svg width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                            </div>
-                        </div>
-
-                        <!-- Main Canvas Title -->
-                        <div id="main-title-layer" class="absolute inset-x-0 bottom-5 flex flex-col items-center justify-center pointer-events-none p-3 text-center">
-                            <div id="main-kinetic-text" class="font-mono font-black text-lg sm:text-xl text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)] tracking-widest uppercase">
-                                MAIN VIDEO PROJECT
-                            </div>
-                            <span id="main-canvas-sub" class="text-[10px] font-mono text-slate-400 font-bold mt-0.5">Timeline Project Stage</span>
-                        </div>
-
-                        <!-- Timecode HUD -->
-                        <div class="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-700 flex items-center gap-2 text-[10px] font-mono text-slate-300">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            <span>MAIN TIMELINE</span>
-                        </div>
-                        <div class="absolute top-3 right-3 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700 text-[10px] font-mono text-slate-400 font-bold">
-                            1920x1080
-                        </div>
-                    </div>
-
-                    <!-- Transport & Pen VFX Bar -->
-                    <div class="flex flex-col sm:flex-row items-center justify-between p-3 bg-slate-900/90 rounded-2xl border border-slate-800 font-mono gap-2 shadow-lg">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-slate-300">Status: <b id="main-canvas-status" class="text-slate-400 font-bold">Idle (Draw on Canvas for Live VFX)</b></span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button type="button" id="btn-toggle-canvas-pen" onclick="toggleCanvasPenMode('titan-svg-effect-card')"
-                                    class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-red-950/80 border border-red-500 text-red-300 hover:bg-red-900 transition-all flex items-center gap-1.5 shadow">
-                                <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-                                <span>🖌️ LIVE PEN: ACTIVE</span>
-                            </button>
-                            <button type="button" onclick="clearCanvasVfxStrokes()"
-                                    class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white transition-all">
-                                🗑️ CLEAR
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 🎞️ VINTAGE 35mm ANALOG FILMSTRIP CINEMATIC TOOLBAR PACK -->
-                    <div class="w-full">
-                        ${renderTitanFilmstripToolbar({ id: 'titan-filmstrip-toolbar', activeToolId: 'split' })}
-                    </div>
-                </div>
-
-                <!-- Right (5 Cols): 100% PURE VECTOR SVG INSPECTOR STUDIO (5-CARD SUITE) -->
-                <div class="lg:col-span-5 flex flex-col items-center justify-center gap-3">
+                <!-- 16:9 Program Monitor Stage -->
+                <div class="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.85)] bg-black">
+                    <!-- Main Canvas Backdrop -->
+                    <canvas id="main-video-canvas" width="640" height="360" class="absolute inset-0 w-full h-full object-cover block"></canvas>
                     
-                    <!-- 🎛️ CARD SELECTOR & DISPLAY MODE CONTROLLER -->
-                    <div class="w-full max-w-[360px] flex flex-col gap-2 p-2.5 bg-slate-900/90 rounded-2xl border border-slate-800 font-mono text-[11.5px] shadow-lg">
-                        <!-- Top Row: 6-Card Selector (Animation vs Transform vs Color vs Typo vs VFX vs Media) -->
-                        <div class="flex items-center justify-between gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
-                            <button type="button" id="btn-card-anim" onclick="switchActiveCardInspector('anim')" 
-                                    class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-amber-300 bg-amber-950/80 border border-amber-500 shadow transition-all truncate">
-                                ⚡ ANIM
-                            </button>
-                            <button type="button" id="btn-card-transform" onclick="switchActiveCardInspector('transform')" 
-                                    class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-slate-400 hover:text-cyan-300 transition-all truncate">
-                                📐 TRSF
-                            </button>
-                            <button type="button" id="btn-card-color" onclick="switchActiveCardInspector('color')" 
-                                    class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-slate-400 hover:text-pink-400 transition-all truncate">
-                                🎨 COLOR
-                            </button>
-                            <button type="button" id="btn-card-typo" onclick="switchActiveCardInspector('typo')" 
-                                    class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-slate-400 hover:text-amber-400 transition-all truncate">
-                                🔤 TYPO
-                            </button>
-                            <button type="button" id="btn-card-vfx" onclick="switchActiveCardInspector('vfx')" 
-                                    class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-slate-400 hover:text-red-400 transition-all truncate">
-                                💥 VFX
-                            </button>
-                            <button type="button" id="btn-card-thumb" onclick="switchActiveCardInspector('thumb')" 
-                                    class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-slate-400 hover:text-amber-400 transition-all truncate">
-                                🖼️ THUMB
-                            </button>
-                        </div>
-
-                        <!-- Bottom Row: Mockup Frame Mode -->
-                        <div class="flex items-center justify-between pt-1 border-t border-slate-800/60">
-                            <span class="text-slate-400 font-bold px-1 flex items-center gap-1.5 text-[10.5px]">
-                                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-                                <span>MOCKUP:</span>
-                            </span>
-                            <div class="flex items-center gap-1">
-                                <button type="button" id="btn-mode-with-frame" onclick="toggleMobileFrameMode(true)" 
-                                        class="px-2.5 py-0.5 rounded-lg font-bold text-[10.5px] text-cyan-300 bg-cyan-950 border border-cyan-700 shadow transition-all">
-                                    📱 With Frame
-                                </button>
-                                <button type="button" id="btn-mode-without-frame" onclick="toggleMobileFrameMode(false)" 
-                                        class="px-2.5 py-0.5 rounded-lg font-bold text-[10.5px] text-slate-400 hover:text-white transition-all">
-                                    ⬛ Without Frame
-                                </button>
-                            </div>
+                    <!-- Main Canvas Media / Icon -->
+                    <div id="main-media-layer" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div id="main-media-icon" class="text-cyan-300 drop-shadow-[0_0_25px_rgba(6,182,212,0.8)]">
+                            <svg width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         </div>
                     </div>
 
-                    <!-- Hidden Native File Input for Media Hub -->
-                    <input type="file" id="native-media-file-input" multiple accept="video/*,image/*,audio/*" class="hidden" onchange="handleNativeMediaFileChange(event)">
-
-                    <!-- SVG Card Slot 1 (Animation Card) -->
-                    <div id="inspector-card-anim-slot" class="relative transition-all duration-300 w-full max-w-[360px]">
-                        ${renderTitanSvgAnimationCard()}
+                    <!-- Main Canvas Kinetic Title -->
+                    <div id="main-title-layer" class="absolute inset-x-0 bottom-5 flex flex-col items-center justify-center pointer-events-none p-3 text-center">
+                        <div id="main-kinetic-text" class="font-mono font-black text-lg sm:text-xl text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)] tracking-widest uppercase">
+                            MAIN VIDEO PROJECT
+                        </div>
+                        <span id="main-canvas-sub" class="text-[10px] font-mono text-slate-400 font-bold mt-0.5">Timeline Program Monitor</span>
                     </div>
 
-                    <!-- SVG Card Slot 2 (Transform Card) -->
-                    <div id="inspector-card-transform-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
-                        ${renderTitanSvgTransformCard()}
+                    <!-- HUD Badges -->
+                    <div class="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-700 flex items-center gap-2 text-[10px] font-mono text-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>MAIN PROGRAM MONITOR</span>
                     </div>
-
-                    <!-- SVG Card Slot 3 (Color & Gradient Card) -->
-                    <div id="inspector-card-color-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
-                        ${renderTitanSvgColorCard()}
-                    </div>
-
-                    <!-- SVG Card Slot 4 (Typography & Font Studio Card) -->
-                    <div id="inspector-card-typo-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
-                        ${renderTitanSvgTypoCard()}
-                    </div>
-
-                    <!-- SVG Card Slot 5 (VFX & Power Shaders Studio Card) -->
-                    <div id="inspector-card-vfx-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
-                        ${renderTitanSvgEffectCard()}
-                    </div>
-
-                    <!-- SVG Card Slot 6 (360° Rotary Media Ingestion Wheel Card) -->
-                    <div id="inspector-card-media-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
-                        ${renderTitanSvgMediaCard()}
-                    </div>
-
-                    <!-- SVG Card Slot 7 (YouTube Thumbnail & Photoshop Studio Card) -->
-                    <div id="inspector-card-thumb-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
-                        ${renderTitanSvgThumbnailCard()}
+                    <div class="absolute top-3 right-3 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700 text-[10px] font-mono text-slate-400 font-bold">
+                        1920x1080 &bull; 120 FPS
                     </div>
                 </div>
 
-            </div>
-
-        </section>
-
-        <!-- ═══════════════════════════════════════════════════════════════════════════════
-             🌟 SECTION 3: FULL 256 UNIVERSAL FONTS SPECTRUM (0 TO 255)
-        ═══════════════════════════════════════════════════════════════════════════════ -->
-        <section class="p-6 bg-gradient-to-b from-slate-900/95 to-slate-950/95 rounded-3xl border border-slate-800 flex flex-col gap-5 shadow-2xl backdrop-blur-2xl">
-            
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                <div>
-                    <h2 class="text-base sm:text-lg font-black uppercase tracking-wider text-white font-mono flex items-center gap-2">
-                        <span>🔤</span> Full 256 Universal Fonts Spectrum (0 to 255)
-                    </h2>
-                    <p class="text-xs text-slate-400">🇳🇵 Devanagari & Nepali &bull; Modern Sans &bull; Cinematic Titles &bull; Luxury Serif &bull; Cyberpunk &bull; Script &bull; Monospace</p>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-3">
-                    <div class="relative">
-                        <input id="font-search-input" type="text" oninput="filterFontsList()" placeholder="Search 256 fonts, Devanagari, Serif..." 
-                               class="py-2 pl-9 pr-4 bg-slate-950 rounded-xl border border-slate-800 text-xs font-mono text-slate-100 focus:outline-none focus:border-cyan-400 w-72 shadow-inner">
-                        <svg class="w-4 h-4 text-slate-500 absolute left-3 top-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <!-- Transport & Pen VFX Bar -->
+                <div class="flex flex-col sm:flex-row items-center justify-between p-3 bg-slate-900/90 rounded-2xl border border-slate-800 font-mono gap-2 shadow-lg">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-300">Status: <b id="main-canvas-status" class="text-cyan-400 font-bold">120 FPS Realtime Program Monitor Active</b></span>
                     </div>
-                    <span id="font-count-badge" class="text-xs font-mono bg-cyan-950 text-cyan-300 px-3 py-1.5 rounded-xl border border-cyan-700 font-bold">256 / 256 FONTS</span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="btn-toggle-canvas-pen" onclick="toggleCanvasPenMode('titan-svg-effect-card')"
+                                class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-red-950/80 border border-red-500 text-red-300 hover:bg-red-900 transition-all flex items-center gap-1.5 shadow">
+                            <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                            <span>🖌️ LIVE PEN: ACTIVE</span>
+                        </button>
+                        <button type="button" onclick="clearCanvasVfxStrokes()"
+                                class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white transition-all">
+                            🗑️ CLEAR
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 🎞️ 35mm VINTAGE ANALOG FILMSTRIP CINEMATIC TOOLBAR PACK -->
+                <div class="w-full">
+                    ${renderTitanFilmstripToolbar({ id: 'titan-filmstrip-toolbar', activeToolId: 'split' })}
                 </div>
             </div>
 
-            <!-- Category Filter Tabs -->
-            <div class="flex flex-wrap items-center gap-2">
-                <button onclick="setFontCategory('all', this)" class="font-cat-btn px-4 py-1.5 rounded-xl font-mono text-xs font-black bg-cyan-600 text-slate-950 shadow-lg transition">🌟 All 256 Fonts</button>
-                <button onclick="setFontCategory('Hardware & LCD Matrix', this)" class="font-cat-btn px-4 py-1.5 rounded-xl font-mono text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-900 transition">📟 7-Segment & LCD (0-31)</button>
-                <button onclick="setFontCategory('Nepali & Devanagari', this)" class="font-cat-btn px-4 py-1.5 rounded-xl font-mono text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-900 transition">🇳🇵 Nepali & Devanagari (32-63)</button>
-                <button onclick="setFontCategory('Cyberpunk & Sci-Fi', this)" class="font-cat-btn px-4 py-1.5 rounded-xl font-mono text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-900 transition">⚡ Cyberpunk & Sci-Fi (64-95)</button>
-                <button onclick="setFontCategory('Cinematic & Title Display', this)" class="font-cat-btn px-4 py-1.5 rounded-xl font-mono text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-900 transition">🎬 Cinematic Title (96-127)</button>
-                <button onclick="setFontCategory('Luxury & Editorial Serif', this)" class="font-cat-btn px-4 py-1.5 rounded-xl font-mono text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-900 transition">📰 Luxury Serif (128-159)</button>
-                <button onclick="setFontCategory('Modern & Swiss Sans', this)" class="font-cat-btn px-4 py-1.5 rounded-xl font-mono text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-900 transition">💎 Swiss Sans (160-191)</button>
-                <button onclick="setFontCategory('Handwritten & Brush Script', this)" class="font-cat-btn px-4 py-1.5 rounded-xl font-mono text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-900 transition">🖋️ Brush Script (192-223)</button>
-                <button onclick="setFontCategory('Monospace, Retro & 3D Art', this)" class="font-cat-btn px-4 py-1.5 rounded-xl font-mono text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-900 transition">💻 Monospace & 3D (224-255)</button>
-            </div>
-
-            <!-- 256 Fonts Grid -->
-            <div id="font-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 max-h-[560px] overflow-y-auto custom-scrollbar p-3.5 bg-slate-950/60 rounded-2xl border border-slate-800/80">
-                ${fontsGridHtml}
-            </div>
-
-        </section>
-
-        <!-- SECTION 4: HOSPITAL PATIENT & ICU TABLE -->
-        <section class="flex flex-col gap-3.5">
-            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400 font-mono">🏥 Hospital Patient & Vitals Data Table (&lt;TitanTable variant="medical" /&gt;)</span>
-            ${hospitalTableHtml}
-        </section>
-
-        <!-- ═══════════════════════════════════════════════════════════════════════════════
-             🌟 SECTION 5: SILICON-GRADE MATHEMATICAL VECTOR CHARTS (<TitanChart />)
-        ═══════════════════════════════════════════════════════════════════════════════ -->
-        <section class="flex flex-col gap-5">
-            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
-                <div>
-                    <h2 class="text-base sm:text-lg font-black uppercase tracking-wider text-white font-mono flex items-center gap-2">
-                        <span>📈</span> Zero-Dependency Vector Charts Suite (&lt;TitanChart /&gt;)
-                    </h2>
-                    <p class="text-xs text-slate-400 font-mono">16-Bit Register Micro-Bus Mapped &bull; 100/100 Core Web Vitals &bull; 100% Pure SVG Bézier Math</p>
-                </div>
-                <span class="text-xs font-mono bg-cyan-950 text-cyan-300 px-3 py-1 rounded-full border border-cyan-700 font-bold">16-BIT TELEMETRY</span>
-            </div>
-
-            <!-- Charts Grid: 1 Big Area Wave Chart + 1 Bar Chart + 1 Donut Chart -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- 1. ICU 24-Hr Wave Area Chart (Spans 2 columns on lg) -->
-                <div class="lg:col-span-2">
-                    ${renderTitanChart({
-                        variant: 'area',
-                        title: 'ICU Patient Vitals & Heart Rate Telemetry',
-                        subtitle: 'Continuous 24-Hour Real-Time Pulse & SpO2 Stream',
-                        badge: 'LIVE 98 BPM',
-                        data: [72, 75, 78, 85, 98, 88, 76, 80, 84, 92, 78, 82],
-                        labels: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
-                        color: 'cyan'
-                    })}
+            <!-- ═══════════════════════════════════════════════════════════════════════
+                 RIGHT COLUMN (3.5 Cols): RIGHT TITAN 6-CARD INSPECTOR & CREATIVE SUITE
+            ════════════════════════════════════════════════════════════════════════ -->
+            <div class="lg:col-span-3 xl:col-span-3 flex flex-col items-center justify-start gap-2">
+                
+                <!-- 6-Card Selector Bar -->
+                <div class="w-full max-w-[360px] flex items-center justify-between gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800 font-mono text-[11px] shadow-lg">
+                    <button type="button" id="btn-card-anim" onclick="switchActiveCardInspector('anim')" 
+                            class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-amber-300 bg-amber-950/80 border border-amber-500 shadow transition-all truncate">
+                        ⚡ ANIM
+                    </button>
+                    <button type="button" id="btn-card-transform" onclick="switchActiveCardInspector('transform')" 
+                            class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-slate-400 hover:text-cyan-300 transition-all truncate">
+                        📐 TRSF
+                    </button>
+                    <button type="button" id="btn-card-color" onclick="switchActiveCardInspector('color')" 
+                            class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-slate-400 hover:text-pink-400 transition-all truncate">
+                        🎨 COLOR
+                    </button>
+                    <button type="button" id="btn-card-typo" onclick="switchActiveCardInspector('typo')" 
+                            class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-slate-400 hover:text-amber-400 transition-all truncate">
+                        🔤 TYPO
+                    </button>
+                    <button type="button" id="btn-card-vfx" onclick="switchActiveCardInspector('vfx')" 
+                            class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-slate-400 hover:text-red-400 transition-all truncate">
+                        💥 VFX
+                    </button>
+                    <button type="button" id="btn-card-thumb" onclick="switchActiveCardInspector('thumb')" 
+                            class="flex-1 py-1 px-0.5 rounded-lg font-black text-[8px] sm:text-[8.5px] text-slate-400 hover:text-amber-400 transition-all truncate">
+                        🖼️ THUMB
+                    </button>
                 </div>
 
-                <!-- 2. Capacity & Resource Donut Chart -->
-                <div class="lg:col-span-1">
-                    ${renderTitanChart({
-                        variant: 'donut',
-                        title: 'Hospital Bed Allocation',
-                        subtitle: 'Live Ward Capacity Breakdown',
-                        badge: '85% OCCUPIED',
-                        centerValue: '85%',
-                        centerLabel: 'OCCUPIED',
-                        segments: [
-                            { label: 'ICU Critical (Bed 1-4)', value: 60, color: '#22d3ee' },
-                            { label: 'General Ward', value: 25, color: '#10b981' },
-                            { label: 'Emergency Reserve', value: 15, color: '#f59e0b' }
-                        ]
-                    })}
+                <!-- Hidden Native File Input for Media Hub -->
+                <input type="file" id="native-media-file-input" multiple accept="video/*,image/*,audio/*" class="hidden" onchange="handleNativeMediaFileChange(event)">
+
+                <!-- SVG Card Slot 1 (Animation Card) -->
+                <div id="inspector-card-anim-slot" class="relative transition-all duration-300 w-full max-w-[360px]">
+                    ${renderTitanSvgAnimationCard()}
+                </div>
+
+                <!-- SVG Card Slot 2 (Transform Card) -->
+                <div id="inspector-card-transform-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
+                    ${renderTitanSvgTransformCard()}
+                </div>
+
+                <!-- SVG Card Slot 3 (Color & Gradient Card) -->
+                <div id="inspector-card-color-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
+                    ${renderTitanSvgColorCard()}
+                </div>
+
+                <!-- SVG Card Slot 4 (Typography & Font Studio Card) -->
+                <div id="inspector-card-typo-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
+                    ${renderTitanSvgTypoCard()}
+                </div>
+
+                <!-- SVG Card Slot 5 (VFX & Power Shaders Studio Card) -->
+                <div id="inspector-card-vfx-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
+                    ${renderTitanSvgEffectCard()}
+                </div>
+
+                <!-- SVG Card Slot 7 (YouTube Thumbnail & Photoshop Studio Card) -->
+                <div id="inspector-card-thumb-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
+                    ${renderTitanSvgThumbnailCard()}
                 </div>
             </div>
 
-            <!-- Weekly Call Traffic Bar Chart -->
-            <div class="w-full">
-                ${renderTitanChart({
-                    variant: 'bar',
-                    title: 'Weekly PBX Call Volume & Inbound Workload',
-                    subtitle: 'Total Processed Calls (Monday through Sunday)',
-                    badge: '14,820 CALLS',
-                    data: [1850, 2420, 2680, 2910, 2750, 1420, 790],
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                    color: 'emerald'
-                })}
-            </div>
-        </section>
-
-        <!-- ═══════════════════════════════════════════════════════════════════════════════
-             🌟 SECTION 6: LIVE SVG VECTOR WHITEBOARD & SIGNATURE PAD (<TitanWhiteboard />)
-        ═══════════════════════════════════════════════════════════════════════════════ -->
-        <section class="flex flex-col gap-4">
-            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
-                <div>
-                    <h2 class="text-base sm:text-lg font-black uppercase tracking-wider text-white font-mono flex items-center gap-2">
-                        <span>✍️</span> Live SVG Vector Drawing & Signature Canvas (&lt;TitanWhiteboard /&gt;)
-                    </h2>
-                    <p class="text-xs text-slate-400 font-mono">120 FPS Sub-Pixel Quadratic Bézier Curve Smoothing &bull; Real-Time Neon Glow & Freehand Vector Export</p>
-                </div>
-                <span class="text-xs font-mono bg-cyan-950 text-cyan-300 px-3 py-1 rounded-full border border-cyan-700 font-bold">120 FPS VECTOR</span>
-            </div>
-
-            ${renderTitanWhiteboard({
-                id: 'titan-live-whiteboard',
-                title: 'Interactive Vector Drawing & Telemetry Signature Pad',
-                subtitle: 'Draw with Mouse / Touch / Stylus &bull; 1-Click Standalone SVG Vector Download',
-                width: 800,
-                height: 360
-            })}
-        </section>
+        </div>
 
         <!-- Real-time I/O Stream Terminal -->
-        <footer class="w-full p-4 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs flex flex-col gap-1.5 shadow-2xl">
-            <div class="flex items-center justify-between text-slate-500 pb-1 border-b border-slate-900">
-                <span class="text-emerald-400 font-bold flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    TITAN FULL HIGHWAY (MODAL, TOAST, DRAWER, 512 ICONS & NEPAL FLAG ONLINE)
+        <footer class="w-full p-3 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs flex flex-col gap-1 shadow-2xl">
+            <div class="flex items-center justify-between text-slate-500 pb-1 border-b border-slate-900 text-[10px]">
+                <span class="text-cyan-400 font-bold flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    🐬 DANPHE UI &amp; TITAN HARDWARE PCB BUS &bull; 120 FPS REALTIME STUDIO
                 </span>
-                <span>STATUS: 100% ONLINE</span>
+                <span class="text-emerald-400 font-bold">STATUS: 100% ONLINE</span>
             </div>
-            <div id="io-terminal" class="text-cyan-300 min-h-[30px] flex items-center">
-                Toggle any switch or click Drawer/Modal buttons above...
+            <div id="io-terminal" class="text-cyan-300 text-[11px] min-h-[22px] flex items-center">
+                Ready. Drag on Canvas to pan, scroll mouse wheel to zoom, or select any tool from the toolbar...
             </div>
         </footer>
 
