@@ -269,73 +269,6 @@ function renderFullPage() {
         </div>`;
     }).join('');
 
-    const animCss = generateAnimationCSS();
-    const fontCss = generateFontCSS();
-    const fontLinksHtml = getGoogleFontsLinkTags();
-
-    // 🔤 Build 256 Universal Fonts Spectrum Grid
-    const fontsGridHtml = FONTS_256.map(f => {
-        const hex = f.opcodeHex;
-        return `
-        <div onclick="selectGlobalFont(${f.opcode}, '${f.name}', '${f.family.replace(/'/g, "\\'")}')"
-             data-cat="${f.category}"
-             data-name="${f.name.toLowerCase()}"
-             class="font-card p-3.5 bg-slate-950/90 rounded-2xl border border-slate-800 hover:border-cyan-400 hover:bg-slate-900/90 transition-all cursor-pointer flex flex-col justify-between gap-2.5 group shadow-lg">
-            <div class="flex items-center justify-between">
-                <span class="text-[9.5px] font-mono font-black text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded-md border border-cyan-700">#${hex}</span>
-                <span class="text-[9px] font-mono text-slate-400 font-bold truncate max-w-[120px]">${f.category}</span>
-            </div>
-            <div class="flex flex-col gap-1">
-                <h4 class="text-xs font-black text-white font-mono truncate group-hover:text-cyan-300 transition-colors">${f.name}</h4>
-                <div class="p-2.5 bg-slate-900/80 rounded-xl border border-slate-800/80 flex flex-col gap-1.5 overflow-hidden shadow-inner">
-                    <span style="font-family: ${f.family};" class="text-base text-amber-300 font-bold truncate">${f.sampleNepali}</span>
-                    <span style="font-family: ${f.family};" class="text-xs text-slate-200 tracking-wider truncate">${f.sampleEnglish}</span>
-                </div>
-            </div>
-            <div class="flex items-center justify-between pt-1 border-t border-slate-800/60">
-                <span class="text-[9px] font-mono text-slate-500">Opcode: ${f.opcode}</span>
-                <span class="text-[10px] font-mono text-cyan-400 font-bold group-hover:underline">Apply to Canvas ➔</span>
-            </div>
-        </div>`;
-    }).join('');
-
-    // 🎚️ Render Authentic Danphe-UI TitanProSliders for Section 2.7
-    const sliderTextHtml = renderTitanProSlider({
-        id: 'slider-text',
-        label: '1. Text Animation',
-        sublabel: 'OPCODE 0x00 - 0xFF',
-        min: 0,
-        max: 255,
-        value: 76,
-        color: 'amber',
-        style: 'lens',
-        unit: ' (0x4C)'
-    });
-
-    const sliderColorHtml = renderTitanProSlider({
-        id: 'slider-color',
-        label: '2. Color Animation',
-        sublabel: 'OPCODE 0x00 - 0xFF',
-        min: 0,
-        max: 255,
-        value: 12,
-        color: 'cyan',
-        style: 'lens',
-        unit: ' (0x0C)'
-    });
-
-    const sliderNormalHtml = renderTitanProSlider({
-        id: 'slider-normal',
-        label: '3. Normal Animation',
-        sublabel: 'OPCODE 0x00 - 0xFF',
-        min: 0,
-        max: 255,
-        value: 3,
-        color: 'purple',
-        style: 'lens',
-        unit: ' (0x03)'
-    });
-
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -389,110 +322,33 @@ function renderFullPage() {
     </style>
 </head>
 <body id="master-page-body" class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-start p-4 sm:p-8 font-sans transition-all duration-500">
-    
-    <!-- TOP MASTER NAVBAR -->
-    <div class="w-full max-w-7xl">
-        ${navbarHtml}
-    </div>
-
-    <!-- TOAST OVERLAY TARGET -->
-    <div id="toast-container" class="fixed top-6 right-6 z-50 flex flex-col gap-3 pointer-events-none"></div>
-
-    <!-- 🪟 GLOBAL POPUP MODAL (DIRECT INLINE CSS TRANSFORM ACCELERATION) -->
-    <div id="titan-modal-backdrop" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4" 
-         style="opacity: 0; pointer-events: none; transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);" 
-         onclick="if(event.target===this)closeTitanModal();">
-        <div id="titan-modal-box" class="max-w-lg w-full bg-slate-900 border-2 border-cyan-500/50 rounded-3xl p-6 shadow-[0_0_50px_rgba(34,211,238,0.3)] flex flex-col gap-4" 
-             style="transform: scale(0.88) translateY(25px); opacity: 0; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;">
-            <div class="flex items-center justify-between pb-3.5 border-b border-slate-800">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-2xl bg-cyan-950 border border-cyan-500/60 flex items-center justify-center text-cyan-400 shadow-inner">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-black uppercase tracking-wider text-white font-mono">Hospital Patient Admission</h3>
-                        <p class="text-[11px] text-slate-400 font-mono">ICU Bed & Biometric Vitals Allocation Dialog</p>
-                    </div>
-                </div>
-                <button type="button" onclick="closeTitanModal();" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 flex items-center justify-center font-mono font-bold transition">✕</button>
-            </div>
-            <div class="flex flex-col gap-3 py-2 text-xs font-mono text-slate-300">
-                <div class="p-3.5 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-1">
-                    <span class="text-[10px] text-slate-500 font-bold uppercase">Assigned Attending Doctor</span>
-                    <span class="text-white font-bold text-sm">👨‍⚕️ Dr. Shankar Phuyal (Chief Cardiologist)</span>
-                </div>
-                <div class="p-3.5 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-1">
-                    <span class="text-[10px] text-slate-500 font-bold uppercase">Assigned Unit</span>
-                    <span class="text-cyan-300 font-bold text-sm">🏥 Emergency ICU Ward - Bed #04 (Connected 98% SpO2)</span>
-                </div>
-            </div>
-            <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
-                <button type="button" onclick="closeTitanModal();" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-mono rounded-xl font-bold transition shadow-md">Cancel</button>
-                <button type="button" onclick="showLiveToast('Admission Approved', 'Bed #04 allocated to Patient successfully.', 'success'); closeTitanModal();" class="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 text-xs font-mono rounded-xl font-black transition shadow-[0_0_15px_rgba(34,211,238,0.4)]">Authorize Admission</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 📑 GLOBAL SLIDE-OUT DRAWER -->
-    ${renderTitanDrawer({
-        id: 'titan-drawer',
-        title: 'Patient Medical History',
-        subtitle: 'ICU Bed #01 &bull; Sunita Sharma',
-        position: 'right',
-        content: `
-        <div class="flex flex-col gap-3">
-            <div class="p-3.5 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-1">
-                <span class="text-[10px] text-slate-500 font-bold uppercase">Diagnosis</span>
-                <span class="text-xs text-white font-bold">Acute Respiratory Distress & Cardio Monitoring</span>
-            </div>
-            <div class="p-3.5 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-1">
-                <span class="text-[10px] text-slate-500 font-bold uppercase">Attending Specialist</span>
-                <span class="text-xs text-cyan-300 font-bold">Dr. Shankar Phuyal (Chief of Cardiology)</span>
-            </div>
-            <div class="p-3.5 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-2">
-                <span class="text-[10px] text-slate-500 font-bold uppercase">Live Vitals Telemetry</span>
-                <div class="flex items-center justify-between text-xs text-emerald-400 font-bold">
-                    <span>💓 Heart Rate: 78 bpm</span>
-                    <span>💨 SpO2: 98%</span>
-                </div>
-            </div>
-        </div>`
-    })}
 
     <!-- 🐬 PURE 3-COLUMN PROFESSIONAL VIDEO STUDIO WORKSPACE -->
     <main class="w-full min-h-screen p-2 m-0 flex flex-col gap-2 max-w-[1920px] mx-auto">
         
         <!-- Top 3-Column Studio Deck -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full">
+        <div class="flex flex-col lg:flex-row items-start justify-center gap-4 w-full px-2">
             
-            <!-- ═══════════════════════════════════════════════════════════════════════
-                 LEFT COLUMN (3.5 Cols): LEFT MEDIA HUB, 360 LENS, OVERLAY & HEAD SWAP
-            ════════════════════════════════════════════════════════════════════════ -->
-            <div class="lg:col-span-3 xl:col-span-3 flex flex-col items-center justify-start gap-2">
-                <!-- Left Media & Overlay Card Slot -->
+            <!-- LEFT COLUMN (360px): LEFT MEDIA HUB -->
+            <div class="w-full lg:w-[360px] flex-shrink-0 flex flex-col items-center justify-start">
                 <div id="inspector-card-media-slot" class="w-full max-w-[360px] shadow-2xl">
                     ${renderTitanSvgMediaCard()}
                 </div>
             </div>
 
-            <!-- ═══════════════════════════════════════════════════════════════════════
-                 CENTER COLUMN (5.5 Cols): MAIN PROGRAM MONITOR & 120 FPS COMPOSITOR
-            ════════════════════════════════════════════════════════════════════════ -->
-            <div class="lg:col-span-6 xl:col-span-6 flex flex-col gap-3">
+            <!-- CENTER COLUMN: MAIN PROGRAM MONITOR & TIMELINE WITH 35mm FILMSTRIP -->
+            <div class="flex-1 min-w-0 w-full flex flex-col gap-2">
                 
                 <!-- 16:9 Program Monitor Stage -->
                 <div class="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.85)] bg-black">
-                    <!-- Main Canvas Backdrop -->
                     <canvas id="main-video-canvas" width="640" height="360" class="absolute inset-0 w-full h-full object-cover block"></canvas>
                     
-                    <!-- Main Canvas Media / Icon -->
                     <div id="main-media-layer" class="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div id="main-media-icon" class="text-cyan-300 drop-shadow-[0_0_25px_rgba(6,182,212,0.8)]">
                             <svg width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         </div>
                     </div>
 
-                    <!-- Main Canvas Kinetic Title -->
                     <div id="main-title-layer" class="absolute inset-x-0 bottom-5 flex flex-col items-center justify-center pointer-events-none p-3 text-center">
                         <div id="main-kinetic-text" class="font-mono font-black text-lg sm:text-xl text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)] tracking-widest uppercase">
                             MAIN VIDEO PROJECT
@@ -500,7 +356,6 @@ function renderFullPage() {
                         <span id="main-canvas-sub" class="text-[10px] font-mono text-slate-400 font-bold mt-0.5">Timeline Program Monitor</span>
                     </div>
 
-                    <!-- HUD Badges -->
                     <div class="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-700 flex items-center gap-2 text-[10px] font-mono text-slate-300">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span>MAIN PROGRAM MONITOR</span>
@@ -510,64 +365,42 @@ function renderFullPage() {
                     </div>
                 </div>
 
-                <!-- Transport & Pen VFX Bar -->
-                <div class="flex flex-col sm:flex-row items-center justify-between p-3 bg-slate-900/90 rounded-2xl border border-slate-800 font-mono gap-2 shadow-lg">
+                <!-- 🎞️ 35mm VINTAGE ANALOG FILMSTRIP CINEMATIC TOOLBAR (IN TIMELINE ACTION STRIP) -->
+                <div class="w-full flex items-center justify-between p-1.5 bg-slate-900/90 rounded-xl border border-slate-800 gap-2">
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-300">Status: <b id="main-canvas-status" class="text-cyan-400 font-bold">120 FPS Realtime Program Monitor Active</b></span>
+                        <button type="button" class="px-2.5 py-1 rounded-lg text-xs font-black bg-cyan-600 text-slate-950 flex items-center gap-1 shadow">▶ PLAY</button>
+                        <button type="button" class="px-2 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">◀</button>
+                        <button type="button" class="px-2 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700">▶</button>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button type="button" id="btn-toggle-canvas-pen" onclick="toggleCanvasPenMode('titan-svg-effect-card')"
-                                class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-red-950/80 border border-red-500 text-red-300 hover:bg-red-900 transition-all flex items-center gap-1.5 shadow">
-                            <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-                            <span>🖌️ LIVE PEN: ACTIVE</span>
-                        </button>
-                        <button type="button" onclick="clearCanvasVfxStrokes()"
-                                class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white transition-all">
-                            🗑️ CLEAR
-                        </button>
+                    <div class="flex-1 flex justify-center overflow-x-auto">
+                        ${renderTitanFilmstripToolbar({ id: 'titan-filmstrip-toolbar', activeToolId: 'split', height: 28 })}
+                    </div>
+                    <div class="flex items-center gap-2 font-mono text-xs text-slate-400">
+                        <span class="text-cyan-300 font-bold">00:00:00:00</span>
                     </div>
                 </div>
 
-                <!-- 🎞️ 35mm VINTAGE ANALOG FILMSTRIP CINEMATIC TOOLBAR PACK -->
-                <div class="w-full">
-                    ${renderTitanFilmstripToolbar({ id: 'titan-filmstrip-toolbar', activeToolId: 'split' })}
-                </div>
             </div>
 
-            <!-- ═══════════════════════════════════════════════════════════════════════
-                 RIGHT COLUMN (3.5 Cols): RIGHT TITAN 6-CARD INSPECTOR & CREATIVE SUITE
-            ════════════════════════════════════════════════════════════════════════ -->
-            <div class="lg:col-span-3 xl:col-span-3 flex flex-col items-center justify-start gap-0">
-                
-                <!-- Hidden Native File Input for Media Hub -->
+            <!-- RIGHT COLUMN (360px): RIGHT TITAN 6-CARD INSPECTOR & CREATIVE SUITE -->
+            <div class="w-full lg:w-[360px] flex-shrink-0 flex flex-col items-center justify-start gap-0">
                 <input type="file" id="native-media-file-input" multiple accept="video/*,image/*,audio/*" class="hidden" onchange="handleNativeMediaFileChange(event)">
 
-                <!-- SVG Card Slot 1 (Animation Card) -->
                 <div id="inspector-card-anim-slot" class="relative transition-all duration-300 w-full max-w-[360px]">
                     ${renderTitanSvgAnimationCard()}
                 </div>
-
-                <!-- SVG Card Slot 2 (Transform Card) -->
                 <div id="inspector-card-transform-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
                     ${renderTitanSvgTransformCard()}
                 </div>
-
-                <!-- SVG Card Slot 3 (Color & Gradient Card) -->
                 <div id="inspector-card-color-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
                     ${renderTitanSvgColorCard()}
                 </div>
-
-                <!-- SVG Card Slot 4 (Typography & Font Studio Card) -->
                 <div id="inspector-card-typo-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
                     ${renderTitanSvgTypoCard()}
                 </div>
-
-                <!-- SVG Card Slot 5 (VFX & Power Shaders Studio Card) -->
                 <div id="inspector-card-vfx-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
                     ${renderTitanSvgEffectCard()}
                 </div>
-
-                <!-- SVG Card Slot 7 (YouTube Thumbnail & Photoshop Studio Card) -->
                 <div id="inspector-card-thumb-slot" class="relative transition-all duration-300 w-full max-w-[360px] hidden">
                     ${renderTitanSvgThumbnailCard()}
                 </div>
