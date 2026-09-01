@@ -7,6 +7,14 @@
         <div class="ribbon-tools-left">
             <button type="button" class="ribbon-btn add-text-btn" onclick="addNewTimelineTextClip()" title="Add Text / Subtitle to Timeline at Playhead (T)" style="background:#8b5cf6; color:#fff; font-weight:800; border-color:#a855f7;">✍️ Add Text (T)</button>
             <button type="button" class="ribbon-btn" onclick="splitSelectedTimelineClip()" title="Split Clip at Playhead (C)">✂️ Split (C)</button>
+            
+            <!-- Pen Point Range Tools -->
+            <button type="button" class="ribbon-btn pen-toggle-btn" id="btn-pen-mode" onclick="togglePenToolMode()" title="Toggle Pen Range Mode (P)" style="background:#0284c7; color:#fff; font-weight:800; border-color:#38bdf8;">🖊️ Pen (P)</button>
+            <button type="button" class="ribbon-btn pen-action-btn" id="btn-pen-cut" onclick="executePenRangeCut()" title="Split Clip at Start (A) & End (B) Points" style="background:#0369a1; color:#fff; font-weight:800; border-color:#0284c7; display:none;">✂️ Cut Ends</button>
+            <button type="button" class="ribbon-btn pen-action-btn" id="btn-pen-centeruse" onclick="executePenCenterUse()" title="Keep Selected Center (A-B) & Trim Outer Parts" style="background:#059669; color:#fff; font-weight:800; border-color:#10b981; display:none;">🎯 CenterUse</button>
+            <button type="button" class="ribbon-btn pen-action-btn" id="btn-pen-delete" onclick="executePenRangeDelete()" title="Delete Center (A-B) Range & Close Gap" style="background:#dc2626; color:#fff; font-weight:800; border-color:#ef4444; display:none;">🗑️ Delete Center</button>
+            <button type="button" class="ribbon-btn pen-action-btn" id="btn-pen-clear" onclick="clearPenSelection()" title="Clear Pen Points" style="background:#334155; color:#cbd5e1; font-weight:700; border-color:#475569; display:none;">✕ Clear</button>
+
             <button type="button" class="ribbon-btn" onclick="deleteSelectedTimelineClip()" title="Delete Selected Clip (Del)">🗑️ Delete (Del)</button>
             <button type="button" class="ribbon-btn active" onclick="dispatchTitanRelay(0x23, 303, 'SNAP_TOGGLE')">🧲 Snap</button>
             <button type="button" class="ribbon-btn" onclick="clearAllTimelineTracks()" title="Clear Timeline">🧹 Clear</button>
@@ -102,6 +110,32 @@
                 <div class="timeline-playhead-needle" id="timeline-playhead-needle" style="left: 0%;" onmousedown="startPlayheadScrub(event)">
                     <div class="needle-head" title="Drag Playhead"></div>
                     <div class="needle-body"></div>
+                </div>
+
+                <!-- Pen Point-to-Point Interactive Drawing & Range Highlight Overlay -->
+                <div class="timeline-pen-overlay" id="timeline-pen-overlay" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; z-index:25; pointer-events:none;">
+                    <svg id="timeline-pen-svg" style="width:100%; height:100%; overflow:visible; position:absolute; top:0; left:0;">
+                        <!-- Highlight Region -->
+                        <rect id="pen-range-rect" x="0" y="0" width="0" height="100%" fill="rgba(56, 189, 248, 0.18)" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4,4" style="display:none;"/>
+                        <!-- Connecting Line -->
+                        <line id="pen-connecting-line" x1="0" y1="20" x2="0" y2="20" stroke="#facc15" stroke-width="2.5" stroke-linecap="round" style="display:none;"/>
+                        <!-- Point A Marker -->
+                        <g id="pen-handle-a" style="display:none;">
+                            <line id="pen-line-a" x1="0" y1="0" x2="0" y2="1000" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3,3"/>
+                            <circle cx="0" cy="18" r="8" fill="#0284c7" stroke="#ffffff" stroke-width="2"/>
+                            <text x="0" y="22" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="900">A</text>
+                        </g>
+                        <!-- Point B Marker -->
+                        <g id="pen-handle-b" style="display:none;">
+                            <line id="pen-line-b" x1="0" y1="0" x2="0" y2="1000" stroke="#f43f5e" stroke-width="2" stroke-dasharray="3,3"/>
+                            <circle cx="0" cy="18" r="8" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+                            <text x="0" y="22" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="900">B</text>
+                        </g>
+                    </svg>
+                    <!-- Range Floating Badge -->
+                    <div id="pen-range-badge" style="display:none; position:absolute; top:4px; transform:translateX(-50%); background:rgba(15,23,42,0.92); border:1px solid #38bdf8; border-radius:4px; padding:2px 8px; font-size:10px; font-weight:800; color:#38bdf8; white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,0.5); pointer-events:none; z-index:30;">
+                        Selected: <span id="pen-range-duration" style="color:#facc15;">0.00s</span> (<span id="pen-range-points">A → B</span>)
+                    </div>
                 </div>
 
                 <!-- Track Content Lanes Stack (V1, A1 prominent at top) -->

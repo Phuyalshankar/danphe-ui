@@ -15,6 +15,7 @@ const { Titan3DSlider } = require('./Titan3DSlider.jsx');
 const { Titan3DKnob } = require('./Titan3DKnob.jsx');
 const { NepalFlag } = require('./NepalFlag.jsx');
 const { NepaliDateTag } = require('./NepaliDateBadge.jsx');
+const { TitanMobileDeviceFrame } = require('./TitanMobileDeviceFrame.jsx');
 const { TITAN_REG, TITAN_ADDRESS } = require('../lib/TitanRegisters');
 
 module.exports = {
@@ -43,6 +44,7 @@ module.exports = {
     TitanNavbar,
     NepalFlag,
     NepaliDateTag,
+    TitanMobileDeviceFrame,
     CARD_FLAGS,
     TITAN_REG,
     TITAN_ADDRESS,

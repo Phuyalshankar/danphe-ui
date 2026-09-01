@@ -8,8 +8,8 @@ const { TITAN_ICON, TITAN_ANIM } = require('../lib/TitanAdaptiveIcon');
 let TitanMicroBus = null;
 let TitanDeclarative = null;
 try {
-    const tb = require('d:/titan-bus/index.js');
-    TitanMicroBus = tb.TitanMicroBus;
+    const tb = require('d:/titan-envent-bus/index.js');
+    TitanMicroBus = tb.TitanMicroBus || tb.Bus;
     TitanDeclarative = tb.TitanDeclarative;
 } catch (e) {}
 

@@ -1,7 +1,7 @@
 'use strict';
 
 const { TitanIconMatrix, parseBitmask } = require('../lib/index.js');
-const { TitanMicroBus } = require('d:/titan-bus/index.js');
+const { TitanMicroBus } = require('d:/titan-envent-bus/index.js');
 
 console.log('🧪 Testing Titan Data Bus Bit Control & Icon Matrix...');
 

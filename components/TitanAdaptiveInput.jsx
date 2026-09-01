@@ -7,7 +7,7 @@ const { TITAN_ICON, TITAN_ANIM } = require('../lib/TitanAdaptiveIcon');
 
 let TitanMicroBus = null;
 try {
-    TitanMicroBus = require('d:/titan-bus/index.js').TitanMicroBus;
+    TitanMicroBus = require('d:/titan-envent-bus/index.js').TitanMicroBus;
 } catch (e) {}
 
 /**

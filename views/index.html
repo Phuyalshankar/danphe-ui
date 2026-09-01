@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danphe Studio 19 Pro — Cinema Master NLE</title>
+    <link rel="icon" type="image/svg+xml" href="#danphe-logo">
+    <link rel="stylesheet" href="/css/danphe-ui.min.css">
+    <link rel="stylesheet" href="/css/danphe-studio-pro.css">
+    <style>
+
+    *, *::before, *::after { box-sizing: border-box !important; margin: 0; padding: 0; }
+    html, body { width: 100vw; height: 100vh; overflow: hidden; background: #03060d; color: #cbd5e1; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 12px; user-select: none; }
+    .studio-app { display: flex; flex-direction: column; width: 100vw; height: 100vh; overflow: hidden; }
+
+    /* SVG Icon Constraint */
+    svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+
+    /* ── 1. Top Navbar (44px) ── */
+    .studio-navbar { height: 44px; min-height: 44px; background: #050a14; border-bottom: 1px solid #142036; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; flex-shrink: 0; z-index: 50; }
+    .nav-left, .nav-center, .nav-right { display: flex; align-items: center; gap: 10px; }
+    .logo-box { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .danphe-logo-svg { width: 22px; height: 22px; }
+    .brand-text { display: flex; flex-direction: column; }
+    .brand-title { font-size: 13px; font-weight: 900; color: #fff; letter-spacing: 0.08em; line-height: 1; }
+    .brand-sub { font-size: 8.5px; font-weight: 700; color: #38bdf8; letter-spacing: 0.12em; }
+    .v-sep { width: 1px; height: 20px; background: #1e293b; }
+
+    .project-pill { display: flex; align-items: center; gap: 6px; background: #0b1426; border: 1px solid #1e293b; border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+    .proj-ico { width: 14px; height: 14px; fill: none; stroke: #38bdf8; stroke-width: 2; }
+    .proj-name { font-weight: 700; font-size: 11px; color: #e2e8f0; }
+    .proj-tag { font-size: 9px; font-weight: 800; background: #0369a1; color: #bae6fd; padding: 1px 5px; border-radius: 3px; }
+
+    .ws-switcher { display: flex; gap: 3px; background: #070c18; padding: 3px; border-radius: 8px; border: 1px solid #162035; }
+    .ws-btn { background: transparent; border: none; border-radius: 5px; color: #64748b; font-size: 10.5px; font-weight: 800; padding: 4px 12px; cursor: pointer; transition: all 0.15s; }
+    .ws-btn:hover { color: #cbd5e1; background: #0e172a; }
+    .ws-btn.active { background: #0284c7; color: #fff; box-shadow: 0 0 12px rgba(2,132,199,0.5); }
+
+    .telemetry-box { display: flex; align-items: center; gap: 6px; background: #070c18; border: 1px solid #162035; border-radius: 6px; padding: 4px 10px; font-family: monospace; font-size: 10.5px; }
+    .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 6px #38bdf8; }
+    .tele-val { font-weight: 800; }
+    .text-cyan { color: #38bdf8; }
+    .text-emerald { color: #38bdf8; }
+    .text-purple { color: #a855f7; }
+
+    .btn-export {
+        height: 28px;
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        color: #ffffff;
+        border: 1px solid #38bdf8;
+        border-radius: 6px;
+        padding: 0 14px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 0 12px rgba(56,189,248,0.35);
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+    }
+    .btn-export:hover {
+        background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+        box-shadow: 0 0 18px rgba(56,189,248,0.6);
+        color: #fff;
+    }
+    .btn-export svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        flex-shrink: 0;
+    }
+
+    /* ── 2. Toolbar (32px) ── */
+    .studio-toolbar { height: 32px; min-height: 32px; background: #060a14; border-bottom: 1px solid #142036; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; flex-shrink: 0; z-index: 40; }
+    .tool-group { display: flex; align-items: center; gap: 4px; }
+    .tool-sep { width: 1px; height: 16px; background: #1e293b; margin: 0 4px; }
+    .tool-btn { background: #0b1426; border: 1px solid #1e293b; border-radius: 4px; color: #94a3b8; padding: 3px 8px; font-size: 10.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .tool-btn:hover { background: #141d30; color: #fff; border-color: #0284c7; }
+    .tool-btn.active { background: #0284c7; color: #fff; border-color: #0284c7; }
+    .snap-pill { display: flex; align-items: center; gap: 4px; background: #0b1426; border: 1px solid #1e293b; border-radius: 4px; padding: 2px 7px; font-size: 10px; font-weight: 800; cursor: pointer; color: #94a3b8; }
+    .snap-pill.active { color: #38bdf8; border-color: rgba(56,189,248,0.4); }
+    .snap-dot { width: 6px; height: 6px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 6px rgba(56,189,248,0.8); }
+    .timecode-display { font-family: monospace; font-size: 12px; font-weight: 800; color: #38bdf8; background: #03060d; padding: 2px 8px; border-radius: 4px; border: 1px solid #1e293b; }
+
+    /* ── 3. Upper Deck (3 Columns) ── */
+    .workspace-deck { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: #03060d; }
+    .deck-upper { flex: 1; min-height: 220px; display: flex; overflow: hidden; background: #020408; position: relative; }
+
+    /* Left: Media Pool */
+    .media-dock { width: 220px; min-width: 180px; max-width: 260px; background: #060a14; border-right: 1px solid #142036; display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; }
+    .dock-header { height: 32px; min-height: 32px; background: #080d1a; border-bottom: 1px solid #142036; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; }
+    .dock-title-row { display: flex; align-items: center; gap: 6px; }
+    .dock-ico { width: 14px; height: 14px; fill: none; stroke: #38bdf8; stroke-width: 2; }
+    .dock-title { font-size: 11px; font-weight: 800; color: #fff; }
+    .dock-badge { font-size: 9px; font-weight: 800; background: #1e293b; color: #38bdf8; padding: 1px 5px; border-radius: 3px; }
+    .btn-import-tiny { background: #0284c7; color: #fff; border: none; border-radius: 3px; padding: 4px 8px; font-size: 10px; font-weight: 800; cursor: pointer; }
+
+    .media-dropzone { margin: 8px; padding: 12px; border: 1.5px dashed #1e293b; border-radius: 8px; background: #080d1a; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; cursor: pointer; }
+    .media-dropzone:hover { border-color: #0284c7; background: rgba(2,132,199,0.08); }
+    .drop-ico { width: 22px; height: 22px; fill: none; stroke: #38bdf8; stroke-width: 2; }
+    .drop-main { font-size: 11px; font-weight: 700; color: #e2e8f0; }
+    .drop-sub { font-size: 9.5px; color: #64748b; }
+    .media-cards-list { flex: 1; overflow-y: auto; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 6px; }
+    .media-item { background: #070d18; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px; display: flex; gap: 8px; align-items: center; cursor: pointer; transition: all 0.15s ease; }
+    .media-item:hover { background: #0e1726; border-color: rgba(56,189,248,0.3); }
+    .item-thumb { width: 52px; height: 34px; border-radius: 5px; display: flex; flex-direction: column; justify-content: space-between; padding: 3px 4px; font-size: 8px; font-weight: 800; font-family: monospace; box-shadow: inset 0 0 8px rgba(0,0,0,0.6); flex-shrink: 0; }
+    .vid-thumb { background: linear-gradient(135deg, #0369a1, #082f49); color: #38bdf8; border: 1px solid rgba(56,189,248,0.35); }
+    .aud-thumb { background: linear-gradient(135deg, #1e1b4b, #0f172a); color: #818cf8; border: 1px solid rgba(129,140,248,0.35); }
+    .mus-thumb { background: linear-gradient(135deg, #581c87, #170928); color: #d8b4fe; border: 1px solid rgba(216,180,254,0.35); }
+    .fx-thumb  { background: linear-gradient(135deg, #312e81, #0f172a); color: #a5b4fc; border: 1px solid rgba(165,180,252,0.35); }
+    .drw-thumb { background: linear-gradient(135deg, #881337, #2c0b16); color: #fb7185; border: 1px solid rgba(251,113,133,0.35); }
+    .txt-thumb { background: linear-gradient(135deg, #78350f, #291b0d); color: #fbbf24; border: 1px solid rgba(251,191,36,0.35); }
+    .item-details { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .item-name { font-size: 11px; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-meta { font-size: 9.5px; color: #64748b; font-family: monospace; }
+
+    /* Center: Program Monitor */
+    .monitor-dock { flex: 1; min-width: 0; background: #020408; display: flex; flex-direction: column; position: relative; }
+    .monitor-bar { height: 30px; min-height: 30px; background: #060a14; border-bottom: 1px solid #142036; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-size: 11px; flex-shrink: 0; }
+    .bar-left, .bar-center, .bar-right { display: flex; align-items: center; gap: 6px; }
+    .mon-title { font-weight: 800; font-size: 10.5px; color: #fff; }
+    .mon-dims { font-size: 10px; color: #64748b; font-family: monospace; }
+    .mon-tool { background: #0b1426; border: 1px solid #1e293b; border-radius: 3px; color: #94a3b8; padding: 2px 7px; font-size: 10px; font-weight: 700; cursor: pointer; }
+    .mon-tool.active { background: #0284c7; color: #fff; border-color: #0284c7; }
+    .fps-pill { font-family: monospace; font-size: 10px; color: #10b981; font-weight: 800; }
+
+    .canvas-stage { flex: 1; min-height: 0; position: relative; background: #010204; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 8px; }
+    #program-canvas { max-width: 100%; max-height: 100%; width: auto; height: auto; aspect-ratio: 16 / 9; object-fit: contain; transform-origin: center center; transition: transform 0.15s ease-out; display: block; box-shadow: 0 0 40px rgba(0,0,0,0.95), 0 0 2px rgba(56,189,248,0.4); border-radius: 4px; background: #000; }
+
+    .canvas-transport { position: absolute; bottom: 12px; display: flex; align-items: center; gap: 8px; background: rgba(6,11,22,0.9); backdrop-filter: blur(10px); padding: 4px 12px; border-radius: 20px; border: 1px solid #1a2742; }
+    .btn-step { background: transparent; border: none; color: #94a3b8; cursor: pointer; padding: 4px 6px; display: flex; align-items: center; justify-content: center; }
+    .btn-step svg { width: 14px; height: 14px; fill: currentColor; }
+    .btn-step:hover { color: #fff; }
+    .btn-play { width: 32px; height: 32px; border-radius: 50%; background: #0284c7; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .btn-play svg { width: 14px; height: 14px; fill: #fff; }
+    .btn-play:hover { background: #0ea5e9; transform: scale(1.08); }
+
+    /* Right: Inspector Dock */
+    .inspector-dock { width: 320px; min-width: 280px; max-width: 360px; background: #060a14; border-left: 1px solid #142036; display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; }
+    .dock-tabs { height: 32px; min-height: 32px; background: #080d1a; border-bottom: 1px solid #142036; display: flex; align-items: center; padding: 0 4px; gap: 2px; }
+    .tab-btn { flex: 1; height: 26px; background: transparent; border: none; border-radius: 4px; color: #64748b; font-size: 9.5px; font-weight: 800; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .tab-btn:hover { color: #cbd5e1; background: #0f172a; }
+    .tab-btn.active { background: #0284c7; color: #fff; }
+    .dock-body { flex: 1; overflow: hidden; padding: 0; display: flex; flex-direction: column; min-height: 0; }
+    .dock-body::-webkit-scrollbar { display: none; width: 0; }
+    .insp-pane { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 6px; scrollbar-width: none; -ms-overflow-style: none; min-height: 0; }
+    .insp-pane::-webkit-scrollbar { display: none; width: 0; }
+    .insp-pane.active { display: flex; flex-direction: column; }
+    .pane-sec-title { font-size: 10px; font-weight: 900; color: #38bdf8; letter-spacing: 0.08em; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #142036; padding-bottom: 4px; }
+    .btn-reset { background: transparent; border: none; color: #64748b; font-size: 9.5px; font-weight: 700; cursor: pointer; }
+    .btn-reset:hover { color: #f43f5e; }
+
+    /* Compact Alignment for Audio DSP & Typography */
+    #danphe-audio-eq .px-6.pt-5.pb-3 { padding: 6px 10px 4px !important; }
+    #danphe-audio-eq .px-4.relative svg { max-height: 20px !important; }
+    #danphe-audio-eq .teq-panel-bg { margin: 4px 6px !important; padding: 6px 6px !important; }
+    #danphe-audio-eq .teq-fader-rail { height: 95px !important; }
+
+    #titan-typo-studio .typo-preview-stage { height: 32px !important; min-height: 32px !important; padding: 2px 6px !important; margin-bottom: 4px !important; }
+    #titan-typo-studio .typo-live-text { font-size: 15px !important; }
+    #titan-typo-studio .typo-presets-grid { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; gap: 4px !important; margin-bottom: 4px !important; padding-bottom: 2px !important; }
+    #titan-typo-studio .typo-preset-card { min-width: 85px !important; padding: 3px 5px !important; flex-shrink: 0 !important; }
+
+    /* ── 4. Workspace Splitter (Resize Timeline) ── */
+    .workspace-splitter { height: 6px; min-height: 6px; background: #060b16; border-top: 1px solid #142036; border-bottom: 1px solid #142036; cursor: row-resize; display: flex; align-items: center; justify-content: center; z-index: 30; }
+    .splitter-grip { width: 40px; height: 2px; background: #334155; border-radius: 2px; }
+    .workspace-splitter:hover .splitter-grip { background: #0284c7; }
+
+    /* ── 5. Multi-Track Timeline Dock (.lane & .clip-block) ── */
+    .timeline-dock { height: 340px; min-height: 200px; max-height: 70vh; background: #040711; display: flex; flex-direction: column; flex-shrink: 0; z-index: 20; border-top: 1px solid #142036; }
+    .timeline-bar { height: 32px; min-height: 32px; background: #060a14; border-bottom: 1px solid #142036; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; flex-shrink: 0; }
+    .tl-left, .tl-mid, .tl-right { display: flex; align-items: center; gap: 6px; }
+    .tl-btn { background: #0b1426; border: 1px solid #1e293b; border-radius: 4px; color: #94a3b8; padding: 2px 7px; font-size: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .tl-btn svg { width: 12px; height: 12px; fill: currentColor; }
+    .tl-btn:hover { background: #141d30; color: #fff; border-color: #0284c7; }
+    .tc-now { font-family: monospace; font-size: 12px; font-weight: 800; color: #38bdf8; }
+    .tc-sep { color: #475569; }
+    .tc-max { font-family: monospace; font-size: 11px; color: #64748b; }
+    .tl-zoom { width: 80px; height: 4px; accent-color: #0284c7; cursor: pointer; }
+    .zoom-badge { font-family: monospace; font-size: 9.5px; color: #64748b; }
+
+    .timeline-view { flex: 1; min-height: 0; display: flex; overflow: hidden; position: relative; }
+    .track-headers {
+        width: 130px; min-width: 130px;
+        background: #060a14;
+        border-right: 1px solid #142036;
+        display: flex; flex-direction: column;
+        flex-shrink: 0;
+        overflow-y: scroll;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        position: relative;
+        z-index: 50;
+        box-shadow: 4px 0 16px rgba(0,0,0,0.6);
+    }
+    .track-headers::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+
+    .ruler-corner { height: 26px; min-height: 26px; border-bottom: 1px solid #142036; background: #080d1a; font-family: monospace; font-size: 9px; font-weight: 900; color: #64748b; display: flex; align-items: center; padding: 0 8px; flex-shrink: 0; position: sticky; top: 0; z-index: 60; }
+    
+    .header-row { height: 36px; min-height: 36px; max-height: 36px; border-bottom: 1px solid #142036; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-family: monospace; font-size: 10px; font-weight: 800; flex-shrink: 0; }
+    .badge-tag { font-size: 8.5px; font-weight: 900; padding: 1px 4px; border-radius: 3px; }
+    .badge-tag.amber { background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.4); }
+    .badge-tag.cyan { background: rgba(56,189,248,0.2); color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); }
+    .badge-tag.emerald { background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.4); }
+    .track-nm { color: #cbd5e1; font-size: 10.5px; flex: 1; margin-left: 6px; }
+    .hdr-acts { display: flex; gap: 3px; }
+    .hdr-acts .act-btn { background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 10px; padding: 1px 3px; }
+    .hdr-acts .act-btn:hover, .hdr-acts .act-btn.active { color: #38bdf8; }
+
+    /* Hide scrollbars everywhere while keeping full native scrolling */
+    .timeline-canvas-scroll {
+        flex: 1; min-width: 0;
+        overflow-x: scroll;
+        overflow-y: scroll;
+        position: relative;
+        background: #02050b;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+    }
+    .timeline-canvas-scroll::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+
+    .timeline-scroll-content { min-width: 100%; position: relative; min-height: 100%; }
+    .time-ruler {
+        height: 26px; min-height: 26px;
+        border-bottom: 1px solid #142036;
+        background: #060a14;
+        position: sticky; top: 0; z-index: 40;
+        cursor: ew-resize; min-width: 100%; user-select: none;
+    }
+    .time-ruler::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #1e293b, #1e293b 1px, transparent 1px, transparent 20px); pointer-events: none; }
+
+    .lanes-box { min-width: 100%; display: flex; flex-direction: column; }
+    
+    /* 🎯 CRITICAL: .lane MUST BE position: relative & height: 36px! */
+    .lane {
+        height: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
+        position: relative !important;
+        border-bottom: 1px solid #0e172a;
+        background: rgba(15,23,42,0.25);
+        min-width: 100%;
+    }
+
+    /* 🎯 CRITICAL: .clip-block MUST BE height: 30px & position: absolute inside .lane! */
+    .clip-block {
+        position: absolute !important;
+        top: 3px !important;
+        height: 30px !important;
+        border-radius: 4px;
+        padding: 0 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        overflow: hidden;
+        white-space: nowrap;
+        border: 1px solid rgba(255,255,255,0.15);
+        box-sizing: border-box;
+        z-index: 10;
+    }
+    .clip-block.vid-clip { background: linear-gradient(135deg, #0369a1, #0284c7); color: #f0f9ff; border-color: #38bdf8; }
+    .clip-block.aud-clip { background: linear-gradient(135deg, #065f46, #059669); color: #ecfdf5; border-color: #34d399; }
+    .clip-block.txt-clip { background: linear-gradient(135deg, #b45309, #d97706); color: #fffbeb; border-color: #fbbf24; }
+    .clip-block.selected { border: 2px solid #ffffff !important; box-shadow: 0 0 12px rgba(56,189,248,0.7) !important; }
+    .clip-block .handle { width: 4px; height: 100%; background: rgba(0,0,0,0.3); border-radius: 2px; cursor: ew-resize; }
+    .clip-block .truncate { overflow: hidden; text-overflow: ellipsis; }
+
+    .playhead { position: absolute; top: 0; bottom: 0; width: 2px; pointer-events: none; z-index: 100; }
+    .playhead-top { width: 12px; height: 10px; background: #ef4444; clip-path: polygon(0 0, 100% 0, 50% 100%); margin-left: -5px; }
+    .playhead-laser { width: 2px; height: calc(100% - 10px); background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.8); }
+
+    
+.titan-pro-slider-rack {
+    background: radial-gradient(circle at 50% 0%, #1e232b 0%, #0d0f12 100%);
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.4) 3px, rgba(0,0,0,0.4) 4px);
+    border: 1px solid #1f242d;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 24px rgba(0,0,0,0.7);
+}
+.titan-slider-channel {
+    position: relative;
+    width: 100%;
+    height: 14px;
+    background: #06080a;
+    border-radius: 9999px;
+    box-shadow:
+        inset 0 3px 6px rgba(0,0,0,0.9),
+        inset 0 1px 2px rgba(0,0,0,0.95),
+        0 1px 0 rgba(255,255,255,0.10),
+        0 -1px 0 rgba(0,0,0,0.8);
+    cursor: pointer;
+    user-select: none;
+}
+.titan-slider-led-fill {
+    position: absolute;
+    top: 2.5px; bottom: 2.5px; left: 4px;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #6ee7b7 0%, #10b981 40%, #047857 100%);
+    box-shadow: 0 0 14px rgba(16,185,129,0.75), 0 0 5px rgba(52,211,153,0.9), inset 0 1px 1px rgba(255,255,255,0.8);
+    pointer-events: none;
+    transition: width 0.04s ease-out;
+}
+.titan-slider-led-fill::after {
+    content: '';
+    position: absolute;
+    top: 1px; left: 6px; right: 6px; height: 2px;
+    background: rgba(255,255,255,0.72);
+    border-radius: 9999px;
+    filter: blur(0.4px);
+}
+.titan-slider-led-fill.cyan {
+    background: linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 40%, #0369a1 100%);
+    box-shadow: 0 0 14px rgba(14,165,233,0.75), 0 0 5px rgba(56,189,248,0.9), inset 0 1px 1px rgba(255,255,255,0.8);
+}
+.titan-slider-led-fill.amber {
+    background: linear-gradient(180deg, #fde047 0%, #eab308 40%, #a16207 100%);
+    box-shadow: 0 0 14px rgba(234,179,8,0.75), 0 0 5px rgba(250,204,21,0.9), inset 0 1px 1px rgba(255,255,255,0.8);
+}
+.titan-slider-led-fill.rose {
+    background: linear-gradient(180deg, #fda4af 0%, #f43f5e 40%, #be123c 100%);
+    box-shadow: 0 0 14px rgba(244,63,94,0.75), 0 0 5px rgba(251,113,133,0.9), inset 0 1px 1px rgba(255,255,255,0.8);
+}
+.titan-slider-led-fill.purple {
+    background: linear-gradient(180deg, #d8b4fe 0%, #a855f7 40%, #7e22ce 100%);
+    box-shadow: 0 0 14px rgba(168,85,247,0.75), 0 0 5px rgba(196,181,253,0.9), inset 0 1px 1px rgba(255,255,255,0.8);
+}
+
+/* === KNOB: ORB (Matte Beveled Round) === */
+.titan-knob-orb {
+    position: absolute; top: 50%;
+    width: 24px; height: 24px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: linear-gradient(145deg, #2d333d 0%, #15181d 100%);
+    border: 1px solid #3c434f;
+    box-shadow:
+        0 4px 8px rgba(0,0,0,0.8),
+        inset 0 1px 1px rgba(255,255,255,0.38),
+        inset 0 -2px 3px rgba(0,0,0,0.8);
+    cursor: grab; z-index: 10; pointer-events: none;
+}
+
+/* === KNOB: GRIP (Vertical Capsule |||) === */
+.titan-knob-grip {
+    position: absolute; top: 50%;
+    width: 18px; height: 30px;
+    transform: translate(-50%, -50%);
+    border-radius: 6px;
+    background: linear-gradient(145deg, #2e343e 0%, #171a1f 100%);
+    border: 1px solid #3d4552;
+    box-shadow:
+        0 5px 10px rgba(0,0,0,0.85),
+        inset 0 1px 1px rgba(255,255,255,0.30),
+        inset 0 -2px 3px rgba(0,0,0,0.8);
+    display: flex; align-items: center; justify-content: center; gap: 2px;
+    z-index: 10; pointer-events: none;
+}
+.titan-knob-grip .ridge {
+    width: 1.5px; height: 14px;
+    background: #0f1216;
+    border-right: 1px solid rgba(255,255,255,0.16);
+    border-radius: 1px;
+}
+
+/* === KNOB: LENS (LED Indicator Center) === */
+.titan-knob-lens {
+    position: absolute; top: 50%;
+    width: 28px; height: 28px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, #272d37 40%, #121519 100%);
+    border: 1px solid #3f4756;
+    box-shadow:
+        0 6px 14px rgba(0,0,0,0.9),
+        inset 0 1px 2px rgba(255,255,255,0.42),
+        inset 0 -3px 4px rgba(0,0,0,0.8);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10; pointer-events: none;
+}
+.titan-knob-lens .center-led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #34d399, inset 0 1px 1px rgba(255,255,255,0.8);
+    border: 1px solid #065f46;
+}
+.titan-knob-lens.cyan   .center-led { background:#0ea5e9; box-shadow:0 0 9px #38bdf8; border-color:#0369a1; }
+.titan-knob-lens.amber  .center-led { background:#eab308; box-shadow:0 0 9px #fde047; border-color:#854d0e; }
+.titan-knob-lens.rose   .center-led { background:#f43f5e; box-shadow:0 0 9px #fb7171; border-color:#9f1239; }
+.titan-knob-lens.purple .center-led { background:#a855f7; box-shadow:0 0 9px #d8b4fe; border-color:#6b21a8; }
+
+/* === KNOB: PILL (Wide Horizontal Fader) === */
+.titan-knob-pill {
+    position: absolute; top: 50%;
+    width: 68px; height: 20px;
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #2e343f 0%, #16191f 100%);
+    border: 1px solid #3c4452;
+    box-shadow:
+        0 4px 10px rgba(0,0,0,0.85),
+        inset 0 1px 1px rgba(255,255,255,0.30),
+        inset 0 -2px 3px rgba(0,0,0,0.8);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10; pointer-events: none;
+}
+.titan-knob-pill .pill-groove {
+    width: 46px; height: 4px;
+    background: #0b0d10; border-radius: 2px;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+/* === Native Invisible Input === */
+.titan-slider-native-input {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0; cursor: pointer; z-index: 20; margin: 0;
+}
+
+
+    </style>
+</head>
+<body>
+<div style="display: none;" id="danphe-icons-sprite">
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="danphe-logo" viewBox="0 0 32 32">
+    <path d="M 4 24 C 8 28, 16 30, 24 26 C 28 24, 30 18, 28 12 C 26 8, 20 4, 14 6 C 10 7, 6 12, 4 18 Z" fill="#0284c7"/>
+    <path d="M 14 6 C 18 2, 26 2, 28 8 C 26 12, 20 14, 14 14 Z" fill="#38bdf8"/>
+    <circle cx="20" cy="8" r="2" fill="#fff"/>
+    <path d="M 6 22 C 10 26, 18 26, 22 22" stroke="#facc15" stroke-width="2" fill="none"/>
+  </symbol>
+  <symbol id="tool_selection" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 3l7 18 3-7 7-3L3 3z"/>
+  </symbol>
+  <symbol id="tool_track_select_fwd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/>
+  </symbol>
+  <symbol id="tool_track_select_back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/>
+  </symbol>
+  <symbol id="tool_ripple_edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 4v16"/><path d="M18 4v16"/><path d="M6 12h12"/><polyline points="10 8 6 12 10 16"/><polyline points="14 8 18 12 14 16"/>
+  </symbol>
+  <symbol id="tool_rolling_edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="2" x2="12" y2="22"/><polyline points="8 8 4 12 8 16"/><polyline points="16 8 20 12 16 16"/>
+  </symbol>
+  <symbol id="tool_rate_stretch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/><path d="M19 18h4"/><path d="M19 22h4"/>
+  </symbol>
+  <symbol id="tool_razor_cut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>
+  </symbol>
+  <symbol id="tool_slip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="6" width="16" height="12" rx="2"/><polyline points="9 10 7 12 9 14"/><polyline points="15 10 17 12 15 14"/>
+  </symbol>
+  <symbol id="tool_slide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="7" y="6" width="10" height="12" rx="1"/><polyline points="4 10 2 12 4 14"/><polyline points="20 10 22 12 20 14"/>
+  </symbol>
+  <symbol id="tool_pen_mask" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="1.5"/>
+  </symbol>
+  <symbol id="tool_hand_pan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8a7 7 0 0 0 14 0v-3a2 2 0 0 0-4 0v0"/>
+  </symbol>
+  <symbol id="tool_zoom" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+  </symbol>
+  <symbol id="tool_type_text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>
+  </symbol>
+  <symbol id="action_split_playhead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="2" x2="12" y2="22"/><polyline points="8 6 12 2 16 6"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
+  </symbol>
+  <symbol id="action_trim_boundaries" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 6v12"/><path d="M20 6v12"/><line x1="4" y1="12" x2="11" y2="12"/><line x1="13" y1="12" x2="20" y2="12"/>
+  </symbol>
+  <symbol id="action_ripple_delete" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="9" y1="12" x2="15" y2="12"/>
+  </symbol>
+  <symbol id="action_keyframe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="12 3 21 12 12 21 3 12 12 3"/><circle cx="12" cy="12" r="2"/>
+  </symbol>
+  <symbol id="action_speed_ramp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 18c3-6 6-12 18-12"/><circle cx="3" cy="18" r="2"/><circle cx="21" cy="6" r="2"/><polyline points="15 6 21 6 21 12"/>
+  </symbol>
+  <symbol id="action_rotate_90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+  </symbol>
+  <symbol id="action_crop_pan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/>
+  </symbol>
+  <symbol id="action_reverse_playback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+  </symbol>
+  <symbol id="audio_speaker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+  </symbol>
+  <symbol id="audio_mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+  </symbol>
+  <symbol id="audio_mic_record" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+  </symbol>
+  <symbol id="audio_equalizer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+  </symbol>
+  <symbol id="audio_denoise" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 10v4"/><path d="M6 6v12"/><path d="M10 3v18"/><path d="M14 8v8"/><path d="M18 5v14"/><path d="M22 10v4"/><line x1="1" y1="1" x2="23" y2="23"/>
+  </symbol>
+  <symbol id="audio_ducking" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>
+  </symbol>
+  <symbol id="audio_headphones" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+  </symbol>
+  <symbol id="color_wheel_3way" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="22"/><line x1="2" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="22" y2="12"/>
+  </symbol>
+  <symbol id="color_lut_cube" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+  </symbol>
+  <symbol id="color_exposure" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+  </symbol>
+  <symbol id="color_contrast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20z" fill="currentColor"/>
+  </symbol>
+  <symbol id="color_blend_mode" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>
+  </symbol>
+  <symbol id="text_edit_string" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </symbol>
+  <symbol id="text_font_matrix" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/><text x="14" y="21" font-size="7" font-family="monospace">N</text>
+  </symbol>
+  <symbol id="text_neon_glow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+  </symbol>
+  <symbol id="text_auto_captions" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/>
+  </symbol>
+  <symbol id="text_nepal_stamp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="4 2 20 9 9 9 20 18 4 18 4 22"/><line x1="4" y1="2" x2="4" y2="22"/>
+  </symbol>
+  <symbol id="ai_smart_cutout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M19 8l2 2-2 2M15 4l-1 2 1 2"/>
+  </symbol>
+  <symbol id="ai_beat_sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><circle cx="12" cy="10" r="1.5" fill="currentColor"/>
+  </symbol>
+  <symbol id="ai_trendy_vfx" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </symbol>
+  <symbol id="vfx_motion_blur" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="4" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="2" y1="18" x2="14" y2="18"/>
+  </symbol>
+  <symbol id="vfx_vector_shapes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+  </symbol>
+  <symbol id="media_video_cam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+  </symbol>
+  <symbol id="media_audio_track" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+  </symbol>
+  <symbol id="media_import" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+  </symbol>
+  <symbol id="media_export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+  </symbol>
+  <symbol id="transport_play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+  </symbol>
+  <symbol id="transport_pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+  </symbol>
+  <symbol id="transport_step_back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/>
+  </symbol>
+  <symbol id="transport_step_fwd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
+  </symbol>
+  <symbol id="transport_loop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+  </symbol>
+  <symbol id="track_eye_visible" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+  </symbol>
+  <symbol id="track_lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </symbol>
+  <symbol id="track_magnet_snap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 3v7a6 6 0 0 0 12 0V3"/><line x1="4" y1="8" x2="8" y2="8"/><line x1="16" y1="8" x2="20" y2="8"/>
+  </symbol>
+  <symbol id="system_trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+  </symbol>
+  <symbol id="system_clone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+  </symbol>
+</svg>
+</div>
+
+    <div class="studio-app" id="studio-root-container">
+        <!-- 1. TOP NAVBAR -->
+<!-- 🐬 1. TOP NAVBAR (44px - Clean Pro Studio) -->
+<header class="studio-navbar" id="studio-main-navbar">
+    <div class="nav-left">
+        <div class="logo-box" title="Danphe Video Studio Pro (19.0.0)">
+            <svg class="danphe-logo-svg" viewBox="0 0 32 32">
+                <use href="#danphe-logo"/>
+            </svg>
+            <div class="brand-text">
+                <span class="brand-title">DANPHE STUDIO</span>
+                <span class="brand-sub">19.0.0 PRO MASTER</span>
+            </div>
+        </div>
+
+        <div class="v-sep"></div>
+
+        <div class="project-pill" onclick="openProjectWizard()" title="Current Active Timeline Project">
+            <svg class="proj-ico" viewBox="0 0 24 24"><use href="#project_open"/></svg>
+            <span class="proj-name" id="active-project-name">Dolphin_Cinema_4K</span>
+            <span class="proj-tag">1080p60</span>
+        </div>
+    </div>
+
+    <div class="nav-center">
+        <div class="ws-switcher">
+            <button type="button" class="ws-btn active" id="ws-tab-edit" onclick="switchWorkspace('edit')">EDIT</button>
+            <button type="button" class="ws-btn" id="ws-tab-color" onclick="switchWorkspace('color')">COLOR</button>
+            <button type="button" class="ws-btn" id="ws-tab-audio" onclick="switchWorkspace('audio')">FAIRLIGHT</button>
+            <button type="button" class="ws-btn" id="ws-tab-deliver" onclick="switchWorkspace('deliver')">DELIVER</button>
+        </div>
+    </div>
+
+    <div class="nav-right">
+        <div class="telemetry-box" title="Hardware Engine Highway Telemetry">
+            <div class="pulse-dot"></div>
+            <span class="tele-val text-cyan">60 FPS</span>
+            <span class="tele-sep">|</span>
+            <span class="tele-val text-emerald">4K HDR</span>
+            <span class="tele-sep">|</span>
+            <span class="tele-val text-purple">TITAN-BUS</span>
+        </div>
+
+        <button type="button" class="btn-export" onclick="triggerRenderWorkflow()" title="Export 4K Master Video (Ctrl+M)">
+            <svg viewBox="0 0 24 24"><use href="#action_export"/></svg>
+            <span>EXPORT 4K</span>
+        </button>
+    </div>
+</header>
+
+
+        <!-- 2. SUB-TOOLBAR -->
+<!-- 🐬 2. EDITING TOOLBAR (32px - Tooltip Only Clean Pro Toolbar) -->
+<div class="studio-toolbar" id="studio-sub-toolbar">
+    <div class="tool-group">
+        <button type="button" class="tool-btn active" id="tool-btn-select" onclick="setTimelineTool('select')" title="Selection Tool (V)">
+            <svg viewBox="0 0 24 24"><use href="#tool_selection"/></svg>
+            <span>Select</span>
+        </button>
+        <button type="button" class="tool-btn" id="tool-btn-razor" onclick="setTimelineTool('razor')" title="Razor Blade Cut (C)">
+            <svg viewBox="0 0 24 24"><use href="#tool_razor_cut"/></svg>
+            <span>Razor</span>
+        </button>
+        <button type="button" class="tool-btn" id="tool-btn-draw" onclick="toggleDrawToolMode('pen')" title="Draw / Pen Tool (P)">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+            <span>Draw</span>
+        </button>
+        <button type="button" class="tool-btn" onclick="triggerSplitAtPlayhead()" title="Split Clip at Playhead (Ctrl+K)">
+            <svg viewBox="0 0 24 24"><use href="#action_split_playhead"/></svg>
+            <span>Split</span>
+        </button>
+        <button type="button" class="tool-btn" onclick="triggerRippleDelete()" title="Ripple Delete Selected Clip (Del)">
+            <svg viewBox="0 0 24 24"><use href="#action_ripple_delete"/></svg>
+            <span>Delete</span>
+        </button>
+    </div>
+
+    <div class="tool-sep"></div>
+
+    <div class="tool-group">
+        <button type="button" class="tool-btn" onclick="addNewTextToTimeline()" title="Add 3D Text Title (T)">
+            <svg viewBox="0 0 24 24"><use href="#text_edit_string"/></svg>
+            <span>+ Text</span>
+        </button>
+        <button type="button" class="tool-btn" onclick="duplicateActiveLayer()" title="Duplicate Layer (Ctrl+D)">
+            <svg viewBox="0 0 24 24"><use href="#action_duplicate"/></svg>
+            <span>Duplicate</span>
+        </button>
+        <button type="button" class="tool-btn" onclick="switchInspectorTab('color')" title="Color Wheels">
+            <svg viewBox="0 0 24 24"><use href="#color_wheel_3way"/></svg>
+            <span>Color</span>
+        </button>
+        <button type="button" class="tool-btn" onclick="switchInspectorTab('audio')" title="Fairlight Audio DSP & DJ Studio">
+            <svg viewBox="0 0 24 24"><use href="#audio_equalizer"/></svg>
+            <span>Audio</span>
+        </button>
+    </div>
+
+    <div class="tool-sep"></div>
+
+    <div class="tool-group tool-right">
+        <div class="snap-pill active" id="btn-snap-toggle" onclick="toggleSnapMagnet()" title="Timeline Snapping (S)">
+            <span class="snap-dot"></span>
+            <span>SNAP ON</span>
+        </div>
+        <div class="timecode-display" id="master-timecode-display" title="Playhead Timecode (HH:MM:SS:FF)">
+            00:00:00:00
+        </div>
+    </div>
+</div>
+
+
+        <!-- 3. MAIN WORKSPACE DECK -->
+        <div class="workspace-deck" id="studio-workspace-deck">
+            <div class="deck-upper" id="studio-upper-deck">
+                <!-- Left: Media Pool -->
+<!-- 🐬 NATIVE MEDIA POOL -->
+<aside class="media-dock" id="media-pool-dock">
+    <div class="dock-header">
+        <div class="dock-title-row">
+            <svg class="dock-ico" viewBox="0 0 24 24"><use href="#media_video_cam"/></svg>
+            <span class="dock-title">MEDIA POOL</span>
+            <span class="dock-badge" id="media-pool-count">0</span>
+        </div>
+        <button type="button" class="btn-import-tiny" onclick="document.getElementById('native-file-input').click()">
+            + IMPORT
+        </button>
+    </div>
+
+    <input type="file" id="native-file-input" multiple accept=".mp4,.mov,.webm,.mkv,.avi,.mp3,.wav,.m4a,.aac,.flac,.ogg,.png,.jpg,.jpeg,.webp,.gif,video/*,audio/*,image/*" style="display:none;" onchange="handleNativeFileSelection(this.files)">
+
+    <!-- Drag & Drop Zone -->
+    <div class="media-dropzone" id="media-pool-dropzone" 
+         ondragover="handleMediaDragOver(event)" 
+         ondragleave="handleMediaDragLeave(event)" 
+         ondrop="handleMediaDrop(event)"
+         onclick="document.getElementById('native-file-input').click()">
+        <svg class="drop-ico" viewBox="0 0 24 24"><use href="#media_import"/></svg>
+        <div class="drop-main">Drop 4K Videos / Audio / Images</div>
+        <div class="drop-sub">or click to browse local files</div>
+    </div>
+
+    <!-- Media Cards (Populated dynamically on import) -->
+    <div class="media-cards-list" id="media-cards-container"></div>
+</aside>
+
+
+                <!-- Center: Program Monitor -->
+<!-- 🐬 4. PROGRAM MONITOR & CAD STAGE -->
+<section class="monitor-dock" id="studio-monitor-section">
+    <div class="monitor-bar">
+        <div class="bar-left" style="display:flex;align-items:center;gap:6px;">
+            <span class="mon-title">PROGRAM MONITOR</span>
+            <span class="mon-dims" id="mon-dims-display" style="color:#38bdf8;font-weight:700;font-size:10px;">1920 × 1080 (16:9)</span>
+            <div style="display:flex;align-items:center;gap:3px;margin-left:4px;">
+                <button type="button" class="mon-tool active" id="btn-aspect-16-9" onclick="setAspectRatio('16:9')" title="16:9 Landscape YouTube">16:9</button>
+                <button type="button" class="mon-tool" id="btn-aspect-9-16" onclick="setAspectRatio('9:16')" title="9:16 Shorts/Reels/TikTok">9:16</button>
+                <button type="button" class="mon-tool" id="btn-aspect-1-1" onclick="setAspectRatio('1:1')" title="1:1 Instagram Square">1:1</button>
+                <button type="button" class="mon-tool" id="btn-aspect-21-9" onclick="setAspectRatio('21:9')" title="21:9 Cinema Ultrawide">21:9</button>
+            </div>
+        </div>
+        <div class="bar-center">
+            <button type="button" class="mon-tool active" id="mon-zoom-fit" onclick="setMonitorZoom('fit')">Fit</button>
+            <button type="button" class="mon-tool" id="mon-zoom-50" onclick="setMonitorZoom(0.5)">50%</button>
+            <button type="button" class="mon-tool" id="mon-zoom-100" onclick="setMonitorZoom(1.0)">100%</button>
+            <button type="button" class="mon-tool" id="mon-zoom-200" onclick="setMonitorZoom(2.0)">200%</button>
+            <button type="button" class="mon-tool" id="mon-zoom-400" onclick="setMonitorZoom(4.0)">400%</button>
+            <button type="button" class="mon-tool" onclick="resetMonitorPanZoom()">Reset</button>
+        </div>
+        <div class="bar-right">
+            <button type="button" class="mon-tool" onclick="toggleCadDrawerFromBtn(event)" title="Open CAD Action Drawer (Right-Click Canvas)">
+                <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor;vertical-align:-2px;"><use href="#tool_selection"/></svg>
+                <span>CAD Menu</span>
+            </button>
+            <span class="fps-pill" id="mon-fps-pill">60.0 FPS</span>
+            <span class="zoom-badge" id="mon-zoom-hud" style="font-family:monospace;font-size:10px;font-weight:900;color:#38bdf8;background:#060b16;padding:1px 6px;border-radius:4px;border:1px solid #142036;">100%</span>
+        </div>
+    </div>
+
+    <div class="canvas-stage" id="monitor-canvas-stage"
+         onmousedown="handleCanvasMouseDown(event)"
+         onmousemove="handleCanvasMouseMove(event)"
+         onmouseup="handleCanvasMouseUp(event)"
+         ondblclick="handleCanvasDoubleClick(event)"
+         oncontextmenu="handleCanvasContextMenu(event)"
+         onwheel="handleCanvasWheel(event)"
+         style="flex:1;min-height:0;position:relative;background:#010204;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:8px;">
+        
+        <canvas id="program-canvas" width="1920" height="1080" style="max-width:100%;max-height:100%;width:auto;height:auto;aspect-ratio:16/9;object-fit:contain;transform-origin:center center;display:block;box-shadow:0 0 40px rgba(0,0,0,0.95),0 0 2px rgba(56,189,248,0.4);border-radius:4px;background:#000;"></canvas>
+
+        <div id="canvas-inline-text-editor"
+             contenteditable="true"
+             spellcheck="false"
+             oninput="handleInlineTextInput(event)"
+             onblur="handleInlineTextBlur(event)"
+             onkeydown="handleInlineTextKeydown(event)"
+             style="display:none;position:absolute;z-index:30;padding:4px 8px;border:1px dashed #38bdf8;background:rgba(0,0,0,0.8);color:#fff;outline:none;"></div>
+    </div>
+
+    <!-- Under-Monitor Transport Bar (High-Visibility Solid Bar, 0% video obstruction!) -->
+    <div class="monitor-transport-bar" style="height:36px;min-height:36px;background:#060a14;border-top:1px solid #142036;display:flex;align-items:center;justify-content:center;gap:10px;flex-shrink:0;z-index:15;padding:0 12px;">
+        <button type="button" class="btn-step" onclick="stepFrame(-1)" title="Step 1 Frame Back (Left Arrow)" style="background:#0b1426;border:1px solid #1e293b;border-radius:4px;color:#94a3b8;cursor:pointer;padding:4px 10px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;">
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;"><use href="#transport_step_back"/></svg>
+            <span>-1 Frame</span>
+        </button>
+        <button type="button" class="btn-play" id="btn-master-play" onclick="togglePlayback()" title="Play / Pause (Space)" style="height:28px;padding:0 16px;border-radius:14px;background:#0284c7;border:none;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 0 14px rgba(2,132,199,0.6);color:#fff;font-weight:800;font-size:12px;">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff;"><use href="#transport_play"/></svg>
+            <span id="btn-play-label">PLAY</span>
+        </button>
+        <button type="button" class="btn-step" onclick="stepFrame(1)" title="Step 1 Frame Forward (Right Arrow)" style="background:#0b1426;border:1px solid #1e293b;border-radius:4px;color:#94a3b8;cursor:pointer;padding:4px 10px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;">
+            <span>+1 Frame</span>
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;"><use href="#transport_step_fwd"/></svg>
+        </button>
+    </div>
+</section>
+
+
+                <!-- Right: Inspector Dock -->
+<!-- 🐬 AUTHENTIC DANPHE-UI INSPECTOR DOCK -->
+<aside class="inspector-dock" id="studio-inspector-dock">
+    <div class="dock-tabs">
+        <button type="button" class="tab-btn active" id="tab-insp-video" onclick="switchInspectorTab('video')">🎬 TRANSFORM</button>
+        <button type="button" class="tab-btn" id="tab-insp-color" onclick="switchInspectorTab('color')">🎨 COLOR WHEEL</button>
+        <button type="button" class="tab-btn" id="tab-insp-text" onclick="switchInspectorTab('text')">✍️ TYPOGRAPHY</button>
+        <button type="button" class="tab-btn" id="tab-insp-audio" onclick="switchInspectorTab('audio')">🎙️ AUDIO DSP</button>
+    </div>
+
+    <div class="dock-body">
+        <!-- 1. VIDEO TRANSFORM TAB (Danphe-UI TitanVideoInspector) -->
+        <div class="insp-pane active" id="pane-insp-video">
+<div id="danphe-video-insp" class="titan-video-inspector flex flex-col gap-3 p-4 bg-slate-900/95 rounded-2xl border border-slate-800 shadow-2xl font-mono select-none"><div class="flex items-center justify-between pb-3 border-b border-slate-800"><div class="flex items-center gap-2"><span class="text-cyan-400"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" class="titan-adaptive-icon ">
+  <style>
+@keyframes titan-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } }
+@keyframes titan-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes titan-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes titan-ring { 0% { transform: rotate(0); } 10%, 30%, 50%, 70%, 90% { transform: rotate(-12deg); } 20%, 40%, 60%, 80% { transform: rotate(12deg); } 100% { transform: rotate(0); } }
+@keyframes titan-ripple { 0% { transform: scale(0.95); stroke-opacity: 0.8; } 50% { transform: scale(1.05); stroke-opacity: 0.3; } 100% { transform: scale(0.95); stroke-opacity: 0.8; } }
+@keyframes titan-wave { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.6); } }
+@keyframes titan-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+@keyframes titan-glow { 0%, 100% { filter: drop-shadow(0 0 3px currentColor); } 50% { filter: drop-shadow(0 0 10px currentColor); } }
+
+.titan-anim-pulse { animation: titan-pulse 1.8s infinite ease-in-out; transform-origin: center; }
+.titan-anim-spin { animation: titan-spin 1.5s infinite linear; transform-origin: center; }
+.titan-anim-bounce { animation: titan-bounce 1s infinite ease-in-out; transform-origin: center; }
+.titan-anim-ring { animation: titan-ring 1.2s infinite ease-in-out; transform-origin: center; }
+.titan-anim-ripple { animation: titan-ripple 2s infinite ease-in-out; transform-origin: center; }
+.titan-anim-wave { animation: titan-wave 1s infinite ease-in-out; transform-origin: center; }
+.titan-anim-flash { animation: titan-flash 0.6s infinite ease-in-out; transform-origin: center; }
+.titan-anim-glow { animation: titan-glow 1.5s infinite ease-in-out; transform-origin: center; }
+</style>
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="11" width="8" height="7" rx="1.5" fill="currentColor" fill-opacity="0.3" stroke="currentColor" stroke-width="1.8"/></g>
+</svg></span><span class="font-bold text-white tracking-wide uppercase text-sm">Video Transform & Compositing</span></div><button onclick="titanVideoResetTransform('danphe-video-insp')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center gap-1.5 transition-all text-[11px] active:scale-95"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" class="titan-adaptive-icon ">
+  <style>
+@keyframes titan-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } }
+@keyframes titan-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes titan-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes titan-ring { 0% { transform: rotate(0); } 10%, 30%, 50%, 70%, 90% { transform: rotate(-12deg); } 20%, 40%, 60%, 80% { transform: rotate(12deg); } 100% { transform: rotate(0); } }
+@keyframes titan-ripple { 0% { transform: scale(0.95); stroke-opacity: 0.8; } 50% { transform: scale(1.05); stroke-opacity: 0.3; } 100% { transform: scale(0.95); stroke-opacity: 0.8; } }
+@keyframes titan-wave { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.6); } }
+@keyframes titan-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+@keyframes titan-glow { 0%, 100% { filter: drop-shadow(0 0 3px currentColor); } 50% { filter: drop-shadow(0 0 10px currentColor); } }
+
+.titan-anim-pulse { animation: titan-pulse 1.8s infinite ease-in-out; transform-origin: center; }
+.titan-anim-spin { animation: titan-spin 1.5s infinite linear; transform-origin: center; }
+.titan-anim-bounce { animation: titan-bounce 1s infinite ease-in-out; transform-origin: center; }
+.titan-anim-ring { animation: titan-ring 1.2s infinite ease-in-out; transform-origin: center; }
+.titan-anim-ripple { animation: titan-ripple 2s infinite ease-in-out; transform-origin: center; }
+.titan-anim-wave { animation: titan-wave 1s infinite ease-in-out; transform-origin: center; }
+.titan-anim-flash { animation: titan-flash 0.6s infinite ease-in-out; transform-origin: center; }
+.titan-anim-glow { animation: titan-glow 1.5s infinite ease-in-out; transform-origin: center; }
+</style>
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></g>
+</svg> Reset 100%</button></div>
+<div id="danphe-video-insp-scale-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Scale / Zoom</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4101</span></div><div class="flex items-center gap-1.5"><span id="danphe-video-insp-scale-val" class="font-black text-xs text-cyan-400">100%</span><span class="text-[9px] text-slate-600">(23%)</span></div></div><div class="titan-slider-channel" id="danphe-video-insp-scale-channel"><div id="danphe-video-insp-scale-fill" class="titan-slider-led-fill cyan" style="width:calc(23.076923076923077% - 3px)"></div><div id="danphe-video-insp-scale-knob" class="titan-knob-lens cyan" style="left:23.076923076923077%"><div class="center-led"></div></div><input type="range" min="10" max="400" value="100" id="danphe-video-insp-scale-input" oninput="titanProSliderUpdate('danphe-video-insp-scale',+this.value,10,400,'%',16641)" class="titan-slider-native-input"></div></div><div id="danphe-video-insp-rotation-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Rotation Angle</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4102</span></div><div class="flex items-center gap-1.5"><span id="danphe-video-insp-rotation-val" class="font-black text-xs text-purple-400">0°</span><span class="text-[9px] text-slate-600">(50%)</span></div></div><div class="titan-slider-channel" id="danphe-video-insp-rotation-channel"><div id="danphe-video-insp-rotation-fill" class="titan-slider-led-fill purple" style="width:calc(50% - 3px)"></div><div id="danphe-video-insp-rotation-knob" class="titan-knob-grip" style="left:50%"><div class="ridge"></div><div class="ridge"></div><div class="ridge"></div></div><input type="range" min="-180" max="180" value="0" id="danphe-video-insp-rotation-input" oninput="titanProSliderUpdate('danphe-video-insp-rotation',+this.value,-180,180,'°',16642)" class="titan-slider-native-input"></div></div><div id="danphe-video-insp-posX-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Position X</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4103</span></div><div class="flex items-center gap-1.5"><span id="danphe-video-insp-posX-val" class="font-black text-xs text-cyan-400">0px</span><span class="text-[9px] text-slate-600">(50%)</span></div></div><div class="titan-slider-channel" id="danphe-video-insp-posX-channel"><div id="danphe-video-insp-posX-fill" class="titan-slider-led-fill cyan" style="width:calc(50% - 3px)"></div><div id="danphe-video-insp-posX-knob" class="titan-knob-orb" style="left:50%"></div><input type="range" min="-300" max="300" value="0" id="danphe-video-insp-posX-input" oninput="titanProSliderUpdate('danphe-video-insp-posX',+this.value,-300,300,'px',16643)" class="titan-slider-native-input"></div></div><div id="danphe-video-insp-posY-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Position Y</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4104</span></div><div class="flex items-center gap-1.5"><span id="danphe-video-insp-posY-val" class="font-black text-xs text-cyan-400">0px</span><span class="text-[9px] text-slate-600">(50%)</span></div></div><div class="titan-slider-channel" id="danphe-video-insp-posY-channel"><div id="danphe-video-insp-posY-fill" class="titan-slider-led-fill cyan" style="width:calc(50% - 3px)"></div><div id="danphe-video-insp-posY-knob" class="titan-knob-orb" style="left:50%"></div><input type="range" min="-300" max="300" value="0" id="danphe-video-insp-posY-input" oninput="titanProSliderUpdate('danphe-video-insp-posY',+this.value,-300,300,'px',16644)" class="titan-slider-native-input"></div></div><div id="danphe-video-insp-opacity-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Alpha Opacity</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4100</span></div><div class="flex items-center gap-1.5"><span id="danphe-video-insp-opacity-val" class="font-black text-xs text-emerald-400">100%</span><span class="text-[9px] text-slate-600">(100%)</span></div></div><div class="titan-slider-channel" id="danphe-video-insp-opacity-channel"><div id="danphe-video-insp-opacity-fill" class="titan-slider-led-fill emerald" style="width:calc(100% - 3px)"></div><div id="danphe-video-insp-opacity-knob" class="titan-knob-pill" style="left:100%"><div class="pill-groove"></div></div><input type="range" min="0" max="100" value="100" id="danphe-video-insp-opacity-input" oninput="titanProSliderUpdate('danphe-video-insp-opacity',+this.value,0,100,'%',16640)" class="titan-slider-native-input"></div></div><div id="danphe-video-insp-blur-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">DoF Blur</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4106</span></div><div class="flex items-center gap-1.5"><span id="danphe-video-insp-blur-val" class="font-black text-xs text-rose-400">0px</span><span class="text-[9px] text-slate-600">(0%)</span></div></div><div class="titan-slider-channel" id="danphe-video-insp-blur-channel"><div id="danphe-video-insp-blur-fill" class="titan-slider-led-fill rose" style="width:calc(0% - 3px)"></div><div id="danphe-video-insp-blur-knob" class="titan-knob-grip" style="left:0%"><div class="ridge"></div><div class="ridge"></div><div class="ridge"></div></div><input type="range" min="0" max="50" value="0" id="danphe-video-insp-blur-input" oninput="titanProSliderUpdate('danphe-video-insp-blur',+this.value,0,50,'px',16646)" class="titan-slider-native-input"></div></div><div id="danphe-video-insp-radius-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Corner Radius</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4105</span></div><div class="flex items-center gap-1.5"><span id="danphe-video-insp-radius-val" class="font-black text-xs text-amber-400">0px</span><span class="text-[9px] text-slate-600">(0%)</span></div></div><div class="titan-slider-channel" id="danphe-video-insp-radius-channel"><div id="danphe-video-insp-radius-fill" class="titan-slider-led-fill amber" style="width:calc(0% - 3px)"></div><div id="danphe-video-insp-radius-knob" class="titan-knob-orb" style="left:0%"></div><input type="range" min="0" max="60" value="0" id="danphe-video-insp-radius-input" oninput="titanProSliderUpdate('danphe-video-insp-radius',+this.value,0,60,'px',16645)" class="titan-slider-native-input"></div></div>
+</div>
+        </div>
+
+        <!-- 2. COLOR GRADING TAB (Danphe-UI TitanColorInspector) -->
+        <div class="insp-pane" id="pane-insp-color">
+
+<!-- ═══ UNIVERSAL COLOR BANK ═══ -->
+<div style="background:rgba(6,11,22,0.95);border:1px solid #1e293b;border-radius:16px;padding:14px 14px 12px;margin-bottom:10px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:14px;">🎨</span>
+      <span style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:0.08em;text-transform:uppercase;">Universal Color Bank</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <button type="button" id="ucb-mode-fill" onclick="setUniversalColorMode('fill')" title="Fill / Background Color"
+        style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;border:1.5px solid #38bdf8;background:#0f172a;color:#38bdf8;cursor:pointer;transition:all 0.15s;">FILL</button>
+      <button type="button" id="ucb-mode-stroke" onclick="setUniversalColorMode('stroke')" title="Stroke / Border Color"
+        style="font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;border:1px solid #334155;background:#0f172a;color:#64748b;cursor:pointer;transition:all 0.15s;">STROKE</button>
+    </div>
+  </div>
+
+  <!-- Active color preview + custom picker -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+    <div id="ucb-preview-swatch" style="width:36px;height:36px;border-radius:8px;background:#ffffff;border:2px solid #38bdf8;flex-shrink:0;cursor:pointer;position:relative;" title="Click to open color picker">
+      <input type="color" id="ucb-custom-input" value="#ffffff"
+        oninput="applyUniversalColor(this.value)"
+        style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;">
+    </div>
+    <div style="flex:1;">
+      <div id="ucb-color-label" style="font-size:10px;font-weight:700;color:#94a3b8;margin-bottom:2px;">Text / Fill Color</div>
+      <div id="ucb-hex-val" style="font-size:12px;font-weight:900;color:#38bdf8;font-family:monospace;">#FFFFFF</div>
+    </div>
+  </div>
+
+  <!-- Color swatches row 1 — Neutral & Standard -->
+  <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;">
+    <button type="button" onclick="applyUniversalColor('#ffffff')" title="Pure White"    style="width:24px;height:24px;border-radius:5px;background:#ffffff;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#f8fafc')" title="Off White"     style="width:24px;height:24px;border-radius:5px;background:#f8fafc;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#cbd5e1')" title="Silver"        style="width:24px;height:24px;border-radius:5px;background:#cbd5e1;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#64748b')" title="Slate"         style="width:24px;height:24px;border-radius:5px;background:#64748b;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#1e293b')" title="Dark Slate"    style="width:24px;height:24px;border-radius:5px;background:#1e293b;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#0b0f19')" title="Studio Black"  style="width:24px;height:24px;border-radius:5px;background:#0b0f19;border:1.5px solid #38bdf8;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#000000')" title="Pure Black"    style="width:24px;height:24px;border-radius:5px;background:#000000;border:1px solid #334155;cursor:pointer;"></button>
+  </div>
+
+  <!-- Color swatches row 2 — Cinematic palette -->
+  <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;">
+    <button type="button" onclick="applyUniversalColor('#ef4444')" title="Red"           style="width:24px;height:24px;border-radius:5px;background:#ef4444;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#e50914')" title="Netflix Red"   style="width:24px;height:24px;border-radius:5px;background:#e50914;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#f97316')" title="Orange"        style="width:24px;height:24px;border-radius:5px;background:#f97316;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#fbbf24')" title="Gold"          style="width:24px;height:24px;border-radius:5px;background:#fbbf24;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#facc15')" title="Yellow"        style="width:24px;height:24px;border-radius:5px;background:#facc15;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#4ade80')" title="Green"         style="width:24px;height:24px;border-radius:5px;background:#4ade80;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#10b981')" title="Chroma Green"  style="width:24px;height:24px;border-radius:5px;background:#10b981;border:1px solid #334155;cursor:pointer;"></button>
+  </div>
+
+  <!-- Color swatches row 3 — Neon & Studio -->
+  <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;">
+    <button type="button" onclick="applyUniversalColor('#00f0ff')" title="Neon Cyan"     style="width:24px;height:24px;border-radius:5px;background:#00f0ff;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#38bdf8')" title="Sky Blue"      style="width:24px;height:24px;border-radius:5px;background:#38bdf8;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#0284c7')" title="Cyan Studio"   style="width:24px;height:24px;border-radius:5px;background:#0284c7;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#6366f1')" title="Indigo"        style="width:24px;height:24px;border-radius:5px;background:#6366f1;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#a855f7')" title="Purple"        style="width:24px;height:24px;border-radius:5px;background:#a855f7;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#ec4899')" title="Pink"          style="width:24px;height:24px;border-radius:5px;background:#ec4899;border:1px solid #334155;cursor:pointer;"></button>
+    <button type="button" onclick="applyUniversalColor('#f43f5e')" title="Rose"          style="width:24px;height:24px;border-radius:5px;background:#f43f5e;border:1px solid #334155;cursor:pointer;"></button>
+  </div>
+</div>
+<!-- ═══ END UNIVERSAL COLOR BANK ═══ -->
+
+<div id="danphe-color-insp" class="titan-color-inspector flex flex-col gap-3 p-4 bg-slate-900/95 rounded-2xl border border-slate-800 shadow-2xl font-mono select-none"><div class="flex items-center justify-between pb-3 border-b border-slate-800"><div class="flex items-center gap-2"><span class="text-rose-400"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" class="titan-adaptive-icon ">
+  <style>
+@keyframes titan-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } }
+@keyframes titan-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes titan-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes titan-ring { 0% { transform: rotate(0); } 10%, 30%, 50%, 70%, 90% { transform: rotate(-12deg); } 20%, 40%, 60%, 80% { transform: rotate(12deg); } 100% { transform: rotate(0); } }
+@keyframes titan-ripple { 0% { transform: scale(0.95); stroke-opacity: 0.8; } 50% { transform: scale(1.05); stroke-opacity: 0.3; } 100% { transform: scale(0.95); stroke-opacity: 0.8; } }
+@keyframes titan-wave { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.6); } }
+@keyframes titan-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+@keyframes titan-glow { 0%, 100% { filter: drop-shadow(0 0 3px currentColor); } 50% { filter: drop-shadow(0 0 10px currentColor); } }
+
+.titan-anim-pulse { animation: titan-pulse 1.8s infinite ease-in-out; transform-origin: center; }
+.titan-anim-spin { animation: titan-spin 1.5s infinite linear; transform-origin: center; }
+.titan-anim-bounce { animation: titan-bounce 1s infinite ease-in-out; transform-origin: center; }
+.titan-anim-ring { animation: titan-ring 1.2s infinite ease-in-out; transform-origin: center; }
+.titan-anim-ripple { animation: titan-ripple 2s infinite ease-in-out; transform-origin: center; }
+.titan-anim-wave { animation: titan-wave 1s infinite ease-in-out; transform-origin: center; }
+.titan-anim-flash { animation: titan-flash 0.6s infinite ease-in-out; transform-origin: center; }
+.titan-anim-glow { animation: titan-glow 1.5s infinite ease-in-out; transform-origin: center; }
+</style>
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="2" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="22" y2="12"/></g>
+</svg></span><span class="font-bold text-white tracking-wide uppercase text-sm">Lumetri Color Grading</span></div><button onclick="titanColorReset('danphe-color-insp')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 flex items-center gap-1.5 transition-all text-[11px] active:scale-95"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="13" height="13" class="titan-adaptive-icon ">
+  <style>
+@keyframes titan-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } }
+@keyframes titan-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes titan-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes titan-ring { 0% { transform: rotate(0); } 10%, 30%, 50%, 70%, 90% { transform: rotate(-12deg); } 20%, 40%, 60%, 80% { transform: rotate(12deg); } 100% { transform: rotate(0); } }
+@keyframes titan-ripple { 0% { transform: scale(0.95); stroke-opacity: 0.8; } 50% { transform: scale(1.05); stroke-opacity: 0.3; } 100% { transform: scale(0.95); stroke-opacity: 0.8; } }
+@keyframes titan-wave { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.6); } }
+@keyframes titan-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+@keyframes titan-glow { 0%, 100% { filter: drop-shadow(0 0 3px currentColor); } 50% { filter: drop-shadow(0 0 10px currentColor); } }
+
+.titan-anim-pulse { animation: titan-pulse 1.8s infinite ease-in-out; transform-origin: center; }
+.titan-anim-spin { animation: titan-spin 1.5s infinite linear; transform-origin: center; }
+.titan-anim-bounce { animation: titan-bounce 1s infinite ease-in-out; transform-origin: center; }
+.titan-anim-ring { animation: titan-ring 1.2s infinite ease-in-out; transform-origin: center; }
+.titan-anim-ripple { animation: titan-ripple 2s infinite ease-in-out; transform-origin: center; }
+.titan-anim-wave { animation: titan-wave 1s infinite ease-in-out; transform-origin: center; }
+.titan-anim-flash { animation: titan-flash 0.6s infinite ease-in-out; transform-origin: center; }
+.titan-anim-glow { animation: titan-glow 1.5s infinite ease-in-out; transform-origin: center; }
+</style>
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></g>
+</svg> Reset</button></div><div id="danphe-color-insp-exp-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Exposure EV</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4120</span></div><div class="flex items-center gap-1.5"><span id="danphe-color-insp-exp-val" class="font-black text-xs text-amber-400">0</span><span class="text-[9px] text-slate-600">(50%)</span></div></div><div class="titan-slider-channel" id="danphe-color-insp-exp-channel"><div id="danphe-color-insp-exp-fill" class="titan-slider-led-fill amber" style="width:calc(50% - 3px)"></div><div id="danphe-color-insp-exp-knob" class="titan-knob-lens amber" style="left:50%"><div class="center-led"></div></div><input type="range" min="-200" max="200" value="0" id="danphe-color-insp-exp-input" oninput="titanProSliderUpdate('danphe-color-insp-exp',+this.value,-200,200,'',16672)" class="titan-slider-native-input"></div></div><div id="danphe-color-insp-contrast-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Contrast Gamma</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4121</span></div><div class="flex items-center gap-1.5"><span id="danphe-color-insp-contrast-val" class="font-black text-xs text-rose-400">100%</span><span class="text-[9px] text-slate-600">(50%)</span></div></div><div class="titan-slider-channel" id="danphe-color-insp-contrast-channel"><div id="danphe-color-insp-contrast-fill" class="titan-slider-led-fill rose" style="width:calc(50% - 3px)"></div><div id="danphe-color-insp-contrast-knob" class="titan-knob-orb" style="left:50%"></div><input type="range" min="50" max="150" value="100" id="danphe-color-insp-contrast-input" oninput="titanProSliderUpdate('danphe-color-insp-contrast',+this.value,50,150,'%',16673)" class="titan-slider-native-input"></div></div><div id="danphe-color-insp-temp-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Temperature K</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4123</span></div><div class="flex items-center gap-1.5"><span id="danphe-color-insp-temp-val" class="font-black text-xs text-amber-400">5500K</span><span class="text-[9px] text-slate-600">(46%)</span></div></div><div class="titan-slider-channel" id="danphe-color-insp-temp-channel"><div id="danphe-color-insp-temp-fill" class="titan-slider-led-fill amber" style="width:calc(46.15384615384615% - 3px)"></div><div id="danphe-color-insp-temp-knob" class="titan-knob-pill" style="left:46.15384615384615%"><div class="pill-groove"></div></div><input type="range" min="2500" max="9000" value="5500" id="danphe-color-insp-temp-input" oninput="titanProSliderUpdate('danphe-color-insp-temp',+this.value,2500,9000,'K',16675)" class="titan-slider-native-input"></div></div><div id="danphe-color-insp-tint-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Tint Magenta/Green</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4124</span></div><div class="flex items-center gap-1.5"><span id="danphe-color-insp-tint-val" class="font-black text-xs text-emerald-400">0</span><span class="text-[9px] text-slate-600">(50%)</span></div></div><div class="titan-slider-channel" id="danphe-color-insp-tint-channel"><div id="danphe-color-insp-tint-fill" class="titan-slider-led-fill emerald" style="width:calc(50% - 3px)"></div><div id="danphe-color-insp-tint-knob" class="titan-knob-grip" style="left:50%"><div class="ridge"></div><div class="ridge"></div><div class="ridge"></div></div><input type="range" min="-50" max="50" value="0" id="danphe-color-insp-tint-input" oninput="titanProSliderUpdate('danphe-color-insp-tint',+this.value,-50,50,'',16676)" class="titan-slider-native-input"></div></div><div id="danphe-color-insp-sat-container" class="flex flex-col gap-2 p-3.5 rounded-2xl titan-pro-slider-rack font-mono select-none"><div class="flex items-center justify-between text-xs mb-0.5"><div class="flex items-center gap-2"><span class="font-black text-slate-200 tracking-wide uppercase text-[11px]">Saturation Vibrance</span><span class="text-[9px] text-slate-600 font-bold">Reg 0x4122</span></div><div class="flex items-center gap-1.5"><span id="danphe-color-insp-sat-val" class="font-black text-xs text-cyan-400">100%</span><span class="text-[9px] text-slate-600">(50%)</span></div></div><div class="titan-slider-channel" id="danphe-color-insp-sat-channel"><div id="danphe-color-insp-sat-fill" class="titan-slider-led-fill cyan" style="width:calc(50% - 3px)"></div><div id="danphe-color-insp-sat-knob" class="titan-knob-lens cyan" style="left:50%"><div class="center-led"></div></div><input type="range" min="0" max="200" value="100" id="danphe-color-insp-sat-input" oninput="titanProSliderUpdate('danphe-color-insp-sat',+this.value,0,200,'%',16674)" class="titan-slider-native-input"></div></div></div>
+        </div>
+
+        <!-- 3. TYPOGRAPHY TAB (Danphe-UI TitanTypographyStudio Hollywood Pro) -->
+        <div class="insp-pane" id="pane-insp-text">
+            <div id="titan-typo-studio" class="titan-typo-rack font-mono select-none" data-bitmask="417" data-font-size="64" data-tracking="4" data-stroke="2" data-extrude="6">
+                <!-- Header -->
+                <div class="pane-sec-title">
+                    <div style="display:flex;align-items:center;gap:5px;">
+                        <span style="color:#f59e0b;">✍️</span>
+                        <span>Typography Studio</span>
+                    </div>
+                    <span id="titan-typo-studio-bitmask-val" style="font-size:9px;color:#38bdf8;background:#0b1426;padding:2px 6px;border-radius:4px;border:1px solid #1e293b;">0x01A1</span>
+                </div>
+
+                <!-- Text Input & Font Family -->
+                <div style="display:flex;gap:5px;margin-bottom:8px;">
+                    <input type="text" id="titan-typo-studio-input-string" class="typo-input-text" value="DANPHE CINEMA 4K" placeholder="Enter Title String..." oninput="window.titanTypoUpdateText('titan-typo-studio', this.value)" style="flex:1;background:#030712;border:1px solid #1e293b;border-radius:6px;color:#fff;padding:5px 8px;font-size:11px;">
+                    <select id="titan-typo-studio-select-font" class="typo-font-select" onchange="window.titanTypoSetFontFamily('titan-typo-studio', this.value)" style="width:105px;background:#030712;border:1px solid #1e293b;border-radius:6px;color:#38bdf8;padding:4px;font-size:10px;cursor:pointer;">
+                        <option value="Impact, sans-serif" selected>Impact</option>
+                        <option value="-apple-system, BlinkMacSystemFont, sans-serif">Modern</option>
+                        <option value="Georgia, serif">Cinema</option>
+                        <option value="monospace">Terminal</option>
+                        <option value="'Mukti', 'Preeti', 'Kalimati', sans-serif">Nepali</option>
+                    </select>
+                </div>
+
+                <!-- Bitmask Ribbon (6 Core Bits) -->
+                <div class="typo-bit-ribbon" style="display:flex;gap:4px;margin-bottom:8px;">
+                    <button type="button" class="typo-bit-btn active" id="titan-typo-studio-bit-BOLD" onclick="window.titanTypoToggleBit('titan-typo-studio', 1, 'BOLD')" title="Bold (Bit 0x0001)" style="flex:1;padding:3px 0;font-size:10px;font-weight:900;border-radius:4px;border:1px solid #0284c7;background:#0284c7;color:#fff;cursor:pointer;">B</button>
+                    <button type="button" class="typo-bit-btn" id="titan-typo-studio-bit-ITALIC" onclick="window.titanTypoToggleBit('titan-typo-studio', 2, 'ITALIC')" title="Italic (Bit 0x0002)" style="flex:1;padding:3px 0;font-size:10px;font-weight:900;border-radius:4px;border:1px solid #1e293b;background:#0b1426;color:#94a3b8;cursor:pointer;">I</button>
+                    <button type="button" class="typo-bit-btn active" id="titan-typo-studio-bit-ALL_CAPS" onclick="window.titanTypoToggleBit('titan-typo-studio', 4, 'ALL_CAPS')" title="All Caps (Bit 0x0004)" style="flex:1;padding:3px 0;font-size:10px;font-weight:900;border-radius:4px;border:1px solid #0284c7;background:#0284c7;color:#fff;cursor:pointer;">AA</button>
+                    <button type="button" class="typo-bit-btn" id="titan-typo-studio-bit-GLOW_ACTIVE" onclick="window.titanTypoToggleBit('titan-typo-studio', 64, 'GLOW_ACTIVE')" title="Neon Glow (Bit 0x0040)" style="flex:1;padding:3px 0;font-size:9px;font-weight:900;border-radius:4px;border:1px solid #1e293b;background:#0b1426;color:#94a3b8;cursor:pointer;">GLOW</button>
+                    <button type="button" class="typo-bit-btn active" id="titan-typo-studio-bit-EXTRUDE_3D" onclick="window.titanTypoToggleBit('titan-typo-studio', 128, 'EXTRUDE_3D')" title="3D Bevel (Bit 0x0080)" style="flex:1;padding:3px 0;font-size:9px;font-weight:900;border-radius:4px;border:1px solid #0284c7;background:#0284c7;color:#fff;cursor:pointer;">3D</button>
+                    <button type="button" class="typo-bit-btn active" id="titan-typo-studio-bit-METALLIC_GRADIENT" onclick="window.titanTypoToggleBit('titan-typo-studio', 256, 'METALLIC_GRADIENT')" title="Metallic (Bit 0x0100)" style="flex:1;padding:3px 0;font-size:9px;font-weight:900;border-radius:4px;border:1px solid #0284c7;background:#0284c7;color:#fff;cursor:pointer;">GRAD</button>
+                </div>
+
+                <!-- Precision Hardware Sliders (0x4200 - 0x4206) -->
+                <div class="typo-controls-body" style="display:flex;flex-direction:column;gap:8px;">
+                    <!-- Font Size (0x4200) -->
+                    <div style="background:#090d16;border:1px solid #142036;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;">
+                        <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#94a3b8;">
+                            <span>FONT SIZE</span><span id="titan-typo-studio-lbl-fontsize" style="color:#38bdf8;font-weight:900;">64 px</span>
+                        </div>
+                        <input type="range" min="16" max="140" value="64" class="tl-zoom" style="width:100%;height:5px;" id="titan-typo-studio-input-fontsize" oninput="window.titanTypoSetSlider('titan-typo-studio', 'fontSize', +this.value, 'px', 'titan-typo-studio-lbl-fontsize', 0x4200)">
+                    </div>
+
+                    <!-- Optical Tracking (0x4201) -->
+                    <div style="background:#090d16;border:1px solid #142036;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;">
+                        <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#94a3b8;">
+                            <span>OPTICAL TRACKING</span><span id="titan-typo-studio-lbl-tracking" style="color:#c084fc;font-weight:900;">+4 px</span>
+                        </div>
+                        <input type="range" min="-4" max="40" value="4" class="tl-zoom" style="width:100%;height:5px;" id="titan-typo-studio-input-tracking" oninput="window.titanTypoSetSlider('titan-typo-studio', 'tracking', +this.value, 'px', 'titan-typo-studio-lbl-tracking', 0x4201)">
+                    </div>
+
+                    <!-- 3D Bevel Extrude (0x4206) -->
+                    <div style="background:#090d16;border:1px solid #142036;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;">
+                        <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#94a3b8;">
+                            <span>3D BEVEL EXTRUDE</span><span id="titan-typo-studio-lbl-extrude" style="color:#f59e0b;font-weight:900;">6 px</span>
+                        </div>
+                        <input type="range" min="0" max="20" value="6" class="tl-zoom" style="width:100%;height:5px;" id="titan-typo-studio-input-extrude" oninput="window.titanTypoSetSlider('titan-typo-studio', 'extrude', +this.value, 'px', 'titan-typo-studio-lbl-extrude', 0x4206)">
+                    </div>
+
+                    <!-- Outline Stroke (0x4202) -->
+                    <div style="background:#090d16;border:1px solid #142036;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;">
+                        <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#94a3b8;">
+                            <span>OUTLINE STROKE</span><span id="titan-typo-studio-lbl-stroke" style="color:#fb7185;font-weight:900;">2 px</span>
+                        </div>
+                        <input type="range" min="0" max="15" value="2" class="tl-zoom" style="width:100%;height:5px;" id="titan-typo-studio-input-stroke" oninput="window.titanTypoSetSlider('titan-typo-studio', 'stroke', +this.value, 'px', 'titan-typo-studio-lbl-stroke', 0x4202)">
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. AUDIO DSP TAB (Danphe-UI TitanEqualizer) -->
+        <div class="insp-pane" id="pane-insp-audio">
+
+<style id="titan-eq-cassette-style">
+/* ═══ Titan Equalizer — Vintage Cassette Player Style ═══ */
+.teq-root {
+    background: linear-gradient(160deg, #1a1208 0%, #0e0c08 60%, #18120a 100%);
+    border: 1.5px solid #4a3b22;
+    border-radius: 18px;
+    box-shadow:
+        0 0 0 1px #8a6a30,
+        0 4px 40px #0008,
+        inset 0 1px 0 #c8a84b44;
+    position: relative;
+    overflow: hidden;
+}
+.teq-root::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 3px, #ffffff04 3px, #ffffff04 4px);
+    pointer-events: none;
+    z-index: 0;
+    border-radius: inherit;
+}
+.teq-panel-bg {
+    background: linear-gradient(170deg, #231a0d 0%, #1a1208 100%);
+    border: 1px solid #3d2e15;
+    box-shadow: inset 0 2px 8px #0008, inset 0 -1px 0 #c8a84b22;
+}
+/* VU Track - the vertical rail */
+.teq-fader-rail {
+    position: relative;
+    width: 28px;
+    height: 140px;
+    background: linear-gradient(180deg, #0a0806 0%, #151006 40%, #0a0806 100%);
+    border-radius: 4px;
+    border: 1px solid #3d2e15;
+    box-shadow:
+        inset 0 2px 6px #000a,
+        inset 0 0 0 1px #0004,
+        0 0 0 1px #1a1208;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+/* Tick marks on the rail */
+.teq-fader-rail::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    transform: translateX(-50%);
+    background: repeating-linear-gradient(
+        180deg,
+        #4a3b1a 0px,
+        #4a3b1a 1px,
+        transparent 1px,
+        transparent 8px
+    );
+    border-radius: 1px;
+}
+/* Center 0dB notch */
+.teq-zero-mark {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    background: #c8a84b88;
+    transform: translateY(-50%);
+    border-radius: 1px;
+    z-index: 2;
+    pointer-events: none;
+}
+.teq-zero-mark::before,
+.teq-zero-mark::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #c8a84b;
+}
+.teq-zero-mark::before { left: -2px; }
+.teq-zero-mark::after { right: -2px; }
+
+/* Custom vertical range input */
+input.teq-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+    width: 140px;
+    height: 28px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-90deg);
+    background: transparent;
+    cursor: pointer;
+    z-index: 3;
+    margin: 0;
+    padding: 0;
+    outline: none;
+    border: none;
+}
+input.teq-slider::-webkit-slider-runnable-track {
+    background: transparent;
+    width: 4px;
+}
+input.teq-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 28px;
+    height: 18px;
+    border-radius: 4px;
+    background: linear-gradient(180deg,
+        #e8d07a 0%,
+        #c8a030 20%,
+        #a07820 50%,
+        #c8a030 80%,
+        #e8d07a 100%
+    );
+    border: 1px solid #8a6010;
+    box-shadow:
+        0 2px 8px #000c,
+        0 1px 0 #f0e09088,
+        inset 0 1px 2px #f0e09044,
+        inset 0 -1px 2px #00000044;
+    cursor: grab;
+    position: relative;
+    transition: box-shadow 0.1s, transform 0.1s;
+}
+input.teq-slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    box-shadow:
+        0 4px 16px #000e,
+        0 0 0 2px #c8a84b88,
+        0 1px 0 #f0e09088,
+        inset 0 1px 2px #f0e09044;
+    transform: scaleX(1.07);
+}
+input.teq-slider::-moz-range-thumb {
+    width: 28px;
+    height: 18px;
+    border-radius: 4px;
+    background: linear-gradient(180deg,
+        #e8d07a 0%,
+        #c8a030 20%,
+        #a07820 50%,
+        #c8a030 80%,
+        #e8d07a 100%
+    );
+    border: 1px solid #8a6010;
+    box-shadow:
+        0 2px 8px #000c,
+        0 1px 0 #f0e09088;
+    cursor: grab;
+}
+input.teq-slider::-moz-range-track {
+    background: transparent;
+    height: 4px;
+    width: 100%;
+}
+
+
+/* Value badge */
+.teq-val-badge {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+    color: #f0c040;
+    text-shadow: 0 0 8px #c8a84b88;
+    min-height: 14px;
+    text-align: center;
+}
+/* Frequency label */
+.teq-freq-label {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 9px;
+    font-weight: 700;
+    color: #7a6030;
+    text-align: center;
+    letter-spacing: 0.02em;
+    transition: color 0.2s;
+}
+.teq-fader-col:hover .teq-freq-label {
+    color: #e8c050;
+    text-shadow: 0 0 6px #c8a84b66;
+}
+/* VU fill inside rail */
+.teq-vu-fill {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    bottom: 50%;
+    border-radius: 2px;
+    pointer-events: none;
+    transition: height 0.12s ease-out, background 0.3s;
+    z-index: 1;
+}
+/* Tape reel decoration buttons */
+.teq-preset-btn {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    padding: 4px 10px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #2a1e0c 0%, #1a1208 100%);
+    border: 1px solid #4a3b1a;
+    color: #8a7040;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    box-shadow: inset 0 1px 0 #c8a84b18, 0 1px 4px #0006;
+}
+.teq-preset-btn:hover, .teq-preset-btn.active {
+    background: linear-gradient(180deg, #3a2a10 0%, #281e0a 100%);
+    color: #e8c050;
+    border-color: #c8a030;
+    text-shadow: 0 0 8px #c8a84b88;
+    box-shadow: inset 0 1px 0 #c8a84b44, 0 0 8px #c8a84b44, 0 1px 4px #0006;
+}
+/* VU Meter bars */
+.teq-vu-bar {
+    width: 7px;
+    background: linear-gradient(180deg, #ff3a1a 0%, #ffa01a 40%, #40dd40 100%);
+    border-radius: 2px;
+    transition: height 0.08s linear;
+    box-shadow: 0 0 4px #40dd4066;
+}
+/* Cassette-style screw decoration */
+.teq-screw {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #a0a0a0, #404040);
+    border: 1px solid #303030;
+    box-shadow: inset 0 1px 2px #fff2, 0 1px 3px #0006;
+    position: relative;
+}
+.teq-screw::after {
+    content: '';
+    position: absolute;
+    inset: 1.5px;
+    background:
+        linear-gradient(45deg, #303030 48%, transparent 48%, transparent 52%, #303030 52%),
+        linear-gradient(-45deg, #303030 48%, transparent 48%, transparent 52%, #303030 52%);
+    border-radius: 50%;
+}
+/* LED strip */
+.teq-led {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #40ff40;
+    box-shadow: 0 0 6px #40ff40, 0 0 12px #40ff4044;
+    animation: teq-led-pulse 2s ease-in-out infinite;
+}
+.teq-led.red {
+    background: #ff4040;
+    box-shadow: 0 0 6px #ff4040, 0 0 12px #ff404044;
+    animation-delay: 0.7s;
+}
+.teq-led.amber {
+    background: #ffb040;
+    box-shadow: 0 0 6px #ffb040, 0 0 12px #ffb04044;
+    animation-delay: 0.35s;
+}
+@keyframes teq-led-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+/* Pre-amp slider */
+input.teq-preamp-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #0a0806 0%, #2a1e0c 100%);
+    border: 1px solid #4a3b1a;
+    outline: none;
+    box-shadow: inset 0 1px 3px #0008;
+}
+input.teq-preamp-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #e8d07a, #a07820);
+    border: 1px solid #8a6010;
+    box-shadow: 0 1px 6px #000a, 0 0 0 1px #c8a84b44;
+    cursor: grab;
+}
+input.teq-preamp-slider::-webkit-slider-thumb:active { cursor: grabbing; }
+/* Cassette reel SVG animation */
+@keyframes teq-reel-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.teq-reel-spin { animation: teq-reel-spin 3s linear infinite; transform-origin: center; }
+</style>
+<div id="danphe-audio-eq" class="teq-root flex flex-col gap-2 font-mono select-none" style="--eq-color:#c8a030;background:#060a14;border:1px solid #142036;border-radius:12px;padding:8px 10px;">
+  <div class="pane-sec-title" style="margin-bottom:6px;">
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="color:#f0c040;">🎙️</span>
+      <span>10-Band Studio DSP</span>
+    </div>
+    <button type="button" onclick="window.titanEqReset('danphe-audio-eq')" class="btn-reset">Reset</button>
+  </div>
+
+  <div class="teq-panel-bg rounded-lg p-2 relative z-10" style="background:#090d16;border:1px solid #142036;">
+    <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px">
+      <div class="teq-fader-col flex flex-col items-center gap-1"><span id="danphe-audio-eq-val-0" class="teq-val-badge">+5</span><div class="teq-fader-rail"><div class="teq-zero-mark"></div><div id="danphe-audio-eq-vu-0" class="teq-vu-fill" style="bottom:50%;height:20.8%;background:linear-gradient(180deg, #40ff6088, #40ff60cc);"></div><input type="range" id="danphe-audio-eq-slider-0" min="-12" max="12" step="1" value="5" class="teq-slider" oninput="window.titanEqUpdateBand('danphe-audio-eq', 0, this.value)" /></div><span class="teq-freq-label">32</span></div>
+      <div class="teq-fader-col flex flex-col items-center gap-1"><span id="danphe-audio-eq-val-1" class="teq-val-badge">+4</span><div class="teq-fader-rail"><div class="teq-zero-mark"></div><div id="danphe-audio-eq-vu-1" class="teq-vu-fill" style="bottom:50%;height:16.6%;background:linear-gradient(180deg, #40ff6088, #40ff60cc);"></div><input type="range" id="danphe-audio-eq-slider-1" min="-12" max="12" step="1" value="4" class="teq-slider" oninput="window.titanEqUpdateBand('danphe-audio-eq', 1, this.value)" /></div><span class="teq-freq-label">64</span></div>
+      <div class="teq-fader-col flex flex-col items-center gap-1"><span id="danphe-audio-eq-val-2" class="teq-val-badge">+2</span><div class="teq-fader-rail"><div class="teq-zero-mark"></div><div id="danphe-audio-eq-vu-2" class="teq-vu-fill" style="bottom:50%;height:8.3%;background:linear-gradient(180deg, #40ff6088, #40ff60cc);"></div><input type="range" id="danphe-audio-eq-slider-2" min="-12" max="12" step="1" value="2" class="teq-slider" oninput="window.titanEqUpdateBand('danphe-audio-eq', 2, this.value)" /></div><span class="teq-freq-label">125</span></div>
+      <div class="teq-fader-col flex flex-col items-center gap-1"><span id="danphe-audio-eq-val-3" class="teq-val-badge">-1</span><div class="teq-fader-rail"><div class="teq-zero-mark"></div><div id="danphe-audio-eq-vu-3" class="teq-vu-fill" style="bottom:45.8%;height:4.1%;background:linear-gradient(0deg, #ff604088, #ff6040cc);"></div><input type="range" id="danphe-audio-eq-slider-3" min="-12" max="12" step="1" value="-1" class="teq-slider" oninput="window.titanEqUpdateBand('danphe-audio-eq', 3, this.value)" /></div><span class="teq-freq-label">250</span></div>
+      <div class="teq-fader-col flex flex-col items-center gap-1"><span id="danphe-audio-eq-val-4" class="teq-val-badge">-2</span><div class="teq-fader-rail"><div class="teq-zero-mark"></div><div id="danphe-audio-eq-vu-4" class="teq-vu-fill" style="bottom:41.6%;height:8.3%;background:linear-gradient(0deg, #ff604088, #ff6040cc);"></div><input type="range" id="danphe-audio-eq-slider-4" min="-12" max="12" step="1" value="-2" class="teq-slider" oninput="window.titanEqUpdateBand('danphe-audio-eq', 4, this.value)" /></div><span class="teq-freq-label">500</span></div>
+      <div class="teq-fader-col flex flex-col items-center gap-1"><span id="danphe-audio-eq-val-5" class="teq-val-badge">0</span><div class="teq-fader-rail"><div class="teq-zero-mark"></div><div id="danphe-audio-eq-vu-5" class="teq-vu-fill" style="bottom:50%;height:0%;background:linear-gradient(180deg, #40ff6088, #40ff60cc);"></div><input type="range" id="danphe-audio-eq-slider-5" min="-12" max="12" step="1" value="0" class="teq-slider" oninput="window.titanEqUpdateBand('danphe-audio-eq', 5, this.value)" /></div><span class="teq-freq-label">1k</span></div>
+      <div class="teq-fader-col flex flex-col items-center gap-1"><span id="danphe-audio-eq-val-6" class="teq-val-badge">+2</span><div class="teq-fader-rail"><div class="teq-zero-mark"></div><div id="danphe-audio-eq-vu-6" class="teq-vu-fill" style="bottom:50%;height:8.3%;background:linear-gradient(180deg, #40ff6088, #40ff60cc);"></div><input type="range" id="danphe-audio-eq-slider-6" min="-12" max="12" step="1" value="2" class="teq-slider" oninput="window.titanEqUpdateBand('danphe-audio-eq', 6, this.value)" /></div><span class="teq-freq-label">2k</span></div>
+      <div class="teq-fader-col flex flex-col items-center gap-1"><span id="danphe-audio-eq-val-7" class="teq-val-badge">+3</span><div class="teq-fader-rail"><div class="teq-zero-mark"></div><div id="danphe-audio-eq-vu-7" class="teq-vu-fill" style="bottom:50%;height:12.5%;background:linear-gradient(180deg, #40ff6088, #40ff60cc);"></div><input type="range" id="danphe-audio-eq-slider-7" min="-12" max="12" step="1" value="3" class="teq-slider" oninput="window.titanEqUpdateBand('danphe-audio-eq', 7, this.value)" /></div><span class="teq-freq-label">4k</span></div>
+      <div class="teq-fader-col flex flex-col items-center gap-1"><span id="danphe-audio-eq-val-8" class="teq-val-badge">+4</span><div class="teq-fader-rail"><div class="teq-zero-mark"></div><div id="danphe-audio-eq-vu-8" class="teq-vu-fill" style="bottom:50%;height:16.6%;background:linear-gradient(180deg, #40ff6088, #40ff60cc);"></div><input type="range" id="danphe-audio-eq-slider-8" min="-12" max="12" step="1" value="4" class="teq-slider" oninput="window.titanEqUpdateBand('danphe-audio-eq', 8, this.value)" /></div><span class="teq-freq-label">8k</span></div>
+      <div class="teq-fader-col flex flex-col items-center gap-1"><span id="danphe-audio-eq-val-9" class="teq-val-badge">+5</span><div class="teq-fader-rail"><div class="teq-zero-mark"></div><div id="danphe-audio-eq-vu-9" class="teq-vu-fill" style="bottom:50%;height:20.8%;background:linear-gradient(180deg, #40ff6088, #40ff60cc);"></div><input type="range" id="danphe-audio-eq-slider-9" min="-12" max="12" step="1" value="5" class="teq-slider" oninput="window.titanEqUpdateBand('danphe-audio-eq', 9, this.value)" /></div><span class="teq-freq-label">16k</span></div>
+    </div>
+  </div>
+
+  <!-- Audio Presets & Pre-Amp -->
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:2px;">
+    <div style="display:flex;gap:3px;">
+      <button type="button" onclick="window.titanEqApplyPreset('danphe-audio-eq', 'flat')" id="danphe-audio-eq-preset-flat" class="teq-preset-btn">FLAT</button>
+      <button type="button" onclick="window.titanEqApplyPreset('danphe-audio-eq', 'bass')" id="danphe-audio-eq-preset-bass" class="teq-preset-btn">BASS</button>
+      <button type="button" onclick="window.titanEqApplyPreset('danphe-audio-eq', 'rock')" id="danphe-audio-eq-preset-rock" class="teq-preset-btn active">ROCK</button>
+      <button type="button" onclick="window.titanEqApplyPreset('danphe-audio-eq', 'vocal')" id="danphe-audio-eq-preset-vocal" class="teq-preset-btn">VOCAL</button>
+      <button type="button" onclick="window.titanEqApplyPreset('danphe-audio-eq', 'cinema')" id="danphe-audio-eq-preset-cinema" class="teq-preset-btn">3D</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <span style="font-size:9px;color:#7a6030;font-weight:700;">VOL</span>
+      <input type="range" class="teq-preamp-slider" style="width:50px" min="0" max="200" value="100" id="danphe-audio-eq-preamp" oninput="document.getElementById('danphe-audio-eq-preamp-val').innerText=this.value+'%'" />
+      <span id="danphe-audio-eq-preamp-val" style="font-size:9px;color:#c8a030;font-weight:800;min-width:28px;">100%</span>
+    </div>
+  </div>
+</div>
+        </div>
+    </div>
+</aside>
+
+            </div>
+
+            <!-- 4. WORKSPACE SPLITTER -->
+            <div class="workspace-splitter" id="studio-workspace-splitter" title="Drag to Resize Timeline Deck">
+                <div class="splitter-grip"></div>
+            </div>
+
+            <!-- 5. BOTTOM TIMELINE DOCK -->
+<!-- 🐬 PROFESSIONAL MULTI-TRACK TIMELINE -->
+<section class="timeline-dock" id="studio-timeline-section">
+    <div class="timeline-bar">
+        <div class="tl-left">
+            <button type="button" class="tl-btn" onclick="togglePlayback()" id="btn-tl-play" title="Play / Pause (Space)" style="background:#0284c7;border:1px solid #0284c7;border-radius:4px;color:#fff;padding:2px 10px;font-size:10.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                <span id="tl-play-icon">▶</span><span id="tl-play-label">PLAY</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="stepFrame(-1)" title="Step Back" style="background:#0b1426;border:1px solid #1e293b;border-radius:4px;color:#94a3b8;padding:2px 7px;font-size:10px;font-weight:700;cursor:pointer;">
+                <span>◀</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="stepFrame(1)" title="Step Forward" style="background:#0b1426;border:1px solid #1e293b;border-radius:4px;color:#94a3b8;padding:2px 7px;font-size:10px;font-weight:700;cursor:pointer;">
+                <span>▶</span>
+            </button>
+            <div style="width:1px;height:16px;background:#1e293b;margin:0 4px;"></div>
+            <button type="button" class="tl-btn" onclick="triggerSplitAtPlayhead()" title="Split (Ctrl+K)">
+                <svg viewBox="0 0 24 24"><use href="#action_split_playhead"/></svg><span>Split</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="toggleLineDrawCutTool()" id="btn-tl-line-cut" title="Point-to-Point Line Draw Cut (X)" style="background:rgba(239,68,68,0.15);border:1px solid #ef4444;color:#fca5a5;font-weight:800;">
+                <span>✂️ Line Cut (X)</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="triggerDuplicateClip()" title="Duplicate Selected Clip (Ctrl+D)">
+                <span>📋 Duplicate</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="addNewBlankCanvasToTimeline('#ffffff', '⬜ Whiteboard')" title="Add Whiteboard Blank Canvas Layer" style="background:rgba(255,255,255,0.15);border-color:#ffffff;color:#ffffff;">
+                <span>⬜ +Whiteboard</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="addNewBlankCanvasToTimeline('#0b0f19', '⬛ Dark Board')" title="Add Studio Dark Blank Canvas Layer" style="background:rgba(2,132,199,0.15);border-color:#0284c7;color:#38bdf8;">
+                <span>⬛ +Dark Board</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="addNewDrawToTimeline()" title="Add Vector Draw / Ink Annotation (D)" style="background:rgba(244,63,94,0.15);border-color:#f43f5e;color:#fda4af;">
+                <span>🎨 +Draw</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="addNewTextToTimeline()" title="Add Cinematic Title (T)" style="background:rgba(245,158,11,0.15);border-color:#f59e0b;color:#fde047;">
+                <span>✍️ +Text</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="addNewAnimToTimeline()" title="Add Animation / Motion FX Track" style="background:rgba(99,102,241,0.15);border-color:#6366f1;color:#c7d2fe;">
+                <span>⚡ +Anim</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="addNewMusicToTimeline()" title="Add Background Music Soundtrack" style="background:rgba(168,85,247,0.15);border-color:#a855f7;color:#e9d5ff;">
+                <span>🎵 +Music</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="triggerRippleDelete()" title="Ripple Delete (Del)">
+                <svg viewBox="0 0 24 24"><use href="#action_ripple_delete"/></svg><span>Ripple</span>
+            </button>
+            <button type="button" class="tl-btn" onclick="toggleSnapMagnet()" id="btn-tl-snap">
+                <span>🧲 Snap</span>
+            </button>
+        </div>
+
+        <div class="tl-mid">
+            <span class="tc-now" id="tl-timecode-cur">00:00:00:00</span>
+            <span class="tc-sep">/</span>
+            <span class="tc-max" id="tl-timecode-total">00:01:30:00</span>
+        </div>
+
+        <div class="tl-right">
+            <button type="button" class="tl-btn" onclick="fitTimelineToScreen()" title="Fit Timeline to Screen (Shift+Z)" style="padding:2px 7px;font-size:9.5px;font-weight:800;background:#0b1426;border-color:#0284c7;color:#38bdf8;">
+                <span>📐 Fit (Shift+Z)</span>
+            </button>
+            <span class="zoom-lbl">🔍</span>
+            <input type="range" min="5" max="500" value="100" id="tl-zoom-slider" class="tl-zoom" oninput="setTimelineZoom(this.value)">
+            <span class="zoom-badge" id="tl-zoom-val">100%</span>
+        </div>
+    </div>
+
+    <div class="timeline-view">
+        <!-- Track Headers (Compositing stack: D1 > T1 > FX1 > V2 > V1 > A1 > M1) -->
+        <div class="track-headers" onwheel="handleTrackHeadersWheel(event)">
+            <div class="ruler-corner">7-TRACK NLE</div>
+            <div class="header-row draw-row" style="background:rgba(244,63,94,0.05);"><div class="badge-tag rose" style="background:rgba(244,63,94,0.2);color:#fda4af;border:1px solid rgba(244,63,94,0.4);">D1</div><span class="track-nm">Draw</span><div class="hdr-acts"><button type="button" class="act-btn active" onclick="toggleTrackMute('D1')">👁</button><button type="button" class="act-btn" onclick="toggleTrackLock('D1')">🔒</button></div></div>
+            <div class="header-row txt-row"><div class="badge-tag amber">T1</div><span class="track-nm">Titles</span><div class="hdr-acts"><button type="button" class="act-btn active" onclick="toggleTrackMute('T1')">👁</button><button type="button" class="act-btn" onclick="toggleTrackLock('T1')">🔒</button></div></div>
+            <div class="header-row fx-row" style="background:rgba(99,102,241,0.05);"><div class="badge-tag indigo" style="background:rgba(99,102,241,0.2);color:#c7d2fe;border:1px solid rgba(99,102,241,0.4);">FX1</div><span class="track-nm">Anim</span><div class="hdr-acts"><button type="button" class="act-btn active" onclick="toggleTrackMute('FX1')">👁</button><button type="button" class="act-btn" onclick="toggleTrackLock('FX1')">🔒</button></div></div>
+            <div class="header-row vid-row"><div class="badge-tag cyan">V2</div><span class="track-nm">Overlay</span><div class="hdr-acts"><button type="button" class="act-btn active" onclick="toggleTrackMute('V2')">👁</button><button type="button" class="act-btn" onclick="toggleTrackLock('V2')">🔒</button></div></div>
+            <div class="header-row vid-row"><div class="badge-tag cyan">V1</div><span class="track-nm">Master</span><div class="hdr-acts"><button type="button" class="act-btn active" onclick="toggleTrackMute('V1')">👁</button><button type="button" class="act-btn" onclick="toggleTrackLock('V1')">🔒</button></div></div>
+            <div class="header-row aud-row"><div class="badge-tag emerald">A1</div><span class="track-nm">Voice</span><div class="hdr-acts"><button type="button" class="act-btn active" onclick="toggleTrackMute('A1')">M</button><button type="button" class="act-btn" onclick="toggleTrackSolo('A1')">S</button></div></div>
+            <div class="header-row music-row" style="background:rgba(168,85,247,0.05);"><div class="badge-tag purple" style="background:rgba(168,85,247,0.2);color:#e9d5ff;border:1px solid rgba(168,85,247,0.4);">M1</div><span class="track-nm">Music</span><div class="hdr-acts"><button type="button" class="act-btn active" onclick="toggleTrackMute('M1')">M</button><button type="button" class="act-btn" onclick="toggleTrackSolo('M1')">S</button></div></div>
+        </div>
+
+        <!-- Scrollable Tracks Canvas (Hidden scrollbar, fully scrollable) -->
+        <div class="timeline-canvas-scroll" id="timeline-scroll-container" onscroll="handleTimelineScroll(event)" onwheel="handleTimelineWheel(event)">
+            <div class="timeline-scroll-content" id="timeline-content-layer">
+                <div class="time-ruler" id="timeline-ruler" onmousedown="handleRulerMouseDown(event)"></div>
+                <div class="lanes-box">
+                    <div class="lane lane-draw" id="lane-D1" data-track="D1" ondragover="handleLaneDragOver(event)" ondrop="handleLaneDrop(event, 'D1')"></div>
+                    <div class="lane lane-txt" id="lane-T1" data-track="T1" ondragover="handleLaneDragOver(event)" ondrop="handleLaneDrop(event, 'T1')"></div>
+                    <div class="lane lane-fx" id="lane-FX1" data-track="FX1" ondragover="handleLaneDragOver(event)" ondrop="handleLaneDrop(event, 'FX1')"></div>
+                    <div class="lane lane-vid" id="lane-V2" data-track="V2" ondragover="handleLaneDragOver(event)" ondrop="handleLaneDrop(event, 'V2')"></div>
+                    <div class="lane lane-vid" id="lane-V1" data-track="V1" ondragover="handleLaneDragOver(event)" ondrop="handleLaneDrop(event, 'V1')"></div>
+                    <div class="lane lane-aud" id="lane-A1" data-track="A1" ondragover="handleLaneDragOver(event)" ondrop="handleLaneDrop(event, 'A1')"></div>
+                    <div class="lane lane-music" id="lane-M1" data-track="M1" ondragover="handleLaneDragOver(event)" ondrop="handleLaneDrop(event, 'M1')"></div>
+                </div>
+                <div class="playhead" id="timeline-playhead" style="position:absolute;top:0;bottom:0;width:2px;z-index:100;left:0px;cursor:ew-resize;">
+                    <div class="playhead-top" id="playhead-handle" onmousedown="handlePlayheadMouseDown(event)" style="width:16px;height:16px;background:#ef4444;clip-path:polygon(0 0, 100% 0, 50% 100%);margin-left:-7px;cursor:ew-resize;pointer-events:auto;"></div>
+                    <div class="playhead-laser" style="width:2px;height:calc(100% - 16px);background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.8);pointer-events:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+        </div>
+    </div>
+
+    <!-- 🏔️ Modular Titan Register Highway & Studio Architecture -->
+    <script src="/js/titan-bus.js"></script>
+    <script src="/js/core/state.js"></script>
+    <script src="/js/modules/audio.js"></script>
+    <script src="/js/modules/drawing.js"></script>
+    <script src="/js/modules/typography.js"></script>
+    <script src="/js/modules/media.js"></script>
+    <script src="/js/modules/animation.js"></script>
+    <script src="/js/modules/video.js"></script>
+    <script src="/js/modules/timeline.js"></script>
+    <script src="/js/studio.js"></script>
+</body>
+</html>
