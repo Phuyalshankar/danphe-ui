@@ -8,13 +8,13 @@ const path = require('path');
 const { renderTitanMobileSimulator } = require('./lib/TitanMobileSimulator');
 const { TitanChromiumEngine } = require('./lib/TitanChromiumEngine');
 
-// ── 0. START REAL CHROMIUM 60FPS HEADLESS ENGINE (Mobile Viewport 390x780) ──
+// ── 0. START REAL CHROMIUM 60FPS HEADLESS ENGINE (Mobile Viewport 360x680) ──
 const chromiumEngine = new TitanChromiumEngine({
     port: 9222,
     wsPort: 3006,
-    width: 390,
-    height: 780,
-    initialUrl: 'https://en.m.wikipedia.org/wiki/Nepal'
+    width: 360,
+    height: 680,
+    initialUrl: 'https://www.tiktok.com'
 });
 
 chromiumEngine.start().then((started) => {
@@ -224,11 +224,11 @@ const html = `<!DOCTYPE html>
     <!-- Live Rendered Simulator -->
     ${renderTitanMobileSimulator({
         id: 'phone-sim-demo',
-        width: 390,
-        height: 780,
+        width: 360,
+        height: 680,
         deviceModel: 'iPhone 16 Pro Max Titanium',
         deviceColor: 'titanium',
-        initialUrl: 'https://en.m.wikipedia.org/wiki/Nepal',
+        initialUrl: 'https://www.tiktok.com',
         batteryPct: 96,
         wsUrl: 'ws://localhost:3006'
     })}
