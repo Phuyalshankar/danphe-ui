@@ -3,9 +3,53 @@
 const http = require('http');
 const https = require('https');
 const url = require('url');
+const fs = require('fs');
+const path = require('path');
 const { renderTitanMobileSimulator } = require('./lib/TitanMobileSimulator');
 
-// ── ROBUST STREAMING MOBILE PROXY ENGINE ──
+// ── 1. HIGH-SPEED LOCAL VIDEO STREAMER (Supports HTTP 206 Partial Range) ──
+function handleVideoStreaming(req, res, videoName) {
+    const safeName = path.basename(videoName || 'tiktok.mp4');
+    const filePath = path.join(__dirname, 'assets', 'videos', safeName);
+
+    if (!fs.existsSync(filePath)) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Video not found');
+        return;
+    }
+
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunksize = (end - start) + 1;
+        const file = fs.createReadStream(filePath, { start, end });
+        const head = {
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunksize,
+            'Content-Type': 'video/mp4',
+            'Access-Control-Allow-Origin': '*'
+        };
+        res.writeHead(206, head);
+        file.pipe(res);
+    } else {
+        const head = {
+            'Content-Length': fileSize,
+            'Content-Type': 'video/mp4',
+            'Accept-Ranges': 'bytes',
+            'Access-Control-Allow-Origin': '*'
+        };
+        res.writeHead(200, head);
+        fs.createReadStream(filePath).pipe(res);
+    }
+}
+
+// ── 2. STREAMING MOBILE WEB PROXY (Bypasses X-Frame-Options) ──
 function handleProxyRequest(req, res) {
     try {
         const parsedReqUrl = url.parse(req.url, true);
@@ -13,7 +57,7 @@ function handleProxyRequest(req, res) {
 
         if (!targetUrl) {
             res.writeHead(400, { 'Content-Type': 'text/plain' });
-            res.end('Missing "url" query parameter');
+            res.end('Missing url');
             return;
         }
 
@@ -43,13 +87,12 @@ function handleProxyRequest(req, res) {
                 headers: {
                     'Host': parsedTarget.host,
                     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.9'
                 }
             };
 
             const proxyReq = client.request(options, (proxyRes) => {
-                // Follow 301, 302, 303, 307 Redirects
                 if ([301, 302, 303, 307, 308].includes(proxyRes.statusCode) && proxyRes.headers.location) {
                     let redirectLocation = proxyRes.headers.location;
                     if (!redirectLocation.startsWith('http://') && !redirectLocation.startsWith('https://')) {
@@ -60,8 +103,6 @@ function handleProxyRequest(req, res) {
                 }
 
                 const responseHeaders = Object.assign({}, proxyRes.headers);
-
-                // Strip Iframe-blocking headers
                 delete responseHeaders['x-frame-options'];
                 delete responseHeaders['content-security-policy'];
                 delete responseHeaders['content-security-policy-report-only'];
@@ -79,12 +120,9 @@ function handleProxyRequest(req, res) {
                         let html = Buffer.concat(bodyChunks).toString('utf-8');
                         const origin = `${parsedTarget.protocol}//${parsedTarget.host}`;
 
-                        // Inject <base href="..."> so relative paths work, and click interceptor
                         const injection = `
                             <base href="${origin}/">
-                            <style>
-                                body { -webkit-text-size-adjust: 100%; }
-                            </style>
+                            <style> body { -webkit-text-size-adjust: 100%; font-family: sans-serif; } </style>
                             <script>
                                 document.addEventListener('click', function(e) {
                                     const a = e.target.closest('a');
@@ -141,7 +179,7 @@ const html = `<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Danphe-UI — Titanium Mobile Simulator & Live Browser</title>
+    <title>Danphe-UI — Titanium Mobile Simulator & Live Video Player</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -149,10 +187,6 @@ const html = `<!DOCTYPE html>
             min-height: 100vh;
             color: #f8fafc;
             font-family: system-ui, -apple-system, sans-serif;
-        }
-        .mode-tab {
-            cursor: pointer !important;
-            user-select: none;
         }
     </style>
 </head>
@@ -163,7 +197,7 @@ const html = `<!DOCTYPE html>
             📱 Danphe-UI Titanium Mobile Simulator
         </h1>
         <p class="text-xs text-slate-400 font-mono mt-1">
-            Live Web Browser • TikTok / Douyin / Facebook Reels Grabber to Video Editor Timeline
+            Real Local 60FPS Video Streaming • TikTok / Douyin / Facebook Reels Grabber to Video Editor Timeline
         </p>
     </div>
 
@@ -183,11 +217,28 @@ const html = `<!DOCTYPE html>
 </html>`;
 
 const server = http.createServer((req, res) => {
+    // 1. Video Streaming Route
+    if (req.url.startsWith('/api/video')) {
+        const parsed = url.parse(req.url, true);
+        const name = parsed.query.name || 'tiktok.mp4';
+        handleVideoStreaming(req, res, name);
+        return;
+    }
+
+    // 2. Direct /assets/videos/... Route
+    if (req.url.startsWith('/assets/videos/')) {
+        const videoName = req.url.replace('/assets/videos/', '');
+        handleVideoStreaming(req, res, videoName);
+        return;
+    }
+
+    // 3. Web Proxy Route
     if (req.url.startsWith('/api/proxy')) {
         handleProxyRequest(req, res);
         return;
     }
 
+    // 4. Main HTML Page
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);
 });
