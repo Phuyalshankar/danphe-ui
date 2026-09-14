@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <iomanip>
 #include <algorithm>
 #include <random>
 #include <memory>
@@ -31,6 +32,8 @@
     #define WIN32_LEAN_AND_MEAN
     #include <winsock2.h>
     #include <ws2tcpip.h>
+    #include <windows.h>
+    #include <psapi.h>
 #else
     #include <sys/socket.h>
     #include <netinet/in.h>
@@ -622,6 +625,193 @@ public:
     }
 
     var& operator[](const std::string& key) {
+        if (type == TYPE_ARRAY) {
+            static var method_proxy;
+            if (key == "add" || key == "push") {
+                method_proxy = var([this](const std::vector<var>& args) mutable -> var {
+                    for (const auto& a : args) this->push(a);
+                    return var();
+                });
+                return method_proxy;
+            }
+            if (key == "pop") {
+                method_proxy = var([this](const std::vector<var>&) mutable -> var {
+                    return this->pop();
+                });
+                return method_proxy;
+            }
+            if (key == "shift") {
+                method_proxy = var([this](const std::vector<var>&) mutable -> var {
+                    return this->shift();
+                });
+                return method_proxy;
+            }
+            if (key == "unshift") {
+                method_proxy = var([this](const std::vector<var>& args) mutable -> var {
+                    for (auto it = args.rbegin(); it != args.rend(); ++it) this->unshift(*it);
+                    return var();
+                });
+                return method_proxy;
+            }
+            if (key == "length" || key == "size") {
+                method_proxy = var([this](const std::vector<var>&) -> var {
+                    return this->length();
+                });
+                return method_proxy;
+            }
+            if (key == "join") {
+                method_proxy = var([this](const std::vector<var>& args) -> var {
+                    std::string delim = args.size() > 0 ? args[0].toString() : ",";
+                    return this->join(delim);
+                });
+                return method_proxy;
+            }
+            if (key == "indexOf") {
+                method_proxy = var([this](const std::vector<var>& args) -> var {
+                    if (args.empty()) return var(-1);
+                    return this->indexOf(args[0]);
+                });
+                return method_proxy;
+            }
+            if (key == "find" || key == "findOne") {
+                method_proxy = var([this](const std::vector<var>& args) -> var {
+                    if (args.empty() || !args[0].isFunction()) return var();
+                    return this->find(args[0]);
+                });
+                return method_proxy;
+            }
+            if (key == "filter") {
+                method_proxy = var([this](const std::vector<var>& args) -> var {
+                    if (args.empty() || !args[0].isFunction()) return var();
+                    return this->filter(args[0]);
+                });
+                return method_proxy;
+            }
+            if (key == "map") {
+                method_proxy = var([this](const std::vector<var>& args) -> var {
+                    if (args.empty() || !args[0].isFunction()) return var();
+                    return this->map(args[0]);
+                });
+                return method_proxy;
+            }
+            if (key == "forEach") {
+                method_proxy = var([this](const std::vector<var>& args) -> var {
+                    if (!args.empty() && args[0].isFunction()) this->forEach(args[0]);
+                    return var();
+                });
+                return method_proxy;
+            }
+        }
+        if (type == TYPE_STRING) {
+            // Promote to object temporarily to store the proxy
+            if (!object_val) object_val = std::make_shared<var_object>();
+            std::string sv = string_val;   // capture by value – safe & correct
+            if (key == "toUpperCase") {
+                (*object_val)[key] = var([sv](const std::vector<var>&) -> var {
+                    std::string r = sv;
+                    for (auto& c : r) c = (char)std::toupper((unsigned char)c);
+                    return var(r);
+                });
+                return (*object_val)[key];
+            }
+            if (key == "toLowerCase") {
+                (*object_val)[key] = var([sv](const std::vector<var>&) -> var {
+                    std::string r = sv;
+                    for (auto& c : r) c = (char)std::tolower((unsigned char)c);
+                    return var(r);
+                });
+                return (*object_val)[key];
+            }
+            if (key == "trim") {
+                (*object_val)[key] = var([sv](const std::vector<var>&) -> var {
+                    size_t b = sv.find_first_not_of(" \t\r\n");
+                    size_t e = sv.find_last_not_of(" \t\r\n");
+                    return var(b == std::string::npos ? std::string("") : sv.substr(b, e - b + 1));
+                });
+                return (*object_val)[key];
+            }
+            if (key == "split") {
+                (*object_val)[key] = var([sv](const std::vector<var>& args) -> var {
+                    std::string delim = args.size() > 0 ? args[0].toString() : "";
+                    var result; result.type = TYPE_ARRAY;
+                    result.array_val = std::make_shared<std::vector<var>>();
+                    if (delim.empty()) {
+                        for (char c : sv) result.array_val->push_back(var(std::string(1, c)));
+                    } else {
+                        size_t pos = 0, found;
+                        while ((found = sv.find(delim, pos)) != std::string::npos) {
+                            result.array_val->push_back(var(sv.substr(pos, found - pos)));
+                            pos = found + delim.size();
+                        }
+                        result.array_val->push_back(var(sv.substr(pos)));
+                    }
+                    return result;
+                });
+                return (*object_val)[key];
+            }
+            if (key == "indexOf") {
+                (*object_val)[key] = var([sv](const std::vector<var>& args) -> var {
+                    if (args.empty()) return var(-1);
+                    size_t p = sv.find(args[0].toString());
+                    return p == std::string::npos ? var(-1) : var((double)p);
+                });
+                return (*object_val)[key];
+            }
+            if (key == "length" || key == "size") {
+                (*object_val)["length"] = var([sv](const std::vector<var>&) -> var {
+                    return var((double)sv.size());
+                });
+                return (*object_val)["length"];
+            }
+            if (key == "substring" || key == "substr") {
+                (*object_val)[key] = var([sv](const std::vector<var>& args) -> var {
+                    int start = args.size() > 0 ? (int)var(args[0]).toDouble() : 0;
+                    int end   = args.size() > 1 ? (int)var(args[1]).toDouble() : (int)sv.size();
+                    if (start < 0) start = 0;
+                    if (end > (int)sv.size()) end = (int)sv.size();
+                    if (start >= end) return var(std::string(""));
+                    return var(sv.substr(start, end - start));
+                });
+                return (*object_val)[key];
+            }
+            if (key == "replace") {
+                (*object_val)[key] = var([sv](const std::vector<var>& args) -> var {
+                    if (args.size() < 2) return var(sv);
+                    std::string s = sv;
+                    std::string from = args[0].toString();
+                    std::string to   = args[1].toString();
+                    size_t pos = s.find(from);
+                    if (pos != std::string::npos) s.replace(pos, from.size(), to);
+                    return var(s);
+                });
+                return (*object_val)[key];
+            }
+            if (key == "includes" || key == "contains") {
+                (*object_val)[key] = var([sv](const std::vector<var>& args) -> var {
+                    if (args.empty()) return var(false);
+                    return var(sv.find(args[0].toString()) != std::string::npos);
+                });
+                return (*object_val)[key];
+            }
+            if (key == "startsWith") {
+                (*object_val)[key] = var([sv](const std::vector<var>& args) -> var {
+                    if (args.empty()) return var(false);
+                    std::string sub = args[0].toString();
+                    return var(sv.size() >= sub.size() && sv.substr(0, sub.size()) == sub);
+                });
+                return (*object_val)[key];
+            }
+            if (key == "endsWith") {
+                (*object_val)[key] = var([sv](const std::vector<var>& args) -> var {
+                    if (args.empty()) return var(false);
+                    std::string sub = args[0].toString();
+                    return var(sv.size() >= sub.size() &&
+                               sv.substr(sv.size() - sub.size()) == sub);
+                });
+                return (*object_val)[key];
+            }
+            // Not a string method — fall through to object
+        }
         if (type != TYPE_OBJECT || !object_val) {
             type = TYPE_OBJECT;
             object_val = std::make_shared<var_object>();

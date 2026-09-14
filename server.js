@@ -103,6 +103,87 @@ const PORT = 3000;
 // Initialize defaults
 TitanMicroBus.write(1, 'ONLINE');
 TitanMicroBus.write(10, 'Dashboard');
+
+// ── 3. BUILD FULL 551+ MASTER ICONS ARRAY (CORE + EXTENDED + DRAWING & CAD SHAPES) ──
+const DRAW_SHAPES_ICONS = [
+    { id: 600, name: 'Circle', label: 'Geometric Circle', path: '<circle cx="12" cy="12" r="10"/>' },
+    { id: 601, name: 'Rectangle', label: 'Rounded Rectangle', path: '<rect x="3" y="5" width="18" height="14" rx="2" ry="2"/>' },
+    { id: 602, name: 'Square', label: 'Equal Square', path: '<rect x="4" y="4" width="16" height="16" rx="1.5" ry="1.5"/>' },
+    { id: 603, name: 'Triangle', label: 'Equilateral Triangle', path: '<polygon points="12 3 22 21 2 21"/>' },
+    { id: 604, name: 'Line Stroke', label: 'Straight Line Segment', path: '<line x1="4" y1="20" x2="20" y2="4"/>' },
+    { id: 605, name: 'Curved Spline Arc', label: 'Bézier Arc Curve', path: '<path d="M3 18C8 6 16 6 21 18"/>' },
+    { id: 606, name: 'Spiral Helix', label: 'Fibonacci Spiral Vortex', path: '<path d="M12 12a2 2 0 1 0 2-2 4 4 0 0 0-4 4 6 6 0 0 0 6 6 8 8 0 0 0-8-8 10 10 0 0 0 10 10"/>' },
+    { id: 607, name: 'Hexagon Polygon', label: '6-Sided Hexagon', path: '<polygon points="12 2 21 7 21 17 12 22 3 17 3 7"/>' },
+    { id: 608, name: 'Pentagon Shape', label: '5-Sided Pentagon', path: '<polygon points="12 2 22 9 18 21 6 21 2 9"/>' },
+    { id: 609, name: 'Octagon Stop', label: '8-Sided Octagon', path: '<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/>' },
+    { id: 610, name: 'Star 5-Point', label: 'Classic 5-Point Star', path: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' },
+    { id: 611, name: 'Sparkle Star 4-Point', label: '4-Point Flare Sparkle', path: '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>' },
+    { id: 612, name: 'Ellipse Oval', label: 'Horizontal Ellipse', path: '<ellipse cx="12" cy="12" rx="10" ry="6"/>' },
+    { id: 613, name: 'Diamond Rhombus', label: 'Isometric Diamond', path: '<polygon points="12 2 22 12 12 22 2 12"/>' },
+    { id: 614, name: 'Arrow Right', label: 'Directional Arrow Right', path: '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>' },
+    { id: 615, name: 'Arrow Double', label: 'Bidirectional Dimension Arrow', path: '<polyline points="6 9 3 12 6 15"/><polyline points="18 9 21 12 18 15"/><line x1="3" y1="12" x2="21" y2="12"/>' },
+    { id: 616, name: 'Arrow Curved Up', label: 'Curved Flow Arrow', path: '<path d="M4 20v-7a4 4 0 0 1 4-4h12"/><polyline points="15 4 20 9 15 14"/>' },
+    { id: 617, name: 'Precision Stylus Pen', label: 'CAD Technical Pen', path: '<path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/>' },
+    { id: 618, name: 'Calligraphy Brush', label: 'Smooth Calligraphy Brush', path: '<path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 6.99l9 9 1.58-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 8c.5-3 1-5 4-7"/><path d="M14.5 17.5 4.5 15"/>' },
+    { id: 619, name: 'Highlighter Marker', label: 'Translucent Highlight Marker', path: '<path d="m9 11-6 6v3h3l6-6"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>' },
+    { id: 620, name: 'Cyber Neon Glow Laser', label: 'High-Voltage Neon Laser', path: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>' },
+    { id: 621, name: 'Airbrush Spray Can', label: 'Particle Spray Airbrush', path: '<path d="M13 10V6a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4"/><rect x="5" y="10" width="10" height="12" rx="2"/><line x1="9" y1="2" x2="11" y2="2"/><circle cx="18" cy="4" r=".5"/><circle cx="21" cy="3" r=".5"/><circle cx="19" cy="7" r=".5"/>' },
+    { id: 622, name: 'Pencil Drafting', label: 'Fine Graphite Pencil', path: '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>' },
+    { id: 623, name: 'Paint Bucket Fill', label: 'Flood Fill Bucket', path: '<path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/>' },
+    { id: 624, name: 'Eraser Block', label: 'Vector Stroke Eraser', path: '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>' },
+    { id: 625, name: 'Lasso Freehand', label: 'Freehand Lasso Selection', path: '<path d="M7 22a5 5 0 0 1-2-4c0-3.87 3.13-7 7-7h1"/><path d="M15 11a5 5 0 0 1 5 5c0 3.87-3.13 7-7 7a5 5 0 0 1-5-5c0-1.38.56-2.63 1.46-3.54L12 12"/><circle cx="12" cy="5" r="3"/>' },
+    { id: 626, name: 'Eyedropper Color Picker', label: 'Precision Eyedropper', path: '<path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m2 22 3-3"/>' },
+    { id: 627, name: 'Ruler Measure', label: 'Precision CAD Ruler', path: '<path d="M21.3 8.7 8.7 21.3c-.4.4-1 .4-1.4 0l-4.6-4.6c-.4-.4-.4-1 0-1.4L15.3 2.7c.4-.4 1-.4 1.4 0l4.6 4.6c.4.4.4 1 0 1.4Z"/><line x1="14.5" y1="5.5" x2="12" y2="8"/><line x1="11.5" y1="8.5" x2="9" y2="11"/><line x1="8.5" y1="11.5" x2="6" y2="14"/>' },
+    { id: 628, name: 'Compass Drafting', label: 'Drafting Circle Compass', path: '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>' },
+    { id: 629, name: 'Bézier Anchor Pen', label: 'Vector Anchor Node Edit', path: '<path d="m12 19 7-7 3 3-7 7-3-3z"/><circle cx="5" cy="5" r="3"/><line x1="7.5" y1="7.5" x2="10" y2="10"/><circle cx="19" cy="19" r="2"/>' },
+    { id: 630, name: 'Cube 3D Isometric', label: '3D Isometric Solid Box', path: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>' },
+    { id: 631, name: 'Cylinder 3D Prism', label: '3D Solid Cylinder', path: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>' },
+    { id: 632, name: 'Pyramid Cone 3D', label: '3D Geometric Cone', path: '<polygon points="12 2 22 22 2 22"/><line x1="12" y1="2" x2="12" y2="22"/>' }
+];
+
+const all512Icons = [];
+
+// 1. Drawing & Shapes First!
+DRAW_SHAPES_ICONS.forEach(ds => {
+    all512Icons.push({
+        id: ds.id,
+        opcode: ds.id,
+        category: 'draw',
+        name: ds.name,
+        label: ds.label,
+        path: ds.path,
+        svg: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-400">${ds.path}</svg>`
+    });
+});
+
+// 2. Core Telephony & Hardware Icons (0 to 255)
+for (let id = 0; id <= 255; id++) {
+    const meta = ICONS_256[id] || { name: 'ICON_' + id, label: 'Core Icon #' + id };
+    all512Icons.push({
+        id: id,
+        opcode: id,
+        category: 'core',
+        name: meta.name.replace('TITAN_ICON_', ''),
+        label: meta.label,
+        svg: renderAdaptiveIconSVG(id, 0, 18, false)
+    });
+}
+
+// 3. Extended Web & Enterprise Suite (256 to 511)
+for (let id = 256; id <= 511; id++) {
+    const meta = EXTENDED_WEB_ICONS[id] || { name: 'EXT_' + id, label: 'Extended #' + id };
+    let cat = 'web';
+    if (id >= 340 && id <= 369) cat = 'fintech';
+    if (id >= 370 && id <= 399) cat = 'medical';
+    all512Icons.push({
+        id: id,
+        opcode: id,
+        category: cat,
+        name: meta.name,
+        label: meta.label,
+        svg: renderAdaptiveIconSVG(id, 0, 18, false)
+    });
+}
 TitanMicroBus.write(1000, '101');
 TitanMicroBus.write(1010, '512 ICONS & TWINS');
 TitanMicroBus.write(1011, '100% INTERACTIVE');
@@ -172,39 +253,13 @@ function renderFullPage() {
         </div>`;
     }).join('');
 
-    // ── 3. BUILD FULL 512 ICONS ARRAY ──
-    const all512Icons = [];
-    for (let id = 0; id <= 255; id++) {
-        const meta = ICONS_256[id] || { name: 'ICON_' + id, label: 'Core Icon #' + id };
-        all512Icons.push({
-            id: id,
-            category: 'core',
-            name: meta.name.replace('TITAN_ICON_', ''),
-            label: meta.label,
-            svg: renderAdaptiveIconSVG(id, 0, 18, false)
-        });
-    }
-    for (let id = 256; id <= 511; id++) {
-        const meta = EXTENDED_WEB_ICONS[id] || { name: 'EXT_' + id, label: 'Extended #' + id };
-        let cat = 'web';
-        if (id >= 340 && id <= 369) cat = 'fintech';
-        if (id >= 370 && id <= 399) cat = 'medical';
-        all512Icons.push({
-            id: id,
-            category: cat,
-            name: meta.name,
-            label: meta.label,
-            svg: renderAdaptiveIconSVG(id, 0, 18, false)
-        });
-    }
-
     const iconsGridHtml = all512Icons.map(ic => `
         <div data-cat="${ic.category}" data-name="${ic.name.toLowerCase()}" data-id="${ic.id}" 
-             class="icon-tile p-2.5 bg-slate-950/80 rounded-2xl border border-slate-800/80 flex flex-col items-center justify-center gap-1.5 hover:border-cyan-400 hover:bg-slate-900 transition-all cursor-pointer group shadow-sm">
-            <div class="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 group-hover:text-cyan-400 group-hover:scale-110 transition-transform">
+             class="icon-tile p-2.5 bg-slate-950/80 rounded-2xl border ${ic.category === 'draw' ? 'border-amber-500/50 hover:border-amber-400' : 'border-slate-800/80 hover:border-cyan-400'} flex flex-col items-center justify-center gap-1.5 hover:bg-slate-900 transition-all cursor-pointer group shadow-sm">
+            <div class="w-8 h-8 rounded-xl ${ic.category === 'draw' ? 'bg-amber-950/60 border border-amber-800 text-amber-300' : 'bg-slate-900 border border-slate-800 text-slate-300'} flex items-center justify-center group-hover:scale-110 transition-transform">
                 ${ic.svg}
             </div>
-            <span class="text-[9px] font-mono text-slate-400 group-hover:text-cyan-300 text-center truncate w-full font-bold">${ic.name}</span>
+            <span class="text-[9px] font-mono ${ic.category === 'draw' ? 'text-amber-300 group-hover:text-amber-200' : 'text-slate-400 group-hover:text-cyan-300'} text-center truncate w-full font-bold">${ic.name}</span>
             <span class="text-[8px] font-mono text-slate-600">#${ic.id}</span>
         </div>`).join('');
 
@@ -268,6 +323,10 @@ function renderFullPage() {
             </div>
         </div>`;
     }).join('');
+
+    const fontLinksHtml = (typeof getGoogleFontsLinkTags === 'function') ? getGoogleFontsLinkTags() : '';
+    const animCss = (typeof generateAnimationCSS === 'function') ? generateAnimationCSS() : '';
+    const fontCss = (typeof generateFontCSS === 'function') ? generateFontCSS() : '';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -408,8 +467,66 @@ function renderFullPage() {
 
         </div>
 
+        <!-- 🌟 1. DANPHE-UI MASTER 512+ 16-BIT VECTOR ICONS MATRIX SHOWCASE -->
+        <section class="w-full bg-slate-950/95 p-6 rounded-3xl border border-slate-800 shadow-2xl flex flex-col gap-5 mt-4">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-cyan-950/80 border border-cyan-500/50 flex items-center justify-center text-cyan-400 text-2xl shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+                        💎
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black uppercase tracking-wider text-white font-mono flex items-center gap-2">
+                            <span>DANPHE-UI 512+ VECTOR ICONS MATRIX</span>
+                            <span class="text-xs bg-cyan-950 text-cyan-400 px-2.5 py-1 rounded-lg border border-cyan-800/80 font-mono font-bold">16-BIT HARDWARE OPCODES</span>
+                        </h2>
+                        <p class="text-xs text-slate-400 font-mono mt-0.5">Pure ThorVG / C++ Compliant Vector Suite &bull; Zero Repetition &bull; MicroBus Opcode Highway</p>
+                    </div>
+                </div>
+
+                <!-- Live Category Filter & Search -->
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <input type="text" id="icon-search-input" oninput="filterDanpheIcons(this.value)" placeholder="🔍 Search 512 icons (e.g. pen, #12, brush)..." 
+                           class="bg-slate-900 border border-slate-700 text-xs text-white px-4 py-2 rounded-xl focus:border-cyan-400 focus:outline-none w-full sm:w-64 font-mono">
+                    <div class="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                        <button onclick="filterIconCategory('all')" class="px-3 py-1 text-xs font-mono font-bold rounded-lg bg-cyan-500 text-slate-950 shadow">ALL</button>
+                        <button onclick="filterIconCategory('draw')" class="px-3 py-1 text-xs font-mono font-bold rounded-lg text-amber-400 hover:text-amber-300 font-black border border-amber-500/40 bg-amber-950/40">🎨 DRAW & SHAPES (34)</button>
+                        <button onclick="filterIconCategory('core')" class="px-3 py-1 text-xs font-mono font-bold rounded-lg text-slate-400 hover:text-white">CORE (0-255)</button>
+                        <button onclick="filterIconCategory('web')" class="px-3 py-1 text-xs font-mono font-bold rounded-lg text-slate-400 hover:text-white">EXTENDED (256-511)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 512 Icons Responsive Grid -->
+            <div id="danphe-512-icons-container" class="grid grid-cols-4 sm:grid-cols-8 md:grid-cols-12 lg:grid-cols-16 gap-2 max-h-[500px] overflow-y-auto p-2 bg-slate-900/40 rounded-2xl border border-slate-800/60 custom-scrollbar">
+                ${iconsGridHtml}
+            </div>
+        </section>
+
+        <!-- ⚡ 2. 256 KINETIC TYPOGRAPHY & HARDWARE ANIMATIONS MATRIX -->
+        <section class="w-full bg-slate-950/95 p-6 rounded-3xl border border-slate-800 shadow-2xl flex flex-col gap-5 mt-2">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800/80">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-950/80 border border-amber-500/50 flex items-center justify-center text-amber-400 text-2xl shadow-[0_0_20px_rgba(245,158,11,0.4)]">
+                        ⚡
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black uppercase tracking-wider text-white font-mono flex items-center gap-2">
+                            <span>256 HARDWARE ANIMATIONS & KINETIC TYPO MATRIX</span>
+                            <span class="text-xs bg-amber-950 text-amber-400 px-2.5 py-1 rounded-lg border border-amber-800/80 font-mono font-bold">120 FPS GPU ACCELERATED</span>
+                        </h2>
+                        <p class="text-xs text-slate-400 font-mono mt-0.5">Biometric Signals &bull; Matrix Text Decrypt &bull; 3D Extrusion &bull; Neon Glow &bull; Wave FX</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 256 Animations Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-[420px] overflow-y-auto p-2 bg-slate-900/40 rounded-2xl border border-slate-800/60 custom-scrollbar">
+                ${animCardsHtml}
+            </div>
+        </section>
+
         <!-- Real-time I/O Stream Terminal -->
-        <footer class="w-full p-3 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs flex flex-col gap-1 shadow-2xl">
+        <footer class="w-full p-3 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs flex flex-col gap-1 shadow-2xl mt-2">
             <div class="flex items-center justify-between text-slate-500 pb-1 border-b border-slate-900 text-[10px]">
                 <span class="text-cyan-400 font-bold flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -418,7 +535,7 @@ function renderFullPage() {
                 <span class="text-emerald-400 font-bold">STATUS: 100% ONLINE</span>
             </div>
             <div id="io-terminal" class="text-cyan-300 text-[11px] min-h-[22px] flex items-center">
-                Ready. Drag on Canvas to pan, scroll mouse wheel to zoom, or select any tool from the toolbar...
+                Ready. Drag on Canvas to pan, scroll mouse wheel to zoom, or click any icon from the 512+ vector matrix above...
             </div>
         </footer>
 
@@ -479,6 +596,24 @@ function renderFullPage() {
         let currentMasterOpcode = 1;
         let currentMasterIconId = 154;
         let autoCycleTimer = null;
+
+        window.filterDanpheIcons = function(query) {
+            const q = (query || '').toLowerCase().trim();
+            document.querySelectorAll('#danphe-512-icons-container .icon-tile').forEach(tile => {
+                const name = tile.dataset.name || '';
+                const id = tile.dataset.id || '';
+                const isMatch = !q || name.includes(q) || ('#' + id).includes(q) || id === q;
+                tile.style.display = isMatch ? 'flex' : 'none';
+            });
+        };
+
+        window.filterIconCategory = function(cat) {
+            document.querySelectorAll('#danphe-512-icons-container .icon-tile').forEach(tile => {
+                const c = tile.dataset.cat || '';
+                const isMatch = (cat === 'all') || (c === cat);
+                tile.style.display = isMatch ? 'flex' : 'none';
+            });
+        };
 
         const testIconsSvg = {
             154: '<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
@@ -3543,36 +3678,36 @@ function renderFullPage() {
         // 📁 6TH FLAGSHIP: 360° ROTARY MEDIA INGESTION WHEEL & IMPORTED FILES POOL
         // ═════════════════════════════════════════════════════════════════════════
         const MEDIA_WHEEL_CATEGORIES = [
-            { id: 'video', name: 'Video Clips', label: '🎬 VIDEO', icon: '🎬', color: '#38bdf8', bg: '#082f49', stroke: '#0284c7', angle: 0, accept: 'video/*' },
-            { id: 'photo', name: 'Photos & Logos', label: '📸 PHOTO', icon: '📸', color: '#c084fc', bg: '#3b0764', stroke: '#a855f7', angle: 45, accept: 'image/*' },
-            { id: 'audio', name: 'Audio & Music', label: '🎵 AUDIO', icon: '🎵', color: '#34d399', bg: '#064e3b', stroke: '#10b981', angle: 90, accept: 'audio/*' },
-            { id: 'cloud', name: 'Cloud & Stock', label: '🌐 CLOUD', icon: '🌐', color: '#fbbf24', bg: '#451a03', stroke: '#f59e0b', angle: 135, accept: '*/*' },
-            { id: 'text', name: 'Kinetic Text', label: '✍️ TEXT', icon: '✍️', color: '#f472b6', bg: '#500724', stroke: '#ec4899', angle: 180, accept: '.txt,.json' },
-            { id: 'vfx', name: 'VFX Shaders', label: '💥 VFX', icon: '💥', color: '#ef4444', bg: '#450a0a', stroke: '#dc2626', angle: 225, accept: '.fx,.frag' },
-            { id: 'elements', name: 'Shapes & Badges', label: '🎭 SHAPES', icon: '🎭', color: '#60a5fa', bg: '#172554', stroke: '#3b82f6', angle: 270, accept: '.svg' },
-            { id: 'voice', name: 'Voiceover Mic', label: '🎙️ RECORD', icon: '🎙️', color: '#facc15', bg: '#3a2e04', stroke: '#eab308', angle: 315, accept: 'audio/*' }
+            { id: 'video', name: 'Video Clips', label: 'VIDEO', svgPath: '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>', color: '#38bdf8', bg: '#082f49', stroke: '#0284c7', angle: 0, accept: 'video/*' },
+            { id: 'photo', name: 'Photos & Logos', label: 'PHOTO', svgPath: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>', color: '#c084fc', bg: '#3b0764', stroke: '#a855f7', angle: 45, accept: 'image/*' },
+            { id: 'audio', name: 'Audio & Music', label: 'AUDIO', svgPath: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>', color: '#34d399', bg: '#064e3b', stroke: '#10b981', angle: 90, accept: 'audio/*' },
+            { id: 'cloud', name: 'Cloud & Stock', label: 'CLOUD', svgPath: '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>', color: '#fbbf24', bg: '#451a03', stroke: '#f59e0b', angle: 135, accept: '*/*' },
+            { id: 'text', name: 'Kinetic Text', label: 'TEXT', svgPath: '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>', color: '#f472b6', bg: '#500724', stroke: '#ec4899', angle: 180, accept: '.txt,.json' },
+            { id: 'vfx', name: 'VFX Shaders', label: 'VFX', svgPath: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color: '#ef4444', bg: '#450a0a', stroke: '#dc2626', angle: 225, accept: '.fx,.frag' },
+            { id: 'elements', name: 'Shapes & Badges', label: 'SHAPES', svgPath: '<polygon points="12 2 22 22 2 22"/>', color: '#60a5fa', bg: '#172554', stroke: '#3b82f6', angle: 270, accept: '.svg' },
+            { id: 'voice', name: 'Voiceover Mic', label: 'RECORD', svgPath: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>', color: '#facc15', bg: '#3a2e04', stroke: '#eab308', angle: 315, accept: 'audio/*' }
         ];
 
         // 📋 Live Ingested Media Files Pool (Sorted & Filtered by Route)
         const importedMediaPool = {
             video: [
-                { name: 'Cinematic_Drone_4K.mp4', icon: '🎬', desc: '4K UHD • 60FPS • 18.2 MB', duration: '00:15', type: 'video' },
-                { name: 'Cyber_City_Night.mp4', icon: '🏙️', desc: '1080p • 30FPS • 9.4 MB', duration: '00:08', type: 'video' },
-                { name: 'Hyperlapse_Vortex.mp4', icon: '🏎️', desc: '4K • 120FPS • 24.1 MB', duration: '00:22', type: 'video' }
+                { name: 'Cinematic_Drone_4K.mp4', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>', desc: '4K UHD • 60FPS • 18.2 MB', duration: '00:15', type: 'video' },
+                { name: 'Cyber_City_Night.mp4', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>', desc: '1080p • 30FPS • 9.4 MB', duration: '00:08', type: 'video' },
+                { name: 'Hyperlapse_Vortex.mp4', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>', desc: '4K • 120FPS • 24.1 MB', duration: '00:22', type: 'video' }
             ],
             photo: [
-                { name: 'Danphe_Official_Logo.png', icon: '🦚', desc: 'PNG • Transparent • 2.4 MB', duration: 'Static', type: 'photo' },
-                { name: 'Cyberpunk_Emblem.svg', icon: '⚡', desc: 'Vector SVG • 480 KB', duration: 'Static', type: 'photo' },
-                { name: 'Titan_Watermark_Badge.png', icon: '🛡️', desc: 'PNG • 4K Alpha • 1.1 MB', duration: 'Static', type: 'photo' }
+                { name: 'Danphe_Official_Logo.png', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>', desc: 'PNG • Transparent • 2.4 MB', duration: 'Static', type: 'photo' },
+                { name: 'Cyberpunk_Emblem.svg', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', desc: 'Vector SVG • 480 KB', duration: 'Static', type: 'photo' },
+                { name: 'Titan_Watermark_Badge.png', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>', desc: 'PNG • 4K Alpha • 1.1 MB', duration: 'Static', type: 'photo' }
             ],
             audio: [
-                { name: 'Retro_Synthwave_BGM.mp3', icon: '🎹', desc: '320kbps • 128 BPM • 4.8 MB', duration: '02:30', type: 'audio' },
-                { name: 'Epic_Cinema_Trailer.wav', icon: '🎻', desc: '48kHz RAW • 14.2 MB', duration: '01:45', type: 'audio' },
-                { name: 'Laser_Beam_Impact.sfx', icon: '🔊', desc: 'Sci-Fi Soundbite • 120 KB', duration: '00:02', type: 'audio' }
+                { name: 'Retro_Synthwave_BGM.mp3', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>', desc: '320kbps • 128 BPM • 4.8 MB', duration: '02:30', type: 'audio' },
+                { name: 'Epic_Cinema_Trailer.wav', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>', desc: '48kHz RAW • 14.2 MB', duration: '01:45', type: 'audio' },
+                { name: 'Laser_Beam_Impact.sfx', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>', desc: 'Sci-Fi Soundbite • 120 KB', duration: '00:02', type: 'audio' }
             ],
             cloud: [
-                { name: 'Pexels_Cloud_Stock_4K.mp4', icon: '☁️', desc: 'Cloud Stock • 1080p • 12.1 MB', duration: '00:20', type: 'cloud' },
-                { name: 'Unsplash_Urban_Hero.jpg', icon: '📷', desc: 'High-Res Photo • 6.4 MB', duration: 'Static', type: 'cloud' },
+                { name: 'Pexels_Cloud_Stock_4K.mp4', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>', desc: 'Cloud Stock • 1080p • 12.1 MB', duration: '00:20', type: 'cloud' },
+                { name: 'Unsplash_Urban_Hero.jpg', svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>', desc: 'High-Res Photo • 6.4 MB', duration: 'Static', type: 'cloud' },
                 { name: 'Giphy_Neon_Sticker.webp', icon: '✨', desc: 'Animated WebP • 850 KB', duration: '00:04', type: 'cloud' }
             ],
             text: [
@@ -3704,20 +3839,21 @@ function renderFullPage() {
             if (listStageHtml) {
                 if (files.length === 0) {
                     listStageHtml.innerHTML = '<div onclick="triggerNativeMediaImport()" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:50px; background:#070d18; border:1.2px dashed #334155; border-radius:7px; cursor:pointer;">' +
-                        '<span style="font-size:10px; font-weight:900; color:' + cat.color + ';">📁 No ' + cat.name + ' imported yet</span>' +
+                        '<span style="font-size:10px; font-weight:900; color:' + cat.color + '; display:flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> No ' + cat.name + ' imported yet</span>' +
                         '<span style="font-size:8px; font-weight:800; color:#94a3b8;">Click center lens or button below to import</span>' +
                     '</div>';
                 } else {
                     listStageHtml.innerHTML = files.slice(0, 3).map(function(f, i) {
+                        const iconSvg = f.svg || ('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + cat.color + '" stroke-width="2">' + (cat.svgPath || '') + '</svg>');
                         return '<div onclick="insertImportedFileToTimeline(' + i + ')" style="display:flex; align-items:center; justify-content:space-between; background:#0f172a; border:1.2px solid #334155; border-radius:7px; padding:4px 8px; cursor:pointer; transition:all 0.15s;">' +
                             '<div style="display:flex; align-items:center; gap:8px;">' +
-                                '<div style="width:24px; height:24px; background:' + cat.color + '33; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:13px;">' + (f.icon || cat.icon) + '</div>' +
+                                '<div style="width:24px; height:24px; background:' + cat.color + '22; border:1px solid ' + cat.color + '44; border-radius:5px; display:flex; align-items:center; justify-content:center;">' + iconSvg + '</div>' +
                                 '<div style="display:flex; flex-direction:column; gap:1px;">' +
                                     '<span style="font-size:10px; font-weight:900; color:#ffffff;">' + (f.name || 'File').slice(0, 22) + '</span>' +
                                     '<span style="font-size:8px; font-weight:800; color:#93c5fd;">' + (f.desc || 'Media file') + '</span>' +
                                 '</div>' +
                             '</div>' +
-                            '<button style="height:22px; padding:0 10px; background:' + cat.bg + '; color:#ffffff; border:1px solid ' + cat.stroke + '; border-radius:5px; font-size:8.5px; font-weight:900; cursor:pointer;">➕ INSERT</button>' +
+                            '<button style="height:22px; padding:0 8px; background:' + cat.bg + '; color:#ffffff; border:1px solid ' + cat.stroke + '; border-radius:5px; font-size:8.5px; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:3px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> <span>INSERT</span></button>' +
                         '</div>';
                     }).join('');
                 }
@@ -6018,6 +6154,32 @@ const server = http.createServer((req, res) => {
             return;
         }
 
+        // 🚀 C++ / Native Vector Icons REST API: Serve all 551+ Icons Matrix in JSON
+        if (url.pathname === '/api/icons' || url.pathname === '/api/vector-icons') {
+            res.writeHead(200, { 
+                'Content-Type': 'application/json; charset=utf-8',
+                'Access-Control-Allow-Origin': '*'
+            });
+            res.end(JSON.stringify(all512Icons));
+            return;
+        }
+
+        // 🚀 Single Icon SVG by Opcode or Name
+        if (url.pathname.startsWith('/api/icon/')) {
+            const query = url.pathname.replace('/api/icon/', '');
+            const found = all512Icons.find(ic => ic.opcode == query || ic.name.toLowerCase() === query.toLowerCase());
+            res.writeHead(200, { 
+                'Content-Type': 'image/svg+xml; charset=utf-8',
+                'Access-Control-Allow-Origin': '*'
+            });
+            if (found) {
+                res.end(found.svg || `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">${found.path || ''}</svg>`);
+            } else {
+                res.end('<svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="10" stroke="red"/></svg>');
+            }
+            return;
+        }
+
         if (url.pathname === '/editor' || url.pathname === '/video-editor' || url.pathname === '/nle') {
             try {
                 const editorPath = path.join(__dirname, 'views', 'index.html');
@@ -6037,7 +6199,7 @@ const server = http.createServer((req, res) => {
     res.end('Not Found');
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Danphe UI Full Suite Studio running at http://localhost:${PORT}`);
     console.log(`🎬 Cinema Master NLE Video Editor running at http://localhost:${PORT}/editor`);
 });
