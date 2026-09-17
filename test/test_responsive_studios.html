@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danphe-UI — Responsive Studio Redesign Test Harness</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        body { background: #03060d; color: #cbd5e1; font-family: 'Inter', sans-serif; }
+        .mode-pill.active { background: #0284c7; color: white; border-color: #38bdf8; box-shadow: 0 0 12px rgba(56,189,248,0.4); }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex flex-col items-center">
+
+    <header class="w-full max-w-6xl pb-4 mb-6 border-b border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black text-white flex items-center gap-2">
+                <span>🎨</span> Danphe-UI Responsive Redesign
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">TitanAnimationStudio + TitanTypographyStudio (Fluid Mobile & Desktop Breakpoints)</p>
+        </div>
+
+        <!-- Viewport Width Presets -->
+        <div class="flex items-center gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-700 text-xs font-bold">
+            <button onclick="setContainerWidth('360px', this)" class="mode-pill px-3 py-1.5 rounded-lg text-slate-300">📱 Mobile (360px)</button>
+            <button onclick="setContainerWidth('540px', this)" class="mode-pill px-3 py-1.5 rounded-lg text-slate-300">📟 Phablet (540px)</button>
+            <button onclick="setContainerWidth('768px', this)" class="mode-pill px-3 py-1.5 rounded-lg text-slate-300">💻 Tablet (768px)</button>
+            <button onclick="setContainerWidth('100%', this)" class="mode-pill active px-3 py-1.5 rounded-lg">🖥️ Desktop (100%)</button>
+        </div>
+    </header>
+
+    <!-- Resizable Test Container -->
+    <main id="responsive-wrapper" class="w-full max-w-6xl transition-all duration-300 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        
+        <!-- Component 1: TitanAnimationStudio -->
+        <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 shadow-2xl flex flex-col gap-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                <span class="text-xs font-black text-sky-400 flex items-center gap-1.5">
+                    <span>🎬</span> TitanAnimationStudio.jsx
+                </span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">PCB Ready</span>
+            </div>
+            <div id="anim-host" class="w-full">
+                
+<div id="test-anim-suite" class="titan-anim-root font-mono select-none" data-active-tab="in">
+    <style id="titan-anim-studio-css">
+    /* ═══════ Titan Animation Studio Styles ═══════ */
+    .titan-anim-root {
+        background: radial-gradient(circle at 50% 0%, #151c28 0%, #080c14 100%);
+        border: 1.5px solid #1e2d42;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 1px 0 rgba(56,189,248,0.2);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: clamp(8px, 2.5vw, 14px);
+        margin-bottom: 8px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .titan-anim-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #1a2638;
+        padding-bottom: 6px;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .titan-anim-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #38bdf8;
+        font-size: clamp(10px, 2.2vw, 12px);
+        font-weight: 900;
+        letter-spacing: 0.08em;
+    }
+    .titan-anim-chip {
+        font-size: 8.5px;
+        background: #0b1f38;
+        color: #7dd3fc;
+        border: 1px solid #0284c7;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-weight: 800;
+    }
+
+    /* 3-Tab Bar: IN / OVERALL / OUT */
+    .anim-tab-bar {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        background: #05080e;
+        padding: 4px;
+        border-radius: 8px;
+        border: 1px solid #141f30;
+    }
+    @media (max-width: 360px) {
+        .anim-tab-bar {
+            grid-template-columns: 1fr;
+            gap: 3px;
+        }
+    }
+    .anim-tab-btn {
+        background: transparent;
+        border: none;
+        color: #64748b;
+        padding: 7px 4px;
+        min-height: 32px;
+        font-size: clamp(8.5px, 2vw, 10px);
+        font-weight: 800;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .anim-tab-btn:hover { color: #cbd5e1; background: #0c1424; }
+    .anim-tab-btn.active {
+        background: #0284c7;
+        color: #ffffff;
+        box-shadow: 0 0 10px rgba(2,132,199,0.5);
+    }
+    .anim-tab-btn.tab-overall.active {
+        background: #8b5cf6;
+        box-shadow: 0 0 10px rgba(139,92,246,0.5);
+    }
+    .anim-tab-btn.tab-out.active {
+        background: #e11d48;
+        box-shadow: 0 0 10px rgba(225,29,72,0.5);
+    }
+
+    /* Fluid Responsive Preset Grids */
+    .anim-preset-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+        gap: 6px;
+        margin-top: 6px;
+    }
+    @media (max-width: 340px) {
+        .anim-preset-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @media (min-width: 580px) {
+        .anim-preset-grid {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+        }
+    }
+    .anim-card-btn {
+        background: #0c121e;
+        border: 1px solid #1a2638;
+        border-radius: 8px;
+        padding: clamp(6px, 1.5vw, 10px) 4px;
+        min-height: 48px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        cursor: pointer;
+        transition: all 0.15s;
+        color: #94a3b8;
+    }
+    .anim-card-btn:hover {
+        border-color: #38bdf8;
+        background: #111c30;
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    .anim-card-btn.active {
+        border-color: #38bdf8;
+        background: rgba(2,132,199,0.22);
+        color: #38bdf8;
+        box-shadow: 0 0 10px rgba(56,189,248,0.35);
+    }
+    .anim-card-ico {
+        font-size: clamp(14px, 2.5vw, 18px);
+    }
+    .anim-card-title {
+        font-size: clamp(8.5px, 1.8vw, 10px);
+        font-weight: 800;
+        text-align: center;
+        white-space: normal;
+        line-height: 1.15;
+    }
+
+    /* Duration & Easing Sliders */
+    .anim-prop-box {
+        background: #090e18;
+        border: 1px solid #162234;
+        border-radius: 8px;
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        margin-top: 6px;
+    }
+    .anim-prop-box input[type="range"] {
+        height: 24px;
+        cursor: pointer;
+        accent-color: #38bdf8;
+    }
+    </style>
+
+    <!-- Header -->
+    <div class="titan-anim-header">
+        <div class="titan-anim-title">
+            <span>🎬 MOTION & TRANSITIONS</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+            <span class="titan-anim-chip">0x4500 REG</span>
+            <button type="button" class="btn-reset" onclick="window.titanAnimResetActiveLayer('test-anim-suite')">Reset</button>
+        </div>
+    </div>
+
+    <!-- 3 Tabs: IN / OVERALL / OUT -->
+    <div class="anim-tab-bar">
+        <button type="button" class="anim-tab-btn active" id="test-anim-suite-tab-in" onclick="window.titanAnimSwitchTab('test-anim-suite', 'in')">1. IN (ENTRANCE)</button>
+        <button type="button" class="anim-tab-btn tab-overall" id="test-anim-suite-tab-overall" onclick="window.titanAnimSwitchTab('test-anim-suite', 'overall')">2. OVERALL (LOOP)</button>
+        <button type="button" class="anim-tab-btn tab-out" id="test-anim-suite-tab-out" onclick="window.titanAnimSwitchTab('test-anim-suite', 'out')">3. OUT (EXIT)</button>
+    </div>
+
+    <!-- PAGE 1: IN ANIMATIONS -->
+    <div class="anim-page-view" id="test-anim-suite-page-in">
+        <div class="anim-preset-grid">
+            <button type="button" class="anim-card-btn active" id="test-anim-suite-in-none" onclick="window.titanAnimSetIn('test-anim-suite', 'none')">
+                <span class="anim-card-ico">🚫</span>
+                <span class="anim-card-title">None</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-in-fade" onclick="window.titanAnimSetIn('test-anim-suite', 'fade_in')">
+                <span class="anim-card-ico">✨</span>
+                <span class="anim-card-title">Fade In</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-in-slide-up" onclick="window.titanAnimSetIn('test-anim-suite', 'slide_up')">
+                <span class="anim-card-ico">⬆️</span>
+                <span class="anim-card-title">Slide Up</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-in-slide-left" onclick="window.titanAnimSetIn('test-anim-suite', 'slide_left')">
+                <span class="anim-card-ico">⬅️</span>
+                <span class="anim-card-title">Slide Left</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-in-zoom-pop" onclick="window.titanAnimSetIn('test-anim-suite', 'zoom_pop')">
+                <span class="anim-card-ico">💥</span>
+                <span class="anim-card-title">Zoom Pop</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-in-spin-360" onclick="window.titanAnimSetIn('test-anim-suite', 'spin_360')">
+                <span class="anim-card-ico">🌀</span>
+                <span class="anim-card-title">Spin 360</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-in-bounce" onclick="window.titanAnimSetIn('test-anim-suite', 'bounce_in')">
+                <span class="anim-card-ico">🏀</span>
+                <span class="anim-card-title">Bounce In</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-in-flip-3d" onclick="window.titanAnimSetIn('test-anim-suite', 'flip_3d')">
+                <span class="anim-card-ico">🃏</span>
+                <span class="anim-card-title">3D Flip</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-in-wipe-rt" onclick="window.titanAnimSetIn('test-anim-suite', 'wipe_right')">
+                <span class="anim-card-ico">🎬</span>
+                <span class="anim-card-title">Cinema Wipe</span>
+            </button>
+        </div>
+
+        <div class="anim-prop-box">
+            <div class="flex justify-between text-[9.5px] font-bold text-slate-300">
+                <span>IN DURATION (0x4501)</span>
+                <span id="test-anim-suite-in-dur-val" class="text-cyan-400">0.8 s</span>
+            </div>
+            <input type="range" min="1" max="40" value="8" class="zoom-slider w-full" oninput="window.titanAnimSetInDur('test-anim-suite', this.value)" />
+        </div>
+    </div>
+
+    <!-- PAGE 2: OVERALL ANIMATIONS -->
+    <div class="anim-page-view" id="test-anim-suite-page-overall" style="display:none;">
+        <div class="anim-preset-grid">
+            <button type="button" class="anim-card-btn active" id="test-anim-suite-ov-none" onclick="window.titanAnimSetOverall('test-anim-suite', 'none')">
+                <span class="anim-card-ico">🚫</span>
+                <span class="anim-card-title">None</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-ov-float" onclick="window.titanAnimSetOverall('test-anim-suite', 'float_drift')">
+                <span class="anim-card-ico">🌊</span>
+                <span class="anim-card-title">Float Drift</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-ov-pulse" onclick="window.titanAnimSetOverall('test-anim-suite', 'pulse_heart')">
+                <span class="anim-card-ico">💓</span>
+                <span class="anim-card-title">Pulse Beat</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-ov-spin-slow" onclick="window.titanAnimSetOverall('test-anim-suite', 'spin_loop')">
+                <span class="anim-card-ico">🌍</span>
+                <span class="anim-card-title">Slow Spin</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-ov-wiggle" onclick="window.titanAnimSetOverall('test-anim-suite', 'wiggle_shake')">
+                <span class="anim-card-ico">⚡</span>
+                <span class="anim-card-title">Wiggle Jitter</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-ov-breathe" onclick="window.titanAnimSetOverall('test-anim-suite', 'glow_breathe')">
+                <span class="anim-card-ico">💡</span>
+                <span class="anim-card-title">Glow Breathe</span>
+            </button>
+        </div>
+
+        <div class="anim-prop-box">
+            <div class="flex justify-between text-[9.5px] font-bold text-purple-300">
+                <span>LOOP SPEED (0x4511)</span>
+                <span id="test-anim-suite-ov-spd-val" class="text-purple-400">1.0 x</span>
+            </div>
+            <input type="range" min="2" max="30" value="10" class="zoom-slider w-full" oninput="window.titanAnimSetOverallSpeed('test-anim-suite', this.value)" />
+        </div>
+    </div>
+
+    <!-- PAGE 3: OUT ANIMATIONS -->
+    <div class="anim-page-view" id="test-anim-suite-page-out" style="display:none;">
+        <div class="anim-preset-grid">
+            <button type="button" class="anim-card-btn active" id="test-anim-suite-out-none" onclick="window.titanAnimSetOut('test-anim-suite', 'none')">
+                <span class="anim-card-ico">🚫</span>
+                <span class="anim-card-title">None</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-out-fade" onclick="window.titanAnimSetOut('test-anim-suite', 'fade_out')">
+                <span class="anim-card-ico">🌫️</span>
+                <span class="anim-card-title">Fade Out</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-out-slide-down" onclick="window.titanAnimSetOut('test-anim-suite', 'slide_down')">
+                <span class="anim-card-ico">⬇️</span>
+                <span class="anim-card-title">Slide Down</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-out-slide-right" onclick="window.titanAnimSetOut('test-anim-suite', 'slide_right')">
+                <span class="anim-card-ico">➡️</span>
+                <span class="anim-card-title">Slide Right</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-out-zoom-shrink" onclick="window.titanAnimSetOut('test-anim-suite', 'zoom_shrink')">
+                <span class="anim-card-ico">🕳️</span>
+                <span class="anim-card-title">Zoom Shrink</span>
+            </button>
+            <button type="button" class="anim-card-btn" id="test-anim-suite-out-spin-out" onclick="window.titanAnimSetOut('test-anim-suite', 'spin_out')">
+                <span class="anim-card-ico">💫</span>
+                <span class="anim-card-title">Spin Out</span>
+            </button>
+        </div>
+
+        <div class="anim-prop-box">
+            <div class="flex justify-between text-[9.5px] font-bold text-rose-300">
+                <span>OUT DURATION (0x4521)</span>
+                <span id="test-anim-suite-out-dur-val" class="text-rose-400">0.8 s</span>
+            </div>
+            <input type="range" min="1" max="40" value="8" class="zoom-slider w-full" oninput="window.titanAnimSetOutDur('test-anim-suite', this.value)" />
+        </div>
+    </div>
+</div>
+
+            </div>
+        </div>
+
+        <!-- Component 2: TitanTypographyStudio -->
+        <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 shadow-2xl flex flex-col gap-3">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                <span class="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                    <span>🖋️</span> TitanTypographyStudio.jsx
+                </span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">16-Bit Bitmask</span>
+            </div>
+            <div id="typo-host" class="w-full">
+                <style>
+/* ═══════════════════════════════════════════════════════════════════
+   🖋️ TITAN TYPOGRAPHY STUDIO — LUXURY PHOTOSHOP-BEATING CSS
+   ═══════════════════════════════════════════════════════════════════ */
+.titan-typo-rack {
+    background: radial-gradient(circle at 50% 0%, #141c2b 0%, #070c18 100%);
+    border: 1.5px solid #1e2f4a;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.85), inset 0 1px 0 rgba(56,189,248,0.2);
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+}
+.titan-typo-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; background: linear-gradient(180deg, #0f172a 0%, #090d16 100%);
+    border-bottom: 1px solid #1e293b;
+    flex-wrap: wrap; gap: 6px;
+}
+.typo-title-box { display: flex; align-items: center; gap: 8px; }
+.typo-chip {
+    font-family: monospace; font-size: 9px; font-weight: 900;
+    padding: 2px 6px; border-radius: 4px; background: #0369a1; color: #7dd3fc;
+}
+.typo-bitmask-badge {
+    font-family: monospace; font-size: 10.5px; font-weight: 800;
+    padding: 3px 8px; border-radius: 6px; background: #020617; border: 1px solid #1e293b;
+    color: #38bdf8; display: flex; align-items: center; gap: 5px;
+}
+.typo-bitmask-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+
+/* ── Live Visual Text Canvas / Stage ── */
+.typo-preview-stage {
+    background: radial-gradient(circle at 50% 50%, #0b1324 0%, #03060d 100%);
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255,255,255,0.03) 19px, rgba(255,255,255,0.03) 20px),
+                      repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(255,255,255,0.03) 19px, rgba(255,255,255,0.03) 20px);
+    border: 1px solid #162035; border-radius: 12px; margin: clamp(8px, 2vw, 14px); min-height: clamp(80px, 16vh, 130px);
+    display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+    box-shadow: inset 0 4px 20px rgba(0,0,0,0.9);
+    padding: 12px;
+}
+.typo-stage-watermark {
+    position: absolute; bottom: 6px; right: 10px; font-family: monospace; font-size: 8.5px;
+    color: #334155; letter-spacing: 0.1em; pointer-events: none;
+}
+.typo-live-text {
+    text-align: center; line-height: 1.15; cursor: default; user-select: none;
+    transition: all 0.15s ease-out; position: relative; z-index: 5; max-width: 95%;
+    word-break: break-word;
+    font-size: clamp(18px, 4.5vw, 42px) !important;
+}
+
+/* ── Bitmask Toggle Ribbon ── */
+.typo-bit-ribbon {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; padding: 0 clamp(8px, 2vw, 14px);
+}
+@media (max-width: 440px) {
+    .typo-bit-ribbon {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+    }
+}
+.typo-bit-btn {
+    background: #0b1324; border: 1px solid #1e293b; border-radius: 6px; color: #94a3b8;
+    padding: 6px 2px; min-height: 38px; font-family: monospace; font-size: 10px; font-weight: 800;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s;
+}
+.typo-bit-btn .bit-val { font-size: 8px; opacity: 0.6; margin-top: 1px; }
+.typo-bit-btn:hover { background: #141f36; color: #fff; border-color: #334155; }
+.typo-bit-btn.active {
+    background: linear-gradient(135deg, rgba(2,132,199,0.35), rgba(14,165,233,0.15));
+    border-color: #0284c7; color: #38bdf8; box-shadow: 0 0 12px rgba(56,189,248,0.35);
+}
+
+/* ── Hollywood Presets Carousel ── */
+.typo-presets-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 6px; padding: 10px clamp(8px, 2vw, 14px);
+}
+@media (max-width: 380px) {
+    .typo-presets-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.typo-preset-card {
+    background: #080e1c; border: 1px solid #1a2742; border-radius: 8px; padding: 7px 8px;
+    cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 3px;
+    min-height: 44px;
+}
+.typo-preset-card:hover { border-color: #38bdf8; background: #0c172e; transform: translateY(-1px); }
+.typo-preset-card.active { border-color: #0284c7; background: #0e1c38; box-shadow: 0 0 14px rgba(2,132,199,0.4); }
+.typo-preset-title { font-size: 9.5px; font-weight: 800; color: #e2e8f0; letter-spacing: 0.04em; }
+.typo-preset-sample { font-size: 12px; font-weight: 900; line-height: 1.2; }
+
+/* ── Precision Sliders & Color Selectors ── */
+.typo-controls-body {
+    padding: 0 clamp(8px, 2vw, 14px) 14px; display: flex; flex-direction: column; gap: 10px;
+}
+.typo-field-row {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+}
+.typo-input-text {
+    flex: 1 1 140px; min-width: 0; background: #060b16; border: 1px solid #1e293b; border-radius: 6px;
+    padding: 7px 10px; color: #fff; font-size: 12px; font-weight: 700; outline: none;
+    transition: all 0.15s;
+}
+.typo-input-text:focus { border-color: #0284c7; box-shadow: 0 0 10px rgba(2,132,199,0.4); }
+.typo-font-select {
+    flex: 1 1 130px; min-width: 120px; width: auto; background: #060b16; border: 1px solid #1e293b; border-radius: 6px;
+    padding: 7px 8px; color: #38bdf8; font-size: 11px; font-weight: 700; outline: none; cursor: pointer;
+}
+
+/* Animations */
+@keyframes typo-neon-pulse {
+    0%, 100% { filter: drop-shadow(0 0 10px var(--glow-color)) drop-shadow(0 0 25px var(--glow-color)); }
+    50% { filter: drop-shadow(0 0 4px var(--glow-color)) drop-shadow(0 0 12px var(--glow-color)); opacity: 0.88; }
+}
+.anim-neon-pulse { animation: typo-neon-pulse 1.8s infinite ease-in-out; }
+
+@keyframes typo-glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
+}
+.anim-glitch-fx { animation: typo-glitch 0.4s infinite; }
+</style>
+<div id="test-typo-suite" class="titan-typo-rack font-mono select-none" data-bitmask="901" data-font-size="64" data-tracking="4" data-stroke="2" data-extrude="6" data-shadow-blur="18" data-shadow-dist="8" data-shadow-angle="45"><div class="titan-typo-header"><div class="typo-title-box"><span class="typo-chip">TITAN 16-BIT</span><span class="text-xs font-black text-white uppercase tracking-wider">Photoshop-Grade Typography</span></div><div class="typo-bitmask-badge" title="Hardware 16-Bit Register 0x4210"><span class="dot"></span><span id="test-typo-suite-bitmask-val">REG: 0x0385</span></div></div><div class="typo-preview-stage" id="test-typo-suite-stage"><div class="typo-stage-watermark">16-BIT GPU SHADER RENDER</div><div class="typo-live-text" id="test-typo-suite-live-text">DANPHE CINEMA 4K</div></div><div style="padding: 0 12px 8px;"><div class="typo-field-row"><input type="text" id="test-typo-suite-input-string" class="typo-input-text" value="DANPHE CINEMA 4K" placeholder="Enter Title String..." oninput="window.titanTypoUpdateText('test-typo-suite', this.value)" /><select id="test-typo-suite-select-font" class="typo-font-select" onchange="window.titanTypoSetFontFamily('test-typo-suite', this.value)"><option value="Impact, sans-serif" selected>Impact Heavy</option><option value="-apple-system, BlinkMacSystemFont, sans-serif">Modern Clean</option><option value="Georgia, serif">Cinema Serif</option><option value="monospace">Retro Terminal</option><option value='"Mukti", "Preeti", "Kalimati", sans-serif'>Nepali Unicode</option></select></div></div><div class="typo-bit-ribbon"><button type="button" class="typo-bit-btn active" id="test-typo-suite-bit-BOLD" onclick="window.titanTypoToggleBit('test-typo-suite', 1, 'BOLD')" title="Bold (Bit 0x0001)"><span>B</span><span class="bit-val">0x1</span></button><button type="button" class="typo-bit-btn" id="test-typo-suite-bit-ITALIC" onclick="window.titanTypoToggleBit('test-typo-suite', 2, 'ITALIC')" title="Italic (Bit 0x0002)"><span>I</span><span class="bit-val">0x2</span></button><button type="button" class="typo-bit-btn active" id="test-typo-suite-bit-ALL_CAPS" onclick="window.titanTypoToggleBit('test-typo-suite', 4, 'ALL_CAPS')" title="All Caps (Bit 0x0004)"><span>AA</span><span class="bit-val">0x4</span></button><button type="button" class="typo-bit-btn" id="test-typo-suite-bit-GLOW_ACTIVE" onclick="window.titanTypoToggleBit('test-typo-suite', 64, 'GLOW_ACTIVE')" title="Neon Glow (Bit 0x0040)"><span>GLOW</span><span class="bit-val">0x40</span></button><button type="button" class="typo-bit-btn active" id="test-typo-suite-bit-EXTRUDE_3D" onclick="window.titanTypoToggleBit('test-typo-suite', 128, 'EXTRUDE_3D')" title="3D Bevel (Bit 0x0080)"><span>3D</span><span class="bit-val">0x80</span></button><button type="button" class="typo-bit-btn active" id="test-typo-suite-bit-METALLIC_GRADIENT" onclick="window.titanTypoToggleBit('test-typo-suite', 256, 'METALLIC_GRADIENT')" title="Metallic (Bit 0x0100)"><span>GRAD</span><span class="bit-val">0x100</span></button></div><div class="typo-presets-grid"><div class="typo-preset-card active" id="test-typo-suite-preset-cinema_gold" onclick="window.titanTypoApplyPreset('test-typo-suite', 'cinema_gold')" title="Apply Cinema 24K Gold Preset"><span class="typo-preset-title">Cinema 24K Gold</span><span class="typo-preset-sample" style="color:#fbbf24; text-shadow:0 0 6px #f59e0b;">Aa TITAN</span></div><div class="typo-preset-card" id="test-typo-suite-preset-cyberpunk" onclick="window.titanTypoApplyPreset('test-typo-suite', 'cyberpunk')" title="Apply Cyberpunk Neon Preset"><span class="typo-preset-title">Cyberpunk Neon</span><span class="typo-preset-sample" style="color:#00f0ff; text-shadow:0 0 6px #00f0ff;">Aa TITAN</span></div><div class="typo-preset-card" id="test-typo-suite-preset-netflix" onclick="window.titanTypoApplyPreset('test-typo-suite', 'netflix')" title="Apply Netflix Trailer Preset"><span class="typo-preset-title">Netflix Trailer</span><span class="typo-preset-sample" style="color:#e50914; text-shadow:0 0 6px #e50914;">Aa TITAN</span></div><div class="typo-preset-card" id="test-typo-suite-preset-synthwave" onclick="window.titanTypoApplyPreset('test-typo-suite', 'synthwave')" title="Apply 80s Synthwave Preset"><span class="typo-preset-title">80s Synthwave</span><span class="typo-preset-sample" style="color:#38bdf8; text-shadow:0 0 6px #ec4899;">Aa TITAN</span></div><div class="typo-preset-card" id="test-typo-suite-preset-titanium" onclick="window.titanTypoApplyPreset('test-typo-suite', 'titanium')" title="Apply Brushed Titanium Preset"><span class="typo-preset-title">Brushed Titanium</span><span class="typo-preset-sample" style="color:#94a3b8; text-shadow:0 0 6px #38bdf8;">Aa TITAN</span></div><div class="typo-preset-card" id="test-typo-suite-preset-himalaya" onclick="window.titanTypoApplyPreset('test-typo-suite', 'himalaya')" title="Apply Himalayan Sangri-La Preset"><span class="typo-preset-title">Himalayan Sangri-La</span><span class="typo-preset-sample" style="color:#ea580c; text-shadow:0 0 6px #f97316;">Aa TITAN</span></div></div><div class="typo-controls-body"><div class="flex flex-col gap-1"><div class="flex justify-between text-[10px] font-bold text-slate-400"><span>FONT SIZE (0x4200)</span><span id="test-typo-suite-lbl-fontsize" class="text-cyan-400 font-black">64 px</span></div><input type="range" min="16" max="140" value="64" class="zoom-slider w-full" oninput="window.titanTypoSetSlider('test-typo-suite', 'fontSize', +this.value, 'px', 'test-typo-suite-lbl-fontsize', 0x4200)" /></div><div class="flex flex-col gap-1"><div class="flex justify-between text-[10px] font-bold text-slate-400"><span>OPTICAL TRACKING (0x4201)</span><span id="test-typo-suite-lbl-tracking" class="text-purple-400 font-black">+4 px</span></div><input type="range" min="-4" max="40" value="4" class="zoom-slider w-full" oninput="window.titanTypoSetSlider('test-typo-suite', 'tracking', +this.value, 'px', 'test-typo-suite-lbl-tracking', 0x4201)" /></div><div class="flex flex-col gap-1"><div class="flex justify-between text-[10px] font-bold text-slate-400"><span>3D BEVEL EXTRUDE (0x4206)</span><span id="test-typo-suite-lbl-extrude" class="text-amber-400 font-black">6 px</span></div><input type="range" min="0" max="20" value="6" class="zoom-slider w-full" oninput="window.titanTypoSetSlider('test-typo-suite', 'extrude', +this.value, 'px', 'test-typo-suite-lbl-extrude', 0x4206)" /></div><div class="flex flex-col gap-1"><div class="flex justify-between text-[10px] font-bold text-slate-400"><span>OUTLINE STROKE (0x4202)</span><span id="test-typo-suite-lbl-stroke" class="text-rose-400 font-black">2 px</span></div><input type="range" min="0" max="16" value="2" class="zoom-slider w-full" oninput="window.titanTypoSetSlider('test-typo-suite', 'stroke', +this.value, 'px', 'test-typo-suite-lbl-stroke', 0x4202)" /></div></div></div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        function setContainerWidth(w, btn) {
+            const wrap = document.getElementById('responsive-wrapper');
+            wrap.style.maxWidth = w;
+            if (w === '360px' || w === '540px') {
+                wrap.classList.remove('md:grid-cols-2');
+                wrap.classList.add('grid-cols-1');
+            } else {
+                wrap.classList.add('md:grid-cols-2');
+            }
+            document.querySelectorAll('.mode-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // Global stubs for onclick handlers
+        window.titanAnimSwitchTab = function(rootId, tab) {
+            document.querySelectorAll('.anim-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(rootId + '-tab-' + tab).classList.add('active');
+            ['in', 'overall', 'out'].forEach(t => {
+                const p = document.getElementById(rootId + '-page-' + t);
+                if (p) p.style.display = (t === tab ? 'block' : 'none');
+            });
+        };
+        window.titanAnimSetIn = function(rootId, effect) {
+            document.querySelectorAll('#' + rootId + '-page-in .anim-card-btn').forEach(b => b.classList.remove('active'));
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+        };
+        window.titanAnimSetInDur = function(rootId, val) {
+            const el = document.getElementById(rootId + '-in-dur-val');
+            if (el) el.innerText = (val / 10).toFixed(1) + ' s';
+        };
+        window.titanTypoToggleBit = function(rootId, bit, key) {
+            const btn = document.getElementById(rootId + '-bit-' + key);
+            if (btn) btn.classList.toggle('active');
+        };
+        window.titanTypoSelectPreset = function(rootId, presetKey) {
+            document.querySelectorAll('.typo-preset-card').forEach(c => c.classList.remove('active'));
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+        };
+    </script>
+</body>
+</html>

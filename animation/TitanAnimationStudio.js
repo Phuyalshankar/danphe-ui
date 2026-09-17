@@ -26,8 +26,10 @@ function renderTitanAnimationStudio(options = {}) {
         display: flex;
         flex-direction: column;
         gap: 8px;
-        padding: 10px;
+        padding: clamp(8px, 2.5vw, 14px);
         margin-bottom: 8px;
+        width: 100%;
+        box-sizing: border-box;
     }
     .titan-anim-header {
         display: flex;
@@ -35,13 +37,15 @@ function renderTitanAnimationStudio(options = {}) {
         justify-content: space-between;
         border-bottom: 1px solid #1a2638;
         padding-bottom: 6px;
+        flex-wrap: wrap;
+        gap: 4px;
     }
     .titan-anim-title {
         display: flex;
         align-items: center;
         gap: 6px;
         color: #38bdf8;
-        font-size: 11px;
+        font-size: clamp(10px, 2.2vw, 12px);
         font-weight: 900;
         letter-spacing: 0.08em;
     }
@@ -50,7 +54,7 @@ function renderTitanAnimationStudio(options = {}) {
         background: #0b1f38;
         color: #7dd3fc;
         border: 1px solid #0284c7;
-        padding: 1px 6px;
+        padding: 2px 7px;
         border-radius: 4px;
         font-weight: 800;
     }
@@ -58,24 +62,34 @@ function renderTitanAnimationStudio(options = {}) {
     /* 3-Tab Bar: IN / OVERALL / OUT */
     .anim-tab-bar {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
         gap: 4px;
         background: #05080e;
-        padding: 3px;
+        padding: 4px;
         border-radius: 8px;
         border: 1px solid #141f30;
+    }
+    @media (max-width: 360px) {
+        .anim-tab-bar {
+            grid-template-columns: 1fr;
+            gap: 3px;
+        }
     }
     .anim-tab-btn {
         background: transparent;
         border: none;
         color: #64748b;
-        padding: 5px 2px;
-        font-size: 9.5px;
+        padding: 7px 4px;
+        min-height: 32px;
+        font-size: clamp(8.5px, 2vw, 10px);
         font-weight: 800;
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.15s;
         text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     .anim-tab-btn:hover { color: #cbd5e1; background: #0c1424; }
     .anim-tab-btn.active {
@@ -92,21 +106,34 @@ function renderTitanAnimationStudio(options = {}) {
         box-shadow: 0 0 10px rgba(225,29,72,0.5);
     }
 
-    /* Preset Grids */
+    /* Fluid Responsive Preset Grids */
     .anim-preset-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 5px;
-        margin-top: 4px;
+        grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+        gap: 6px;
+        margin-top: 6px;
+    }
+    @media (max-width: 340px) {
+        .anim-preset-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @media (min-width: 580px) {
+        .anim-preset-grid {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+        }
     }
     .anim-card-btn {
         background: #0c121e;
         border: 1px solid #1a2638;
-        border-radius: 7px;
-        padding: 7px 4px;
+        border-radius: 8px;
+        padding: clamp(6px, 1.5vw, 10px) 4px;
+        min-height: 48px;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
         gap: 4px;
         cursor: pointer;
         transition: all 0.15s;
@@ -116,21 +143,23 @@ function renderTitanAnimationStudio(options = {}) {
         border-color: #38bdf8;
         background: #111c30;
         color: #fff;
+        transform: translateY(-1px);
     }
     .anim-card-btn.active {
         border-color: #38bdf8;
-        background: rgba(2,132,199,0.2);
+        background: rgba(2,132,199,0.22);
         color: #38bdf8;
-        box-shadow: 0 0 8px rgba(56,189,248,0.3);
+        box-shadow: 0 0 10px rgba(56,189,248,0.35);
     }
     .anim-card-ico {
-        font-size: 14px;
+        font-size: clamp(14px, 2.5vw, 18px);
     }
     .anim-card-title {
-        font-size: 8.5px;
+        font-size: clamp(8.5px, 1.8vw, 10px);
         font-weight: 800;
         text-align: center;
-        white-space: nowrap;
+        white-space: normal;
+        line-height: 1.15;
     }
 
     /* Duration & Easing Sliders */
@@ -138,11 +167,16 @@ function renderTitanAnimationStudio(options = {}) {
         background: #090e18;
         border: 1px solid #162234;
         border-radius: 8px;
-        padding: 6px 8px;
+        padding: 8px 10px;
         display: flex;
         flex-direction: column;
-        gap: 3px;
-        margin-top: 4px;
+        gap: 5px;
+        margin-top: 6px;
+    }
+    .anim-prop-box input[type="range"] {
+        height: 24px;
+        cursor: pointer;
+        accent-color: #38bdf8;
     }
     </style>
 
