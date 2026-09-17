@@ -145,3 +145,13 @@ module.exports.TITAN_ANIM                  = TITAN_ANIM;
 module.exports.renderAdaptiveIconSVG       = renderAdaptiveIconSVG;
 module.exports.DanpheIcon                  = DanpheIcon;
 module.exports.danpheIcons                 = danpheIcons;
+
+// ── 🎴 Native SVG Cards ──
+const { renderTitanSvgAnimationCard } = require('./lib/TitanSvgAnimationCard');
+const { renderMasterCard, CARD_FLAGS } = require('./lib/TitanMasterCard');
+
+module.exports.renderTitanSvgAnimationCard = renderTitanSvgAnimationCard;
+module.exports.TitanSvgAnimationCard       = renderTitanSvgAnimationCard;
+module.exports.renderMasterCard            = renderMasterCard;
+module.exports.TitanMasterCard             = renderMasterCard;
+module.exports.CARD_FLAGS                  = CARD_FLAGS;
