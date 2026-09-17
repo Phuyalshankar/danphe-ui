@@ -121,3 +121,27 @@ module.exports.BREAKPOINTS       = _ui2.BREAKPOINTS;
 
 // Universal UB 2.0 Engine
 module.exports.ub = require('./src/ub');
+
+// ── 🎬 Danphe UI Studios, Cards & Icons ──
+const { renderTitanAnimationStudio, TitanAnimationStudio } = require('./animation/TitanAnimationStudio');
+const { renderTitanTypographyStudio, TitanTypographyStudio } = require('./lib/TitanTypographyStudio');
+const { TitanCardPCB } = require('./lib/TitanCardPCB');
+const { TitanAdaptiveIcon, TitanIcon, TITAN_ICON, TITAN_ANIM, renderAdaptiveIconSVG } = require('./lib/TitanAdaptiveIcon');
+const danpheIcons = require('./danphe_icons.json');
+
+const DanpheIcon = ({ name, size = 20, className = "" } = {}) => {
+    return `<svg width="${size}" height="${size}" class="${className}" viewBox="0 0 24 24"><use href="/danphe-ui/danphe-icons.svg#icon-${name}" /></svg>`;
+};
+
+module.exports.renderTitanAnimationStudio  = renderTitanAnimationStudio;
+module.exports.TitanAnimationStudio        = renderTitanAnimationStudio;
+module.exports.renderTitanTypographyStudio = renderTitanTypographyStudio;
+module.exports.TitanTypographyStudio       = renderTitanTypographyStudio;
+module.exports.TitanCardPCB                = TitanCardPCB;
+module.exports.TitanAdaptiveIcon           = TitanAdaptiveIcon;
+module.exports.TitanIcon                   = TitanIcon;
+module.exports.TITAN_ICON                  = TITAN_ICON;
+module.exports.TITAN_ANIM                  = TITAN_ANIM;
+module.exports.renderAdaptiveIconSVG       = renderAdaptiveIconSVG;
+module.exports.DanpheIcon                  = DanpheIcon;
+module.exports.danpheIcons                 = danpheIcons;

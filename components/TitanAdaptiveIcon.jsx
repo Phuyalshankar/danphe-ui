@@ -4,7 +4,8 @@
  * 🌟 TitanAdaptiveIcon React Component (danphe-ui)
  * Complete 256 Unique 8-Bit Vector Icons (with circle toggle)
  */
-const React = require('react');
+let React;
+try { React = require('react'); } catch (e) { React = typeof global !== 'undefined' ? global.React : (typeof window !== 'undefined' ? window.React : null); }
 const { renderAdaptiveIconSVG, TITAN_ANIM, TITAN_ICON } = require('../lib/TitanAdaptiveIcon');
 
 const TitanAdaptiveIcon = ({
