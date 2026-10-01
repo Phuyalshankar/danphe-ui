@@ -90,6 +90,42 @@ class TitanCompiler {
         let isRow = tag === 'row';
         let isCol = tag === 'column';
 
+        let isGradient = false;
+        let gradFromPal = 0, gradFromShade = 0;
+        let gradToPal = 0, gradToShade = 0;
+
+        // Parse inline styles & data attributes for gradient & shadow
+        let parsedStyle = {};
+        if (typeof props.style === 'string') {
+            props.style.split(';').forEach(rule => {
+                const parts = rule.split(':');
+                if (parts.length >= 2) {
+                    const k = parts[0].trim();
+                    const v = parts.slice(1).join(':').trim();
+                    if (k && v) parsedStyle[k] = v;
+                }
+            });
+        } else if (typeof props.style === 'object' && props.style !== null) {
+            parsedStyle = props.style;
+        }
+
+        const bgImg = parsedStyle['background-image'] || parsedStyle.backgroundImage || parsedStyle.background || '';
+        if (bgImg && (bgImg.includes('linear-gradient') || bgImg.includes('radial-gradient'))) {
+            isGradient = true;
+            sigFlags |= 0x01 | 0x10;
+        }
+        const bShadow = parsedStyle['box-shadow'] || parsedStyle.boxShadow || '';
+        if (bShadow && bShadow !== 'none') {
+            sigFlags |= 0x40;
+        }
+        if (props['data-titan-gradient']) {
+            isGradient = true;
+            sigFlags |= 0x01 | 0x10;
+        }
+        if (props['data-titan-shadow']) {
+            sigFlags |= 0x40;
+        }
+
         for (let i = 0; i < tokens.length; i++) {
             const t = tokens[i];
 
@@ -137,7 +173,26 @@ class TitanCompiler {
             else if (t.startsWith('mb-')) mb = this._parseUnits(t.slice(3));
             else if (t.startsWith('ml-')) ml = this._parseUnits(t.slice(3));
 
-            else if (t.startsWith('bg-')) {
+            else if (t.startsWith('from-')) {
+                const [pal, sh] = this._resolveColorAndShade(t.slice(5));
+                if (pal !== 0) {
+                    gradFromPal = pal;
+                    gradFromShade = sh;
+                    isGradient = true;
+                    sigFlags |= 0x01 | 0x10;
+                }
+            } else if (t.startsWith('to-')) {
+                const [pal, sh] = this._resolveColorAndShade(t.slice(3));
+                if (pal !== 0) {
+                    gradToPal = pal;
+                    gradToShade = sh;
+                    isGradient = true;
+                    sigFlags |= 0x01 | 0x10;
+                }
+            } else if (t.startsWith('bg-gradient-') || t.startsWith('gradient-')) {
+                isGradient = true;
+                sigFlags |= 0x01 | 0x10;
+            } else if (t.startsWith('bg-')) {
                 const clean = t.slice(3);
                 const [pal, sh] = this._resolveColorAndShade(clean);
                 if (pal !== 0) {
@@ -149,11 +204,15 @@ class TitanCompiler {
             else if (t === 'border') {
                 borderWidth = 1;
                 sigFlags |= 0x04;
-            } else if (t === 'border-b' || t === 'border-bottom' || t.startsWith('border-b-')) {
+            } else if (t === 'border-b' || t === 'border-bottom' || t.startsWith('border-b-') ||
+                       t === 'border-t' || t === 'border-top' || t.startsWith('border-t-') ||
+                       t === 'border-l' || t === 'border-left' || t.startsWith('border-l-') ||
+                       t === 'border-r' || t === 'border-right' || t.startsWith('border-r-')) {
                 borderWidth = 1;
                 sigFlags |= 0x04;
-                const sub = t.startsWith('border-b-') ? t.slice(9) : '';
-                if (sub) {
+                const parts = t.split('-');
+                if (parts.length > 2) {
+                    const sub = parts.slice(2).join('-');
                     if (!isNaN(parseInt(sub)) && !sub.includes('-')) {
                         borderWidth = parseInt(sub);
                     } else {
@@ -161,7 +220,7 @@ class TitanCompiler {
                         if (pal !== 0) borderPalette = pal;
                     }
                 }
-            } else if (t.startsWith('border-') && !t.startsWith('border-t-') && !t.startsWith('border-l-') && !t.startsWith('border-r-')) {
+            } else if (t.startsWith('border-')) {
                 const sub = t.slice(7);
                 if (!isNaN(parseInt(sub)) && !sub.includes('-')) {
                     borderWidth = parseInt(sub);
@@ -207,6 +266,11 @@ class TitanCompiler {
         }
 
         if (stateKey) sigFlags |= 0x08;
+
+        if (isGradient && bgPalette === 0 && gradFromPal !== 0) {
+            bgPalette = gradFromPal;
+            bgShade = gradFromShade;
+        }
 
         bin[0] = ((flexWeight & 0x0F) << 4) | (gravity & 0x0F);
         bin[1] = opcode;

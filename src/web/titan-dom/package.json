@@ -1,0 +1,29 @@
+{
+  "name": "titan-dom",
+  "version": "1.0.0",
+  "description": "Universal Zero-VDOM Reactive DOM, Component & Routing Engine for Titan Bus (TypeScript)",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && npm run bundle",
+    "watch": "tsc --watch",
+    "bundle": "npx esbuild src/index.ts --bundle --format=iife --global-name=TitanPackage --outfile=dist/titan-dom.browser.js",
+    "test": "tsc && node --test tests/titan_dom_test.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "keywords": [
+    "titan-bus",
+    "reactive-dom",
+    "zero-vdom",
+    "no-react",
+    "typescript",
+    "type-safe",
+    "components",
+    "router"
+  ],
+  "author": "Phuyalshankar",
+  "license": "MIT"
+}

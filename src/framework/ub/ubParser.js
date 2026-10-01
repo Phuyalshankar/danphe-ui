@@ -861,6 +861,26 @@ function parseTW(tw) {
             return;
         }
 
+        if (p.startsWith('bg-gradient-') || p.startsWith('gradient-')) {
+            props.isGradient = true;
+            props.gradientDir = p.replace(/^bg-gradient-to-/, '');
+            return;
+        }
+        if (p.startsWith('from-')) {
+            props.gradientFrom = p.slice(5);
+            props.isGradient = true;
+            return;
+        }
+        if (p.startsWith('to-')) {
+            props.gradientTo = p.slice(3);
+            props.isGradient = true;
+            return;
+        }
+        if (p.startsWith('via-')) {
+            props.gradientVia = p.slice(4);
+            return;
+        }
+
         if (p.startsWith('bg-')) {
             const colorPart = p.slice(3);
             if (colorPart === 'white') { props.bg = 'white'; return; }
@@ -1043,6 +1063,13 @@ function parseTW(tw) {
         if (p === 'text-2xl') { props.size = 32; return; }
         if (p === 'text-3xl') { props.size = 40; return; }
     });
+
+    if (props.isGradient) {
+        const from = props.gradientFrom || 'blue-500';
+        const to = props.gradientTo || 'indigo-600';
+        props.gradient = `linear-gradient(to right, ${from}, ${to})`;
+        if (!props.bg) props.bg = from;
+    }
 
     return props;
 }

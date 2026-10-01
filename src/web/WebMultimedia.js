@@ -106,8 +106,8 @@ class WebMultimedia {
 
         // 🎨 64-Channel HTML5 Canvas Video Engine for Web Browser Target (Opcode 0x61)
         window.initTitanWebCanvas = function() {
-            var canvas = document.querySelector('canvas') || document.querySelector('[type="0x61"]');
-            if (!canvas || canvas.getAttribute('data-titan-inited')) return;
+            var canvas = document.querySelector('canvas[data-nvr="true"]') || document.querySelector('canvas[type="0x61"]') || document.querySelector('[type="0x61"]');
+            if (!canvas || canvas.getAttribute('data-titan-inited') || canvas.getAttribute('data-nvr-ignore')) return;
             canvas.setAttribute('data-titan-inited', 'true');
 
             canvas.width = canvas.parentElement ? canvas.parentElement.clientWidth || 1280 : 1280;

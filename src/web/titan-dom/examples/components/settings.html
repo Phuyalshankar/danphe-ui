@@ -1,0 +1,40 @@
+<div class="page-content">
+    <h2>⚙️ High-Speed Form & System Settings</h2>
+    <p class="subtitle">Typing in these fields updates Titan Bus registers directly without React Virtual DOM diffing lag.</p>
+
+    <div class="card card-wide">
+        <form id="settingsForm" class="form-grid">
+            <div class="form-group">
+                <label>System Device Name (Register 3001):</label>
+                <input type="text" tb-bind="3001" name="deviceName" placeholder="e.g. ESP32-Pump-Station-1" class="input-text">
+            </div>
+
+            <div class="form-group">
+                <label>Admin Access Key (Register 3002):</label>
+                <input type="password" tb-bind="3002" name="accessKey" placeholder="Enter key..." class="input-text">
+            </div>
+
+            <div class="form-group">
+                <label>Star-Delta Transition Delay (Register 3003 - seconds):</label>
+                <input type="number" tb-bind="3003" name="starDeltaDelay" min="1" max="60" class="input-text">
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" tb-bind="3004" name="autoRestart">
+                    <span>Enable Auto-Restart on Low Voltage (Register 3004)</span>
+                </label>
+            </div>
+
+            <div class="btn-group">
+                <button type="button" tb-on:click="action:saveSettings" class="btn btn-primary">💾 Save Settings (Capture Registers)</button>
+                <button type="button" tb-on:click="action:resetSettings" class="btn btn-outline">🔄 Reset</button>
+            </div>
+        </form>
+
+        <div class="output-box mt-4">
+            <h4>Live Register Snapshot:</h4>
+            <pre id="formOutput">Data will appear here upon clicking Save...</pre>
+        </div>
+    </div>
+</div>

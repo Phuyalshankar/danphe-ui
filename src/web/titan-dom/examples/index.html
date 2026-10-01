@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titan-DOM — Universal Zero-VDOM Reactive Showcase</title>
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #10b981;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 50px; }
+
+        /* Navbar */
+        .navbar {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; }
+        .badge { background: #0369a1; font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; }
+        .nav-links { display: flex; gap: 12px; }
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+        .nav-link.active { color: white; background: var(--primary); font-weight: 600; }
+        .nav-status { display: flex; gap: 8px; }
+        .pill { background: #0f172a; border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; }
+        .pill-green { border-color: var(--accent); color: var(--accent); }
+
+        /* Content & Cards */
+        .view-container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+        .page-content h2 { margin-bottom: 6px; font-size: 1.6rem; }
+        .subtitle { color: var(--text-muted); margin-bottom: 24px; font-size: 0.95rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px;
+        }
+        .card-wide { grid-column: 1 / -1; }
+        .card h3 { font-size: 1.1rem; margin-bottom: 14px; color: #e2e8f0; }
+
+        /* Metrics & Controls */
+        .metric-display { display: flex; align-items: baseline; gap: 8px; margin: 15px 0; }
+        .huge-number { font-size: 3rem; font-weight: 800; color: #38bdf8; font-family: monospace; }
+        .unit { color: var(--text-muted); font-size: 1rem; }
+        .slider { width: 100%; height: 8px; margin: 15px 0 20px; accent-color: var(--primary); cursor: pointer; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { background: rgba(255,255,255,0.08); }
+        .btn-success { background: var(--accent); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+
+        .toggle-box {
+            padding: 20px;
+            border-radius: 8px;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            text-align: center;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+        .toggle-box.toggle-on {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .trackpad {
+            height: 180px;
+            background: #0f172a;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: crosshair;
+            margin-top: 15px;
+            gap: 12px;
+        }
+        .coords-pill {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #38bdf8;
+        }
+
+        /* Forms */
+        .form-grid { display: grid; gap: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-text {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .input-text:focus { border-color: var(--primary); }
+        .checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.95rem; }
+        .checkbox-label input { width: 18px; height: 18px; accent-color: var(--primary); }
+        .output-box pre {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            padding: 14px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #a7f3d0;
+            overflow-x: auto;
+        }
+        .mt-3 { margin-top: 12px; }
+        .mt-4 { margin-top: 18px; }
+    </style>
+</head>
+<body tb-app>
+
+    <!-- Component 1: Navbar (File-to-file component mounting) -->
+    <div tb-component="navbar"></div>
+
+    <!-- Main View Outlet for Titan Router -->
+    <main tb-view class="view-container">
+        <!-- Route views will be rendered here -->
+    </main>
+
+    <!-- Standalone Titan-DOM Browser Bundle -->
+    <script src="../dist/titan-dom.browser.js"></script>
+
+    <script>
+        // 🐬 Initialize Titan App with Router and Component Manager
+        const app = createTitanApp({
+            router: {
+                mode: "hash",
+                routeRegister: 990 // Maps active route to Register 990
+            }
+        });
+
+        async function startApp() {
+            // 1. Define / Load Components (File-to-file loading)
+            try {
+                await Promise.all([
+                    app.components.loadFile("navbar", "components/navbar.html"),
+                    app.components.loadFile("dashboard", "components/dashboard.html"),
+                    app.components.loadFile("settings", "components/settings.html")
+                ]);
+            } catch (err) {
+                console.warn("[TitanDOM] Failed to fetch components via HTTP, using fallback:", err);
+            }
+
+            // 2. Setup Routes
+            app.router
+                .add({ path: "/", component: "dashboard", title: "Dashboard - Titan-DOM", registerId: 1 })
+                .add({ path: "/dashboard", component: "dashboard", title: "Dashboard - Titan-DOM", registerId: 1 })
+                .add({ path: "/settings", component: "settings", title: "Settings - Titan-DOM", registerId: 2 });
+
+            // 3. Register Custom Action Handlers
+            app.engine.registerAction("saveSettings", ({ store }) => {
+                const data = app.engine.getFormData("#settingsForm");
+                const output = document.getElementById("formOutput");
+                if (output) {
+                    output.textContent = JSON.stringify(data, null, 2);
+                }
+                alert("✓ Settings saved directly from Titan Registers without React!");
+            });
+
+            app.engine.registerAction("resetSettings", ({ store }) => {
+                store.writeBatch({
+                    3001: "Default-Station",
+                    3002: "",
+                    3003: 10,
+                    3004: 0
+                });
+            });
+
+            // 4. Set Initial Store Defaults
+            app.store.writeBatch({
+                1001: 45,                  // Motor Speed 45%
+                1002: 0,                   // Relay Off
+                3001: "ESP32-Station-Alpha", // Device Name
+                3003: 7,                   // 7s Star-Delta
+                3004: 1                    // Auto restart on
+            });
+
+            // 5. Mount to DOM
+            await app.mount();
+        }
+
+        // Start the Application
+        startApp();
+    </script>
+</body>
+</html>

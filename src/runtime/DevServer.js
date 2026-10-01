@@ -48,6 +48,11 @@ class DolphinServer extends EventEmitter {
                             const action = payload.slice(1, 1 + actionLen).toString();
                             const value = payload.slice(1 + actionLen).toString();
                             this.emit('deviceAction', { id, action, value });
+                        } else if (cmd === 0x08 /* PATCH_STATE */) {
+                            const keyLen = payload[0];
+                            const key = payload.slice(1, 1 + keyLen).toString();
+                            const value = payload.slice(1 + keyLen).toString();
+                            this.emit('devicePatchState', { id, key, value });
                         } else if (cmd === 0x05 /* PONG */) {
                             // ignore
                         }
@@ -331,6 +336,10 @@ class DevServer extends EventEmitter {
             this._notify();
         });
 
+        this.server.on('devicePatchState', ({ id, key, value }) => {
+            this.patchState(null, key, value);
+        });
+
         this.server.on('deviceAction', ({ id, action, value }) => {
     let p = value;
     if (action.startsWith('input:bus_')) {
@@ -523,7 +532,13 @@ class DevServer extends EventEmitter {
                             }) || pageFiles[0];
 
                             const pagePath = path.join(pagesDir, matchedFile);
-                            delete require.cache[require.resolve(pagePath)];
+                            const watchNorm = (this.watchDir || '').replace(/\\/g, '/').toLowerCase();
+                            Object.keys(require.cache).forEach(k => {
+                                const kn = k.replace(/\\/g, '/').toLowerCase();
+                                if ((watchNorm && kn.includes(watchNorm)) || kn.includes('desktopstudio') || kn.includes('mobilestudio') || kn.includes('danphe2-video-editor')) {
+                                    delete require.cache[k];
+                                }
+                            });
                             const pageModule = require(pagePath);
                             const compFunc = typeof pageModule === 'function' ? pageModule : (pageModule.default || Object.values(pageModule)[0]);
                             if (typeof compFunc === 'function') {
@@ -545,7 +560,10 @@ class DevServer extends EventEmitter {
                                         try {
                                           const data = JSON.parse(e.data);
                                           if (data.type === 'reload') {
-                                            location.reload();
+                                            if (!window._lastDevReload || (Date.now() - window._lastDevReload > 300)) {
+                                              window._lastDevReload = Date.now();
+                                              location.reload();
+                                            }
                                           } else if (data.type === 'patch' && data.key) {
                                             const targets = document.querySelectorAll('[data-state-key="' + data.key + '"]');
                                             targets.forEach(function(el) {
@@ -2087,6 +2105,12 @@ class DevServer extends EventEmitter {
         this._patchCount++;
         const sent = this.server.broadcast(bundle, 0x01); // FULL_RELOAD
         console.log(`📡 PATCH → ${sent} devices (${bundle ? bundle.length : 0} bytes)`);
+        if (this.sseClients && this.sseClients.length > 0) {
+            const sseData = JSON.stringify({ type: 'reload' });
+            this.sseClients.forEach(client => {
+                try { client.write(`data: ${sseData}\n\n`); } catch(e) {}
+            });
+        }
     }
 
     pushScreenPatches(bundle, screens, entry) {
@@ -2106,12 +2130,24 @@ class DevServer extends EventEmitter {
             });
             console.log(`📡 All screens Hot Patched for device ${dev.id}`);
         });
+        if (this.sseClients && this.sseClients.length > 0) {
+            const sseData = JSON.stringify({ type: 'reload' });
+            this.sseClients.forEach(client => {
+                try { client.write(`data: ${sseData}\n\n`); } catch(e) {}
+            });
+        }
     }
 
     patchScreen(name, screen) {
         this._patchCount++;
         this.server.patchScreen(null, name, screen);
         console.log(`📡 SCREEN PATCH: ${name} → ${this.server.getConnectedDevices().length} devices`);
+        if (this.sseClients && this.sseClients.length > 0) {
+            const sseData = JSON.stringify({ type: 'reload' });
+            this.sseClients.forEach(client => {
+                try { client.write(`data: ${sseData}\n\n`); } catch(e) {}
+            });
+        }
     }
 }
 module.exports = { DevServer };

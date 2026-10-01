@@ -32,6 +32,24 @@ class WebCSS {
         .rounded-32 { border-radius: 2rem !important; }
         .rounded-full { border-radius: 9999px !important; }
 
+        /* Crisp Panel Border Rules */
+        .border { border: 1px solid #1e293b !important; }
+        .border-t { border-top: 1px solid #1e293b !important; }
+        .border-b { border-bottom: 1px solid #1e293b !important; }
+        .border-l { border-left: 1px solid #1e293b !important; }
+        .border-r { border-right: 1px solid #1e293b !important; }
+        .border-2 { border-width: 2px !important; }
+        .border-0 { border: none !important; }
+
+        .border-slate-700 { border-color: #334155 !important; }
+        .border-slate-800 { border-color: #1e293b !important; }
+        .border-slate-900 { border-color: #0f172a !important; }
+        .border-sky-500 { border-color: #0ea5e9 !important; }
+        .border-amber-500 { border-color: #f59e0b !important; }
+        .border-purple-500 { border-color: #a855f7 !important; }
+        .border-emerald-500 { border-color: #10b981 !important; }
+        .border-rose-500 { border-color: #f43f5e !important; }
+
         /* Web Slide-Over Drawer Rules */
         #dolphin-web-drawer { transform: translateX(-100%) !important; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important; }
         #dolphin-web-drawer.drawer-open { transform: translateX(0) !important; }
@@ -98,7 +116,28 @@ class WebCSS {
         .grid-cols-2 { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
         .grid-cols-3 { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
         .grid-cols-4 { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+        .grid-cols-5 { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+        .grid-cols-6 { display: grid !important; grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+        .grid-cols-12 { display: grid !important; grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
+        .col-span-1 { grid-column: span 1 / span 1 !important; }
+        .col-span-2 { grid-column: span 2 / span 2 !important; }
+        .col-span-3 { grid-column: span 3 / span 3 !important; }
+        .col-span-4 { grid-column: span 4 / span 4 !important; }
+        .col-span-5 { grid-column: span 5 / span 5 !important; }
+        .col-span-6 { grid-column: span 6 / span 6 !important; }
+        .col-span-7 { grid-column: span 7 / span 7 !important; }
+        .col-span-8 { grid-column: span 8 / span 8 !important; }
+        .col-span-9 { grid-column: span 9 / span 9 !important; }
+        .col-span-10 { grid-column: span 10 / span 10 !important; }
+        .col-span-11 { grid-column: span 11 / span 11 !important; }
+        .col-span-12 { grid-column: span 12 / span 12 !important; }
+        .aspect-video { aspect-ratio: 16 / 9 !important; }
+        .aspect-square { aspect-ratio: 1 / 1 !important; }
+        .select-none { user-select: none !important; -webkit-user-select: none !important; }
+        .gap-1 { gap: 4px !important; }
+        .gap-1\.5 { gap: 6px !important; }
         .gap-2 { gap: 8px !important; }
+        .gap-2\.5 { gap: 10px !important; }
         .gap-3 { gap: 12px !important; }
         .gap-4 { gap: 16px !important; }
         .gap-6 { gap: 24px !important; }

@@ -98,6 +98,7 @@ class UniversalUIImporter {
                          : (normAttributes.type ? normAttributes.type
                          : (comp.type === 'element' ? (comp.tag || '').toLowerCase() : comp.type));
             const explicitProps = comp.props ? { ...comp.props } : { ...comp, ...normAttributes };
+            if (explicitProps.class && !explicitProps.className) explicitProps.className = explicitProps.class;
 
             // Handle custom <state key="..." fallback="..." /> JSX elements
             if (compType === 'state' || (comp.type === 'element' && comp.tag === 'state')) {
@@ -112,9 +113,11 @@ class UniversalUIImporter {
             if (typeof compType === 'function') {
                 compType = compType.name || '';
             }
-            let rawTw = comp.props && comp.props.className ? comp.props.className
-                      : (normAttributes.classname ? normAttributes.classname
-                      : (comp.tw || comp.className || ''));
+            let rawTw = (comp.props && (comp.props.className || comp.props.class))
+                      ? (comp.props.className || comp.props.class)
+                      : (normAttributes.classname || normAttributes.class
+                      ? (normAttributes.classname || normAttributes.class)
+                      : (comp.tw || comp.className || comp.class || ''));
 
             // PLATFORM FILTERING: skip target="web" elements in Mobile Compiler
             const _target = explicitProps.target || comp.target || explicitProps.platform || comp.platform || '';
@@ -330,7 +333,7 @@ class UniversalUIImporter {
             const s = { t: 0, r: 0, b: 0, l: 0, mt: 0, mr: 0, mb: 0, ml: 0 };
 
             // Padding mapping
-            const pVal = props.p !== undefined ? props.p : twProps.p;
+            const pVal = props.p !== undefined ? props.p : (twProps.p !== undefined ? twProps.p : (props.padding !== undefined ? props.padding : undefined));
             if (pVal !== undefined) { const ps = ub.parseSpacing(pVal); s.t = ps.t; s.r = ps.r; s.b = ps.b; s.l = ps.l; }
             if (twProps.pt !== undefined) s.t = twProps.pt;
             if (twProps.pr !== undefined) s.r = twProps.pr;
@@ -585,7 +588,11 @@ class UniversalUIImporter {
             }
 
             // Byte 14: Radius (Full 8 bits)
-            bin[14] = (props.borderRadius || props.radius || 0) & 0xFF;
+            const radVal = props.borderRadius !== undefined ? props.borderRadius
+                         : (props.radius !== undefined ? props.radius
+                         : (twProps.radius !== undefined ? twProps.radius
+                         : (twProps.borderRadius !== undefined ? twProps.borderRadius : 0)));
+            bin[14] = (typeof radVal === 'number' ? radVal : parseInt(radVal, 10) || 0) & 0xFF;
 
             // Byte 15: Signature / Animation / Gradient Bits
             // Bit 0: Gradient | Bit 4: Animation ACTIVE (0x10) | Bit 7: Loop

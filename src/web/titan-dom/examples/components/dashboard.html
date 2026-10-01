@@ -1,0 +1,48 @@
+<div class="page-content">
+    <h2>⚡ Industrial Controller & Live Data Dashboard</h2>
+    <p class="subtitle">Every slider, button, and mouse movement writes directly to 16-bit Titan Registers in microseconds with <strong>0 KB React</strong>.</p>
+
+    <div class="grid-2">
+        <!-- Card 1: Motor / Pump Speed Controller -->
+        <div class="card">
+            <h3>🎛️ Motor Speed Control (Register 1001)</h3>
+            <div class="metric-display">
+                <span class="huge-number" tb-text="1001">50</span>
+                <span class="unit">RPM / %</span>
+            </div>
+            <label>Adjust Speed Slider:</label>
+            <input type="range" tb-bind="1001" min="0" max="100" class="slider">
+            <div class="btn-group">
+                <button tb-on:click="decrement:1001:5" class="btn btn-outline">-5</button>
+                <button tb-on:click="write:1001:0" class="btn btn-danger">STOP</button>
+                <button tb-on:click="increment:1001:5" class="btn btn-outline">+5</button>
+                <button tb-on:click="write:1001:100" class="btn btn-success">MAX</button>
+            </div>
+        </div>
+
+        <!-- Card 2: Relay & System Toggles -->
+        <div class="card">
+            <h3>💡 Relay Switch (Register 1002)</h3>
+            <div class="toggle-box" tb-class:toggle-on="1002">
+                <span>Relay State: <strong tb-text="1002">0</strong></span>
+            </div>
+            <div class="btn-group mt-3">
+                <button tb-on:click="toggle:1002" class="btn btn-primary">🔄 Toggle Relay</button>
+                <button tb-on:click="write:1002:1" class="btn btn-success">Turn ON</button>
+                <button tb-on:click="write:1002:0" class="btn btn-outline">Turn OFF</button>
+            </div>
+        </div>
+
+        <!-- Card 3: 120 FPS Mouse Tracker -->
+        <div class="card card-wide">
+            <h3>🎯 120 FPS Mouse & Touch Telemetry (Registers 2001, 2002)</h3>
+            <p>Move mouse or touch inside this box. Coordinates map to registers with zero React re-render overhead.</p>
+            <div class="trackpad" tb-on:mousemove="coords:2001:2002" tb-on:touchmove="coords:2001:2002">
+                <span>Touch / Move Mouse Here</span>
+                <div class="coords-pill">
+                    X [2001]: <strong tb-text="2001">0</strong> px | Y [2002]: <strong tb-text="2002">0</strong> px
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

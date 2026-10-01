@@ -8,6 +8,13 @@ const WebStateEngine = require('./WebStateEngine');
 const WebMultimedia = require('./WebMultimedia');
 const WebNavigation = require('./WebNavigation');
 
+let titanDomBundle = '';
+try {
+    titanDomBundle = fs.readFileSync(path.join(__dirname, 'titan-dom.browser.js'), 'utf8');
+} catch (e) {
+    titanDomBundle = '';
+}
+
 /**
  * DolphinWebEngine — Smart Universal Dual-Target Web & SEO Engine
  * Renders Dolphin Native JSX pages into Semantic HTML5 with 100% Google SEO indexing
@@ -115,8 +122,17 @@ class DolphinWebEngine {
             normAttrs[k.toLowerCase()] = rawAttrs[k];
         });
 
-        const props = { ...normAttrs, ...(vnode.props || {}) };
-        if (normAttrs.class && !props.className) props.className = normAttrs.class;
+        const props = {
+            ...normAttrs,
+            ...(vnode.stateKey ? { stateKey: vnode.stateKey } : {}),
+            ...(vnode.statekey ? { statekey: vnode.statekey } : {}),
+            ...(vnode.action ? { action: vnode.action } : {}),
+            ...(vnode.bus ? { bus: vnode.bus } : {}),
+            ...(vnode.props || {})
+        };
+        if (!props.className && (props.class || normAttrs.class)) {
+            props.className = props.class || normAttrs.class;
+        }
 
         // PLATFORM FILTERING: If tag is marked for target="mobile" or target="android", skip for Web HTML!
         const attrTarget = props.target || props.platform || '';
@@ -124,7 +140,7 @@ class DolphinWebEngine {
             return '';
         }
 
-        const children = props.children || vnode.children || [];
+        const children = props.children || vnode.children || vnode.text || [];
 
         // Determine HTML tag
         const compTypeProp = String(props.type || '').toLowerCase();
@@ -187,7 +203,7 @@ class DolphinWebEngine {
         if (rawTag === 'icon') {
             const iconName = props.name || props.icon || props.className || '';
             const faClass = iconName.startsWith('fa-') || iconName.includes('fa-') ? iconName : `fa-solid fa-${iconName}`;
-            const webClasses = String(props.className || '').replace(/\[(.*?)\]/g, '$1').replace(/\s+/g, ' ').trim();
+            const webClasses = String(props.className || '').replace(/\s+/g, ' ').trim();
             return `<i class="${faClass} ${this._escapeHTML(webClasses)}" style="${this._escapeHTML(inlineStyle)}"></i>`;
         }
 
@@ -198,7 +214,7 @@ class DolphinWebEngine {
                 if (!cleanSvg.includes('width=') && !cleanSvg.includes('width:')) {
                     cleanSvg = cleanSvg.replace('<svg ', '<svg width="100%" height="100%" ');
                 }
-                const webClasses = String(props.className || '').replace(/\[(.*?)\]/g, '$1').replace(/\s+/g, ' ').trim();
+                const webClasses = String(props.className || '').replace(/\s+/g, ' ').trim();
                 return `<div class="${this._escapeHTML(webClasses)}" style="display:inline-flex;align-items:center;justify-content:center;${this._escapeHTML(inlineStyle)}">${cleanSvg}</div>`;
             } else if (props.d || (svgContent && typeof svgContent === 'string' && !svgContent.startsWith('<svg') && svgContent.length > 5)) {
                 const pathD = props.d || svgContent;
@@ -207,7 +223,7 @@ class DolphinWebEngine {
                 const stroke = props.stroke || 'currentColor';
                 const fill = props.fill || 'none';
                 const cleanSvg = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${pathD}"/></svg>`;
-                const webClasses = String(props.className || '').replace(/\[(.*?)\]/g, '$1').replace(/\s+/g, ' ').trim();
+                const webClasses = String(props.className || '').replace(/\s+/g, ' ').trim();
                 return `<div class="${this._escapeHTML(webClasses)}" style="display:inline-flex;align-items:center;justify-content:center;${this._escapeHTML(inlineStyle)}">${cleanSvg}</div>`;
             }
         }
@@ -216,7 +232,7 @@ class DolphinWebEngine {
         const attrs = [];
         if (props.id) attrs.push(`id="${this._escapeHTML(props.id)}"`);
         if (props.className) {
-            const webClasses = String(props.className).replace(/\[(.*?)\]/g, '$1').replace(/\s+/g, ' ').trim();
+            const webClasses = String(props.className).replace(/\s+/g, ' ').trim();
             attrs.push(`class="${this._escapeHTML(webClasses)}"`);
         }
 
@@ -229,7 +245,15 @@ class DolphinWebEngine {
             }
         }
 
-        if (props.action) attrs.push(`data-action="${this._escapeHTML(props.action)}"`);
+        if (props.action) {
+            attrs.push(`data-action="${this._escapeHTML(props.action)}"`);
+            attrs.push(`tb-on:click="action:${this._escapeHTML(props.action)}"`);
+        }
+        if (props.bus || props['data-bus']) {
+            const bVal = props.bus || props['data-bus'];
+            attrs.push(`data-bus="${this._escapeHTML(bVal)}"`);
+            attrs.push(`tb-text="${this._escapeHTML(bVal)}"`);
+        }
         
         let extractedStateKey = props.statekey || props.stateKey || null;
         if (!extractedStateKey) {
@@ -242,7 +266,10 @@ class DolphinWebEngine {
                 extractedStateKey = trimmed.substring(10, trimmed.length - 1);
             }
         }
-        if (extractedStateKey) attrs.push(`data-state-key="${this._escapeHTML(extractedStateKey)}"`);
+        if (extractedStateKey) {
+            attrs.push(`data-state-key="${this._escapeHTML(extractedStateKey)}"`);
+            attrs.push(`tb-text="${this._escapeHTML(extractedStateKey)}"`);
+        }
         if (props.src) {
             let cleanSrc = String(props.src);
             if (cleanSrc.startsWith('[stateKey:') && cleanSrc.endsWith(']')) {
@@ -281,7 +308,10 @@ class DolphinWebEngine {
         if (htmlTag === 'input') {
             const inputType = props.type || 'text';
             attrs.push(`type="${this._escapeHTML(inputType)}"`);
-            if (extractedStateKey) attrs.push(`name="${this._escapeHTML(extractedStateKey)}"`);
+            if (extractedStateKey) {
+                attrs.push(`name="${this._escapeHTML(extractedStateKey)}"`);
+                attrs.push(`tb-bind="${this._escapeHTML(extractedStateKey)}"`);
+            }
             const initVal = extractedStateKey && stateMap[extractedStateKey] !== undefined
                 ? stateMap[extractedStateKey] : (props.value || props.defaultValue || '');
             if (initVal) attrs.push(`value="${this._escapeHTML(String(initVal))}"`);
@@ -298,7 +328,9 @@ class DolphinWebEngine {
         }
 
         let innerHTML = '';
-        if (typeof children === 'string' || typeof children === 'number') {
+        if (props.dangerouslySetInnerHTML && typeof props.dangerouslySetInnerHTML.__html === 'string') {
+            innerHTML = props.dangerouslySetInnerHTML.__html;
+        } else if (typeof children === 'string' || typeof children === 'number') {
             innerHTML = this._parseStateKeyString(String(children), stateMap);
         } else if (Array.isArray(children)) {
             innerHTML = children.map(c => this.vnodeToHTML(c, stateMap)).join('');
@@ -354,6 +386,36 @@ class DolphinWebEngine {
         const ogImage = seoConfig.ogImage || '';
         const canonicalUrl = seoConfig.canonicalUrl || '';
 
+        // 🐬 DYNAMICALLY LOAD DANPHE-UI 256 FONTS & 256 GPU ANIMATIONS
+        let danpheFontLinks = '';
+        let danpheAnimCss = '';
+        let danpheFontCss = '';
+        try {
+            let danpheUI = null;
+            try {
+                danpheUI = require('danphe-ui');
+            } catch (e) {
+                try {
+                    danpheUI = require(path.join(process.cwd(), 'node_modules', 'danphe-ui'));
+                } catch (e2) {
+                    danpheUI = null;
+                }
+            }
+            if (danpheUI) {
+                if (typeof danpheUI.getGoogleFontsLinkTags === 'function') {
+                    danpheFontLinks = danpheUI.getGoogleFontsLinkTags();
+                }
+                if (typeof danpheUI.generateAnimationCSS === 'function') {
+                    danpheAnimCss = danpheUI.generateAnimationCSS();
+                }
+                if (typeof danpheUI.generateFontCSS === 'function') {
+                    danpheFontCss = danpheUI.generateFontCSS();
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+
         const mergedInitialState = { ...WebStateEngine.getDefaultState(), ...initialState };
         const bodyHTML = this.vnodeToHTML(pageVNode, mergedInitialState);
 
@@ -374,10 +436,7 @@ class DolphinWebEngine {
     ${ogImage ? `<meta property="og:image" content="${this._escapeHTML(ogImage)}">` : ''}
     ${canonicalUrl ? `<link rel="canonical" href="${this._escapeHTML(canonicalUrl)}">` : ''}
 
-    <!-- Fonts, Icons & Tailwind CSS Web Engine -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&display=swap" rel="stylesheet">
+    <!-- 🇳🇵 Danphe UI Native Typography & Web Engine (100% Offline-First) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
@@ -389,6 +448,20 @@ class DolphinWebEngine {
     <style>
         ${WebCSS.getBaseStyles()}
     </style>
+
+    <!-- 🐬 DANPHE-UI 256 FONTS SUITE & 256 120FPS GPU ANIMATIONS -->
+    ${danpheFontLinks}
+    <style id="danphe-ui-animations">
+        ${danpheAnimCss}
+    </style>
+    <style id="danphe-ui-fonts">
+        ${danpheFontCss}
+    </style>
+
+    <!-- 🐬 TITAN-DOM High-Performance Zero-VDOM Engine -->
+    <script>
+    ${titanDomBundle}
+    </script>
 </head>
 <body>
     <div id="root">${bodyHTML}</div>
@@ -404,15 +477,33 @@ class DolphinWebEngine {
         var tempTimers = {};
         var stateListeners = [];
 
+        // 🌟 Seed Titan Register Store with Initial State
+        if (window.Titan && window.Titan.store) {
+          for (var k in state) {
+            window.Titan.write(k, state[k]);
+          }
+          window.Titan.store.on(-1, function(val, reg) {
+            state[reg] = val;
+          });
+        }
+
         ${WebNavigation.getClientScript()}
         ${WebMultimedia.getClientScript()}
 
         // 🌟 Expose Universal Reactive Hooks & NanoStore to Browser Window
         window.DolphinWebStore = {
           state: state,
-          get: function(key) { return state[key]; },
+          get: function(key) {
+            if (window.Titan && window.Titan.store) {
+              return window.Titan.read(key, state[key]);
+            }
+            return state[key];
+          },
           set: function(key, val) {
             state[key] = val;
+            if (window.Titan && window.Titan.store) {
+              window.Titan.write(key, val);
+            }
             updateDOM();
             stateListeners.forEach(function(l) { try { l(key, val); } catch (e) {} });
           },
@@ -424,6 +515,22 @@ class DolphinWebEngine {
               if (idx >= 0) stateListeners.splice(idx, 1);
             };
           }
+        };
+
+        // 🌟 Universal useTitan Hook (Works identically on Web, Android, and LVGL!)
+        window.useTitan = function(keyOrReg, initial) {
+          var reg = !isNaN(Number(keyOrReg)) ? Number(keyOrReg) : String(keyOrReg);
+          if (initial !== undefined && window.Titan && window.Titan.read(reg, null) === null) {
+            window.Titan.write(reg, initial);
+          }
+          var val = window.Titan ? window.Titan.read(reg, initial !== undefined ? initial : 0) : state[reg];
+          var setVal = function(newVal) {
+            var current = window.Titan ? window.Titan.read(reg) : state[reg];
+            var next = typeof newVal === 'function' ? newVal(current) : newVal;
+            if (window.Titan) window.Titan.write(reg, next);
+            else window.DolphinWebStore.set(reg, next);
+          };
+          return [val, setVal];
         };
 
         window.useState = function(initial) {
@@ -885,6 +992,13 @@ class DolphinWebEngine {
               body: JSON.stringify({ action: action, value: '' })
             }).catch(function() {});
           } catch (e) {}
+
+          // 🐬 Delegate to Titan Engine (Registers & Directives)
+          if (window.Titan && window.Titan.engine) {
+            try {
+              window.Titan.engine.executeDirective("action:" + action, e, btn);
+            } catch (err) {}
+          }
         });
 
         // Forward live search/text input events with action
@@ -1008,23 +1122,58 @@ class DolphinWebEngine {
             styles.push(`background-image:${gradCss} !important`);
         }
 
+        const resolveColorWithOpacity = (raw) => {
+            if (!raw) return null;
+            let base = raw;
+            let alpha = 1;
+            if (raw.includes('/')) {
+                const parts = raw.split('/');
+                base = parts[0];
+                const num = parseFloat(parts[1]);
+                if (!isNaN(num)) alpha = num > 1 ? num / 100 : num;
+            }
+            let hex = TW_COLOR_MAP[base] || (base === 'white' ? '#ffffff' : (base === 'black' ? '#000000' : (base.startsWith('#') ? base : null)));
+            if (!hex) return null;
+            if (alpha < 1 && hex.startsWith('#') && hex.length === 7) {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+            return hex;
+        };
+
         classes.forEach(c => {
             if (!c) return;
-            if (c === 'p-0') styles.push('padding:0px');
-            else if (c === 'p-1') styles.push('padding:4px');
-            else if (c === 'p-2') styles.push('padding:8px');
-            else if (c === 'p-2.5') styles.push('padding:10px');
-            else if (c === 'p-3') styles.push('padding:12px');
-            else if (c === 'p-4') styles.push('padding:16px');
-            else if (c === 'p-5') styles.push('padding:20px');
-            else if (c === 'p-6') styles.push('padding:24px');
-            else if (c === 'p-8') styles.push('padding:32px');
-            else if (c === 'px-1') styles.push('padding-left:4px;padding-right:4px');
-            else if (c === 'px-2') styles.push('padding-left:8px;padding-right:8px');
-            else if (c === 'px-3') styles.push('padding-left:12px;padding-right:12px');
-            else if (c === 'px-4') styles.push('padding-left:16px;padding-right:16px');
-            else if (c === 'py-2') styles.push('padding-top:8px;padding-bottom:8px');
-            else if (c === 'py-3') styles.push('padding-top:12px;padding-bottom:12px');
+            if (c.startsWith('px-')) {
+                const val = c.slice(3);
+                if (!isNaN(parseFloat(val))) styles.push(`padding-left:${parseFloat(val) * 4}px;padding-right:${parseFloat(val) * 4}px`);
+                else if (val.endsWith('px') || val.endsWith('rem')) styles.push(`padding-left:${val};padding-right:${val}`);
+            } else if (c.startsWith('py-')) {
+                const val = c.slice(3);
+                if (!isNaN(parseFloat(val))) styles.push(`padding-top:${parseFloat(val) * 4}px;padding-bottom:${parseFloat(val) * 4}px`);
+                else if (val.endsWith('px') || val.endsWith('rem')) styles.push(`padding-top:${val};padding-bottom:${val}`);
+            } else if (c.startsWith('pt-')) {
+                const val = c.slice(3);
+                if (!isNaN(parseFloat(val))) styles.push(`padding-top:${parseFloat(val) * 4}px`);
+                else if (val.endsWith('px') || val.endsWith('rem')) styles.push(`padding-top:${val}`);
+            } else if (c.startsWith('pb-')) {
+                const val = c.slice(3);
+                if (!isNaN(parseFloat(val))) styles.push(`padding-bottom:${parseFloat(val) * 4}px`);
+                else if (val.endsWith('px') || val.endsWith('rem')) styles.push(`padding-bottom:${val}`);
+            } else if (c.startsWith('pl-')) {
+                const val = c.slice(3);
+                if (!isNaN(parseFloat(val))) styles.push(`padding-left:${parseFloat(val) * 4}px`);
+                else if (val.endsWith('px') || val.endsWith('rem')) styles.push(`padding-left:${val}`);
+            } else if (c.startsWith('pr-')) {
+                const val = c.slice(3);
+                if (!isNaN(parseFloat(val))) styles.push(`padding-right:${parseFloat(val) * 4}px`);
+                else if (val.endsWith('px') || val.endsWith('rem')) styles.push(`padding-right:${val}`);
+            } else if (c.startsWith('p-')) {
+                const val = c.slice(2);
+                if (!isNaN(parseFloat(val))) styles.push(`padding:${parseFloat(val) * 4}px`);
+                else if (val.endsWith('px') || val.endsWith('rem')) styles.push(`padding:${val}`);
+            }
 
             else if (c === 'relative') styles.push('position:relative');
             else if (c === 'absolute') styles.push('position:absolute');
@@ -1054,6 +1203,42 @@ class DolphinWebEngine {
             else if (c === 'w-full') styles.push('width:100%');
             else if (c === 'h-full') styles.push('height:100%');
             else if (c === 'min-h-screen') styles.push('min-height:100vh');
+            else if (c === 'aspect-video') styles.push('aspect-ratio:16/9');
+            else if (c === 'aspect-square') styles.push('aspect-ratio:1/1');
+            else if (c === 'select-none') styles.push('user-select:none');
+
+            else if (c.startsWith('w-') && c !== 'w-full') {
+                const val = c.slice(2);
+                if (!isNaN(parseFloat(val)) && !val.includes('px') && !val.includes('%')) {
+                    styles.push(`width:${parseFloat(val) * 4}px`);
+                } else if (val.endsWith('px') || val.endsWith('rem') || val.endsWith('%') || val.endsWith('vw')) {
+                    styles.push(`width:${val}`);
+                }
+            } else if (c.startsWith('h-') && c !== 'h-full') {
+                const val = c.slice(2);
+                if (!isNaN(parseFloat(val)) && !val.includes('px') && !val.includes('%')) {
+                    styles.push(`height:${parseFloat(val) * 4}px`);
+                } else if (val.endsWith('px') || val.endsWith('rem') || val.endsWith('%') || val.endsWith('vh')) {
+                    styles.push(`height:${val}`);
+                }
+            }
+
+            else if (c.startsWith('grid-cols-')) {
+                const n = c.replace('grid-cols-', '');
+                styles.push(`grid-template-columns:repeat(${n}, minmax(0, 1fr))`);
+            } else if (c.startsWith('col-span-')) {
+                const n = c.replace('col-span-', '');
+                styles.push(`grid-column:span ${n} / span ${n}`);
+            } else if (c.startsWith('min-h-')) {
+                const h = c.replace('min-h-', '');
+                if (h.endsWith('px') || h.endsWith('rem') || h.endsWith('vh') || h.endsWith('%')) styles.push(`min-height:${h}`);
+            } else if (c.startsWith('max-h-')) {
+                const h = c.replace('max-h-', '');
+                if (h.endsWith('px') || h.endsWith('rem') || h.endsWith('vh') || h.endsWith('%')) styles.push(`max-height:${h}`);
+            } else if (c.startsWith('max-w-')) {
+                const w = c.replace('max-w-', '');
+                if (w.endsWith('px') || w.endsWith('rem') || w.endsWith('vw') || w.endsWith('%')) styles.push(`max-width:${w}`);
+            }
 
             else if (c.startsWith('rounded-')) {
                 const rVal = c.replace('rounded-', '');
@@ -1070,16 +1255,32 @@ class DolphinWebEngine {
                 }
             } else if (c === 'rounded') {
                 styles.push('border-radius:4px');
+            } else if (c === 'border') {
+                styles.push('border:1px solid #1e293b');
+            } else if (c === 'border-t') {
+                styles.push('border-top:1px solid #1e293b');
+            } else if (c === 'border-b') {
+                styles.push('border-bottom:1px solid #1e293b');
+            } else if (c === 'border-l') {
+                styles.push('border-left:1px solid #1e293b');
+            } else if (c === 'border-r') {
+                styles.push('border-right:1px solid #1e293b');
+            } else if (c === 'border-2') {
+                styles.push('border-width:2px');
+            } else if (c === 'border-0') {
+                styles.push('border:none');
+            } else if (c.startsWith('border-') && !c.startsWith('border-radius')) {
+                const colorKey = c.replace('border-', '');
+                const resolved = resolveColorWithOpacity(colorKey);
+                if (resolved) styles.push(`border-color:${resolved}`);
             } else if (c.startsWith('bg-') && !c.startsWith('bg-gradient-to-')) {
                 const colorKey = c.replace('bg-', '');
-                if (TW_COLOR_MAP[colorKey]) styles.push(`background-color:${TW_COLOR_MAP[colorKey]}`);
-                else if (colorKey === 'white') styles.push('background-color:#ffffff');
-                else if (colorKey === 'black') styles.push('background-color:#000000');
+                const resolved = resolveColorWithOpacity(colorKey);
+                if (resolved) styles.push(`background-color:${resolved}`);
             } else if (c.startsWith('text-')) {
                 const colorKey = c.replace('text-', '');
-                if (TW_COLOR_MAP[colorKey]) styles.push(`color:${TW_COLOR_MAP[colorKey]}`);
-                else if (colorKey === 'white') styles.push('color:#ffffff');
-                else if (colorKey === 'black') styles.push('color:#000000');
+                const resolved = resolveColorWithOpacity(colorKey);
+                if (resolved) styles.push(`color:${resolved}`);
             }
         });
 

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titan-DOM — 100% Zero-JS Reactive Demo</title>
+    <!-- 1. Just load the standalone script! No manual binder setup needed! -->
+    <script src="../dist/titan-dom.browser.js"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        h1 { font-size: 1.8rem; margin-bottom: 8px; color: #38bdf8; }
+        p.desc { color: #94a3b8; margin-bottom: 24px; }
+        .number { font-size: 2.5rem; font-weight: bold; color: #38bdf8; font-family: monospace; }
+        input[type="range"] { width: 100%; height: 8px; margin: 15px 0; accent-color: #0284c7; cursor: pointer; }
+        input[type="text"] {
+            background: #0f172a; border: 1px solid #334155; color: white; padding: 10px 14px;
+            border-radius: 6px; font-size: 1rem; width: 100%; margin-top: 8px;
+        }
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        button {
+            padding: 8px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer;
+            background: #0284c7; color: white; transition: 0.2s;
+        }
+        button:hover { background: #0369a1; }
+        .btn-outline { background: transparent; border: 1px solid #334155; color: white; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: bold; margin-top: 10px; }
+        .box-relay {
+            background: #0f172a; border: 1px solid #334155; padding: 16px; border-radius: 8px;
+            text-align: center; margin-top: 12px; font-size: 1.1rem; transition: 0.3s;
+        }
+        .box-relay.active {
+            background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #10b981;
+        }
+        .trackpad {
+            height: 140px; background: #0f172a; border: 2px dashed #334155; border-radius: 8px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: crosshair; margin-top: 12px;
+        }
+        .coords { font-family: monospace; color: #38bdf8; font-weight: bold; margin-top: 8px; }
+    </style>
+</head>
+<!-- Notice: 100% Zero JavaScript tags below! Everything binds and works automatically! -->
+<body>
+
+    <h1>🐬 100% Zero-JS Reactive Page</h1>
+    <p class="desc">यो पेजमा कुनै पनि <code>&lt;script&gt;</code> कोड छैन! केवल HTML ट्यागहरू लेखिएको छ, फ्रेमवर्कले भित्रै स्वतः सबै बाइन्डिङ र इभेन्टहरू चलाइरहेको छ।</p>
+
+    <!-- 🚨 UNIVERSAL MASTER ERROR REGISTER BANNER (REG 90-99) -->
+    <!-- tb-show="90": When Reg 90 is 1, this banner shows automatically! -->
+    <div tb-show="90" style="display: none; background: rgba(239, 68, 68, 0.15); border: 2px solid #ef4444; border-radius: 12px; padding: 18px 24px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h3 style="color: #ef4444; margin: 0 0 6px 0; font-size: 1.2rem;">
+                    ⚠️ MASTER ERROR DETECTED (Register 90 = 1)
+                </h3>
+                <div style="font-family: monospace; font-size: 0.9rem; color: #fca5a5;">
+                    Module: <span tb-text="92">0</span> | Code: <span tb-text="93">0</span> | Severity: <span tb-text="94">0</span>
+                </div>
+                <p style="margin: 10px 0 0 0; color: #fee2e2; font-weight: 500;">
+                    Error Detail: <strong tb-text="99">--</strong>
+                </p>
+            </div>
+            <button tb-on:click="clear_error" style="background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                Dismiss / Clear (Reg 90 -> 0)
+            </button>
+        </div>
+    </div>
+
+    <!-- Demo 1: Motor Speed Slider -->
+    <div class="card">
+        <h3>🎛️ मोटर स्पिड (Register 1001)</h3>
+        <div class="number" tb-text="1001">40</div>
+        <input type="range" tb-bind="1001" min="0" max="100" value="40">
+        <div class="btn-group">
+            <button tb-on:click="decrement:1001:5" class="btn-outline">-5</button>
+            <button tb-on:click="write:1001:0" class="btn-outline">STOP (0)</button>
+            <button tb-on:click="increment:1001:5" class="btn-outline">+5</button>
+            <button tb-on:click="write:1001:100">MAX (100)</button>
+        </div>
+    </div>
+
+    <!-- Demo 2: Relay Switch -->
+    <div class="card">
+        <h3>💡 रिले स्विच (Register 1002)</h3>
+        <div class="box-relay" tb-class:active="1002">
+            अवस्था: <strong tb-text="1002">0</strong> (0 = बन्द, 1 = चालू)
+        </div>
+        <div class="btn-group">
+            <button tb-on:click="toggle:1002">🔄 टगल रिले</button>
+            <button tb-on:click="write:1002:1">चालू गर्नुहोस्</button>
+            <button tb-on:click="write:1002:0" class="btn-outline">बन्द गर्नुहोस्</button>
+        </div>
+    </div>
+
+    <!-- Demo 3: Live Mouse Coordinates -->
+    <div class="card">
+        <h3>🎯 १२० FPS माउस ट्र्याकिङ (Registers 2001, 2002)</h3>
+        <div class="trackpad" tb-on:mousemove="coords:2001:2002">
+            <span>यहाँ माउस घुमाउनुहोस् (Zero Lag)</span>
+            <div class="coords">X [2001]: <span tb-text="2001">0</span> px | Y [2002]: <span tb-text="2002">0</span> px</div>
+        </div>
+    </div>
+
+    <!-- Demo 4: Two-Way Text Input -->
+    <div class="card">
+        <h3>📝 दुईतर्फी टेक्स्ट इनपुट (Register 3001)</h3>
+        <input type="text" tb-bind="3001" placeholder="आफ्नो नाम यहाँ टाइप गर्नुहोस्...">
+        <p style="margin-top: 14px; color: #94a3b8;">
+            तपाईंले लेखेको: <strong style="color: #38bdf8;" tb-text="3001">--</strong>
+        </p>
+    </div>
+
+    <!-- Demo 5: Mouse Wheel & Right-Click (Universal Pointer/Mouse Events) -->
+    <div class="card">
+        <h3>🖱️ माउस व्हील र राइट-क्लिक (Registers 4001, 1002)</h3>
+        <div class="trackpad" tb-on:wheel="delta:4001" tb-on:contextmenu.prevent="toggle:1002">
+            <span>यहाँ माउसको पाङ्ग्रा (Wheel) घुमाउनुहोस् वा राइट-क्लिक गर्नुहोस्</span>
+            <div class="coords">अन्तिम Wheel Delta [4001]: <span tb-text="4001">0</span></div>
+            <small style="color: #94a3b8;">(राइट-क्लिक गर्दा मेनु नआई सिधै रिले टगल हुन्छ!)</small>
+        </div>
+    </div>
+
+    <!-- Demo 6: Keyboard Event Shortcuts (Enter, Esc, Arrows) -->
+    <div class="card">
+        <h3>⌨️ किबोर्ड सर्टकटहरू (Register 5001)</h3>
+        <p style="color: #94a3b8; margin-bottom: 10px;">यो इनपुटमा फोकस गरेर कुनै पनि बटन थिच्नुहोस् (Enter = +10, Esc = 0, Arrow Up/Down = ±1):</p>
+        <input type="text" 
+               tb-on:keydown="key:5001"
+               tb-on:keydown.enter="increment:1001:10"
+               tb-on:keydown.escape="write:1001:0"
+               tb-on:keydown.arrowup="increment:1001:1"
+               tb-on:keydown.arrowdown="decrement:1001:1"
+               placeholder="थिति हेर्न यहाँ थिच्नुहोस्...">
+        <p style="margin-top: 12px; color: #94a3b8;">
+            थिचिएको बटन: <strong style="color: #10b981;" tb-text="5001">--</strong>
+        </p>
+    </div>
+
+    <!-- Demo 7: Universal Error Register & Trap Simulation -->
+    <div class="card">
+        <h3>🚨 युनिभर्सल एरर ट्र्याप सिमुलेसन (Registers 90-99)</h3>
+        <p style="color: #94a3b8; margin-bottom: 12px;">कुनै पनि मोड्युल, स्क्रिप्ट, वा हार्डवेयरको एरर स्वतः Master Register 90-99 मा रेकर्ड हुन्छ र माथिको ब्यानर खुल्छ:</p>
+        <div class="btn-group" style="flex-wrap: wrap;">
+            <button tb-on:click="error:Emergency Stop Activated on Conveyor 2:503:6:4" style="background: #dc2626;">
+                हार्डवेयर E-Stop एरर (Code 503)
+            </button>
+            <button tb-on:click="error:Modbus TCP Socket Disconnected:404:2:3" style="background: #ea580c;">
+                नेटवर्क विच्छेद (Code 404)
+            </button>
+            <button tb-on:click="error:PLC Voltage Exceeded Safe Threshold (480V):1008:1:3" style="background: #7c3aed;">
+                कोर लजिक अलार्म (Code 1008)
+            </button>
+        </div>
+    </div>
+
+    <!-- Demo 8: Reactive Dynamic List Rendering (tb-for) -->
+    <div class="card">
+        <h3>📋 रिएक्सन लिस्ट रेन्डरिङ (tb-for, Zero-VDOM)</h3>
+        <p style="color: #94a3b8; margin-bottom: 12px;">रजिस्टर ६००० को डाटा अनुसार सिधै DOM मा नयाँ नोडहरू सिर्जना हुन्छन्:</p>
+        
+        <div class="btn-group" style="margin-bottom: 16px;">
+            <button tb-on:click='set:6000:[{"id":1,"name":"Conveyor Motor","status":"Running","rpm":1450},{"id":2,"name":"Cooling Fan","status":"Idle","rpm":0},{"id":3,"name":"Hydraulic Pump","status":"Overheat","rpm":2100}]'>
+                लोड नोड्स (Nodes Data)
+            </button>
+            <button tb-on:click='set:6000:[{"id":101,"name":"PLC Rack A","status":"Online","rpm":99},{"id":102,"name":"Titan Bus Gateway","status":"Active","rpm":100}]' class="btn-outline">
+                गेटवे नोड्स देखाउनुहोस्
+            </button>
+            <button tb-on:click="set:6000:[]" class="btn-outline">
+                सूची खाली गर्नुहोस्
+            </button>
+        </div>
+
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li tb-for="node in 6000" style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color: #38bdf8;">{{node.name}}</strong>
+                    <span style="color: #94a3b8; font-size: 0.85rem; margin-left: 8px;">(ID: {{node.id}})</span>
+                </div>
+                <div style="font-family: monospace;">
+                    <span style="color: #e2e8f0;">{{node.status}}</span> | <span style="color: #10b981;">{{node.rpm}} RPM</span>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Demo 9: Real Live API Products (FakeStoreAPI into Register 7000) -->
+    <!-- tb-fetch automatically fetches on page load without writing 1 line of JS! -->
+    <div tb-fetch="https://fakestoreapi.com/products?limit=6:7000" class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3>🛍️ Real Live API: FakeStoreAPI (Register 7000)</h3>
+            <span class="badge" style="background: #0284c7; color: white;">
+                कुल उत्पादन: <span tb-text="7000">0</span>
+            </span>
+        </div>
+        <p style="color: #94a3b8; margin-bottom: 14px;">
+            <code>tb-fetch="https://fakestoreapi.com/products?limit=6:7000"</code> बाट कुनै JS नलेखी सिधै वास्तविक API बाट उत्पादनहरू आएर <code>tb-for="product in 7000"</code> मा रेन्डर हुन्छन्:
+        </p>
+
+        <!-- Category Filters / Live Fetch Triggers -->
+        <div class="btn-group" style="flex-wrap: wrap; margin-bottom: 18px;">
+            <button tb-on:click="fetch:https://fakestoreapi.com/products?limit=6:7000">
+                सबै (All - 6)
+            </button>
+            <button tb-on:click="fetch:https://fakestoreapi.com/products/category/electronics?limit=4:7000" class="btn-outline">
+                इलेक्ट्रोनिक्स (Electronics)
+            </button>
+            <button tb-on:click="fetch:https://fakestoreapi.com/products/category/jewelery?limit=4:7000" class="btn-outline">
+                गहनाहरू (Jewelry)
+            </button>
+            <button tb-on:click="set:7000:[]" class="btn-outline" style="color: #ef4444; border-color: #ef4444;">
+                खाली गर्नुहोस् (Clear)
+            </button>
+        </div>
+
+        <!-- Products Responsive Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px;">
+            <template tb-for="product in 7000">
+                <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="background: white; border-radius: 6px; padding: 10px; text-align: center; height: 110px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                            <img src="{{product.image}}" alt="{{product.title}}" style="max-height: 95px; max-width: 100%; object-fit: contain;">
+                        </div>
+                        <span style="font-size: 0.72rem; text-transform: uppercase; color: #38bdf8; font-weight: bold; letter-spacing: 0.5px;">{{product.category}}</span>
+                        <h4 style="margin: 6px 0; font-size: 0.88rem; color: #f8fafc; line-height: 1.35; height: 2.7em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                            {{product.title}}
+                        </h4>
+                    </div>
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="color: #10b981; font-size: 1.15rem;">${{product.price}}</strong>
+                        <span style="font-size: 0.8rem; color: #fbbf24;">★ {{product.rating.rate}}</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+</body>
+</html>
