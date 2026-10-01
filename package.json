@@ -1,7 +1,7 @@
 {
-  "name": "dolphin-native",
+  "name": "danphe-ui",
   "version": "5.0.0",
-  "description": "Zero-WebView Native Android Framework. Compiles JSX + Tailwind CSS to 24-byte Titan binary for mobile apps & embedded devices (TV Box, Kiosk, Watch, Stereo).",
+  "description": "Danphe UI Framework & Video Editor Studios with Titan 24-byte Architecture.",
   "main": "index.js",
   "types": "src/index.d.ts",
   "keywords": [

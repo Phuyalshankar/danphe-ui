@@ -1,0 +1,66 @@
+<div class="pane-box" id="left-media-drawer">
+    <div class="pane-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="display:flex; align-items:center; gap:6px; font-weight:800; color:#38bdf8;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><use href="#icon-folder"/></svg>
+            MEDIA ASSETS &amp; POOL
+        </span>
+        <button class="m-btn" onclick="triggerDirectPCImport()" style="background:#0284c7; color:#fff; padding:2px 8px; font-size:10px; font-weight:bold;">+ Import PC Files</button>
+    </div>
+    
+    <!-- Left Drawer Navigation Tabs -->
+    <div style="display:flex; gap:3px; background:#080d1a; padding:4px; border-bottom:1px solid #1e293b;">
+        <button class="ws-tab active" id="ld-tab-media" onclick="switchLeftDrawerTab('media')" style="flex:1; padding:4px 2px; font-size:9.5px; text-align:center;">?? Media</button>
+        <button class="ws-tab" id="ld-tab-fx" onclick="switchLeftDrawerTab('fx')" style="flex:1; padding:4px 2px; font-size:9.5px; text-align:center;">? FX</button>
+        <button class="ws-tab" id="ld-tab-trans" onclick="switchLeftDrawerTab('trans')" style="flex:1; padding:4px 2px; font-size:9.5px; text-align:center;">?? Trans</button>
+        <button class="ws-tab" id="ld-tab-audio" onclick="switchLeftDrawerTab('audio')" style="flex:1; padding:4px 2px; font-size:9.5px; text-align:center;">?? SFX</button>
+    </div>
+
+    <div class="pane-content" style="padding:6px;">
+        <!-- KineMaster Radial Hub (Video Top, Image Left, Music Right, Play/Pause Center) -->
+        <div class="km-wheel-wrapper" style="margin: 4px auto 10px auto;">
+            <div class="km-wheel-outer">
+                <!-- TOP: Video Files -->
+                <div class="km-node km-top" onclick="triggerDirectPCImport('video')" title="Import Video Files (.mp4, .mov, .mkv, .webm)">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><use href="#icon-video"/></svg>
+                </div>
+
+                <!-- LEFT: Image / Photo Files (Replaced Text with Image) -->
+                <div class="km-node km-left" onclick="triggerDirectPCImport('image')" title="Import Image / Photo Files (.png, .jpg, .jpeg, .webp, .svg)">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><use href="#icon-image"/></svg>
+                </div>
+
+                <!-- RIGHT: Music & Audio -->
+                <div class="km-node km-right" onclick="triggerDirectPCImport('audio')" title="Import Music / Audio (.mp3, .wav, .opus, .aac)">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><use href="#icon-audio"/></svg>
+                </div>
+
+                <!-- BOTTOM: Reserved / FX Slot -->
+                <div class="km-node km-bottom" onclick="switchLeftDrawerTab('fx')" title="Video Effects &amp; Transitions (Reserved)">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><use href="#icon-star"/></svg>
+                </div>
+
+                <!-- CENTER: Play / Pause Master Button -->
+                <div class="km-center" id="km-center-play-btn" onclick="togglePlay()" title="Play / Pause Studio (Spacebar)">
+                    <svg width="15" height="15" fill="currentColor" stroke="currentColor" stroke-width="2"><use href="#icon-play-solid"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Drawer Tab Content Container -->
+        <div id="left-drawer-tab-content">
+            <!-- Media Tab: Real Assets -->
+            <div id="ld-view-media">
+                <div style="font-size: 9.5px; color: var(--text-muted); margin-bottom: 5px; font-weight:800; display:flex; justify-content:space-between;">
+                    <span>MEDIA ASSETS (TITAN 0x5442)</span>
+                    <span id="media-count-badge" style="color:#38bdf8;">0 Assets</span>
+                </div>
+                <div id="media-list-container">
+                    <div id="empty-media-placeholder" style="text-align:center; padding:20px 8px; color:#64748b; font-size:11px; border:1px dashed #1e293b; border-radius:6px;">
+                        <p style="margin-bottom:6px;">?? No media imported yet.</p>
+                        <p style="font-size:9.5px; color:#475569;">Use the <b>Circular Hub</b> above (Video, Image, Audio) or <b>Drag &amp; Drop</b> files.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

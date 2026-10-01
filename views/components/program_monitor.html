@@ -1,0 +1,61 @@
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- 3. PRO 4K PROGRAM MONITOR WITH CARD TRANSFORM & TEXT OVERLAY STAGE  -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="studio-dual-monitors-cluster">
+    <div class="monitor-viewport-box active" id="program-monitor-box">
+        <div class="monitor-top-header">
+            <div class="monitor-badge-group">
+                <span class="pulse-led-live"></span>
+                <span class="mon-title" id="mon-title-text">PROGRAM MONITOR</span>
+                <span class="res-tag" id="mon-res-badge" style="cursor:pointer;" onclick="openProjectModal()" title="Click to Change Canvas Ratio">📱 9:16 (1080×1920) · 60 FPS</span>
+                <span class="res-tag" id="mon-speed-badge" style="background:#0284c7; color:#fff; display:none;">1.0x</span>
+            </div>
+            <div class="mon-actions">
+                <button type="button" class="mon-act-btn" onclick="openProjectModal()" title="Sequence Ratio Settings">📐 Ratio</button>
+                <button type="button" class="mon-act-btn popout-btn" onclick="openDetachedStudioMonitor()" title="Open in Large Resizable Pop-out Window" style="background:#0284c7; color:#fff; font-weight:800;">🗗 Pop Out</button>
+                <button type="button" class="mon-act-btn" onclick="toggleMonitorFit()" title="Fit Viewport">Fit</button>
+                <button type="button" class="mon-act-btn" onclick="toggleMonitorGrid()" title="Safe Grid">▦ Safe</button>
+            </div>
+        </div>
+
+        <!-- Dynamic Aspect-Ratio Viewport Canvas (Phone 9:16, Cinema 16:9, Square 1:1) -->
+        <div class="monitor-screen-stage" id="monitor-screen-stage" ondblclick="handleMonitorDoubleClick(event)" title="💡 Double-Click to Open in Resizable Pop-out Window">
+            <div class="monitor-canvas-container ratio-9-16" id="monitor-canvas-container">
+                <!-- Video Card Layer (Zoom, Pan, Rotate, Card Radius) -->
+                <div class="monitor-video-card-frame" id="monitor-video-card-frame" ondblclick="handleMonitorDoubleClick(event)" title="💡 Double-Click to Open in Resizable Pop-out Window">
+                    <video id="program-master-video" class="native-master-video" playsinline controls="false"
+                           src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4">
+                    </video>
+                </div>
+
+                <!-- On-Screen Interactive Text Overlay Layer -->
+                <div class="monitor-text-layer subtitle-style" id="monitor-text-overlay" style="display: none;" title="Double-click to edit · Drag to move · Drag corner to resize">
+                    <span class="text-content-span" id="monitor-text-content" contenteditable="false" spellcheck="false">Danphe Reels</span>
+                    <div class="text-resize-handle br" id="text-resize-handle-br" title="Drag to Resize Font Size"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transport Control Ribbon -->
+        <div class="monitor-transport-bar">
+            <div class="transport-left-tools">
+                <button type="button" class="trans-btn" onclick="seekRelative(-5)" title="Step Back 5s (J)">⏮ -5s</button>
+                <button type="button" class="trans-btn" onclick="stepFrame(-1)" title="Step 1 Frame Back (←)">◀ 1f</button>
+            </div>
+
+            <div class="transport-center-cluster">
+                <button type="button" class="trans-play-btn" id="master-play-pause-btn" onclick="toggleMasterPlayback()" title="Play / Pause (Space)">
+                    <span id="play-pause-icon">▶</span>
+                </button>
+                <button type="button" class="trans-btn" onclick="stopMasterPlayback()" title="Stop to Start (K)">⏹ Stop</button>
+                <span class="timecode-pill" id="master-timecode-display" style="margin-left: 8px; font-family: monospace; font-size: 11px; font-weight: bold; color: #38bdf8; background: #030712; padding: 2px 8px; border-radius: 4px; border: 1px solid #1e293b;">00:00:00:00</span>
+            </div>
+
+            <div class="transport-right-tools">
+                <button type="button" class="trans-btn" onclick="stepFrame(1)" title="Step 1 Frame Forward (→)">1f ▶</button>
+                <button type="button" class="trans-btn" onclick="seekRelative(5)" title="Step Forward 5s (L)">+5s ⏭</button>
+                <button type="button" class="trans-btn" onclick="toggleLoopPlayback()" id="loop-btn" title="Loop Playback">🔁 Loop</button>
+            </div>
+        </div>
+    </div>
+</div>

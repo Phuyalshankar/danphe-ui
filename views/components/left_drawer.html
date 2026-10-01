@@ -1,0 +1,148 @@
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- 🦚 DANPHE-UI NATIVE LABEL CIRCULAR BUTTON MEDIA IMPORTER           -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<aside class="studio-left-dock" id="studio-left-dock">
+    <div class="dock-header">
+        <div class="dock-tabs-cluster">
+            <button type="button" class="dock-tab-btn active" onclick="switchLeftDockTab('media', this)" title="Media Pool">📁 Media</button>
+            <button type="button" class="dock-tab-btn" onclick="switchLeftDockTab('registers', this)" title="Titan Register List">⚡ Regs</button>
+            <button type="button" class="dock-tab-btn" onclick="switchLeftDockTab('fx', this)" title="Effects Library">✨ FX</button>
+            <button type="button" class="dock-tab-btn" onclick="switchLeftDockTab('motion', this)" title="Vector Shapes">🎨 Draw</button>
+            <button type="button" class="dock-tab-btn" onclick="switchLeftDockTab('social', this)" title="Social Smartphone">📱 Phone</button>
+        </div>
+        <button type="button" class="dock-toggle-btn" onclick="toggleLeftDock()" title="Collapse Panel">◀</button>
+    </div>
+
+    <!-- TAB 1: DANPHE-UI 5-BUTTON GYRO MEDIA IMPORTER -->
+    <div class="dock-tab-pane active" id="dock-pane-media">
+        <!-- 360° Laser Gyro Circular Button Group (Native Labels) -->
+        <div class="radial-importer-strip">
+            <div class="titan-circular-button-group">
+                <div class="laser-orbit-ring"></div>
+                <div class="inner-metallic-ring"></div>
+
+                <!-- 1. Top Satellite: Video Node -->
+                <label class="satellite-btn btn-top" title="Import 4K Video Files">
+                    <svg viewBox="0 0 24 24"><use href="#icon-video"/></svg>
+                    <span class="btn-sub-lbl">VID</span>
+                    <input type="file" accept="video/*" multiple style="display:none;" onchange="handleCircularFilePicked(this, 'video')">
+                </label>
+
+                <!-- 2. Left Satellite: Photo Node -->
+                <label class="satellite-btn btn-left" title="Import Photos / RAW">
+                    <svg viewBox="0 0 24 24"><use href="#icon-image"/></svg>
+                    <span class="btn-sub-lbl">RAW</span>
+                    <input type="file" accept="image/*" multiple style="display:none;" onchange="handleCircularFilePicked(this, 'photo')">
+                </label>
+
+                <!-- 3. Right Satellite: Audio Node -->
+                <label class="satellite-btn btn-right" title="Import 48kHz Audio">
+                    <svg viewBox="0 0 24 24"><use href="#icon-audio"/></svg>
+                    <span class="btn-sub-lbl">AUD</span>
+                    <input type="file" accept="audio/*" multiple style="display:none;" onchange="handleCircularFilePicked(this, 'audio')">
+                </label>
+
+                <!-- 4. Bottom Satellite: VFX Node -->
+                <label class="satellite-btn btn-bottom" title="Import Shaders & VFX">
+                    <svg viewBox="0 0 24 24"><use href="#icon-star"/></svg>
+                    <span class="btn-sub-lbl">VFX</span>
+                    <input type="file" accept=".cube,.lut,.json,.shader,video/*" multiple style="display:none;" onchange="handleCircularFilePicked(this, 'vfx')">
+                </label>
+
+                <!-- 5. Center Master Core -->
+                <label class="master-core-btn" title="Scan & Ingest All Files">
+                    <svg viewBox="0 0 32 32"><use href="#danphe-logo"/></svg>
+                    <span class="core-sub-lbl">IMPORT</span>
+                    <input type="file" accept="video/*,audio/*,image/*" multiple style="display:none;" onchange="handleCircularFilePicked(this, 'all')">
+                </label>
+            </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="bin-search-row">
+            <input type="text" class="bin-search-input" id="media-search-box" placeholder="🔍 Search Assets..." oninput="filterMediaAssets(this.value)">
+        </div>
+
+        <!-- Real Media Assets Grid Container -->
+        <div class="media-assets-grid" id="media-assets-container">
+            <!-- Default Sample Card -->
+            <div class="asset-card active" id="asset-card-default" onclick="loadSourceClip('Sample_Blaze_4K.mp4', 'video', 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4')">
+                <div class="asset-thumb" style="background:linear-gradient(135deg, #0284c7 0%, #082f49 100%);">
+                    <span class="dur-tag">00:15</span>
+                    <span class="fmt-tag">4K MP4</span>
+                </div>
+                <div class="asset-meta">
+                    <span class="asset-name">🎬 Sample_Blaze_4K.mp4</span>
+                    <span class="asset-sub">60.0 FPS · Ready</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: TITAN HARDWARE REGISTER LIST -->
+    <div class="dock-tab-pane" id="dock-pane-registers">
+        <div class="register-list-card">
+            <div class="reg-header-flex">
+                <span class="reg-title">⚡ TITAN HARDWARE REGISTER MAP (0x5442)</span>
+                <span class="reg-live-badge">LIVE 60Hz</span>
+            </div>
+            <div class="register-table-scroll">
+                <table class="titan-register-table">
+                    <thead>
+                        <tr><th>REG</th><th>NAME</th><th>HEX</th><th>VALUE</th><th>SYNC</th></tr>
+                    </thead>
+                    <tbody id="titan-registers-tbody">
+                        <tr><td><code>0x1000</code></td><td>TRANSPORT_STATE</td><td id="reg-hex-1000">0x01</td><td id="reg-val-1000">PLAYING</td><td><span class="sync-dot on"></span></td></tr>
+                        <tr><td><code>0x1001</code></td><td>TIMECODE_FRAME</td><td id="reg-hex-1001">0x052A</td><td id="reg-val-1001">1322f</td><td><span class="sync-dot on"></span></td></tr>
+                        <tr><td><code>0x4001</code></td><td>VIDEO_ZOOM_SCALE</td><td id="reg-hex-4001">0x64</td><td id="reg-val-4001">100 %</td><td><span class="sync-dot on"></span></td></tr>
+                        <tr><td><code>0x4002</code></td><td>TRANSFORM_POS_X</td><td id="reg-hex-4002">0x00</td><td id="reg-val-4002">0 px</td><td><span class="sync-dot on"></span></td></tr>
+                        <tr><td><code>0x4003</code></td><td>TRANSFORM_POS_Y</td><td id="reg-hex-4003">0x00</td><td id="reg-val-4003">0 px</td><td><span class="sync-dot on"></span></td></tr>
+                        <tr><td><code>0x4004</code></td><td>MASTER_OPACITY</td><td id="reg-hex-4004">0x64</td><td id="reg-val-4004">100 %</td><td><span class="sync-dot on"></span></td></tr>
+                        <tr><td><code>0x4005</code></td><td>COLOR_TEMP_KELVIN</td><td id="reg-hex-4005">0x15E0</td><td id="reg-val-4005">5600 K</td><td><span class="sync-dot on"></span></td></tr>
+                        <tr><td><code>0x4006</code></td><td>COLOR_SATURATION</td><td id="reg-hex-4006">0x64</td><td id="reg-val-4006">100 %</td><td><span class="sync-dot on"></span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="reg-raw-bus-stream">
+                <div class="bus-lbl">LIVE 24-BYTE OPSTREAM:</div>
+                <div class="bus-hex-output" id="bus-hex-stream-log">0x5442 02 10 4001 0064 0000 0000 684E0124</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: EFFECTS -->
+    <div class="dock-tab-pane" id="dock-pane-fx">
+        <div class="fx-category-box">
+            <span class="fx-cat-title">FILM LUTS & SHADERS</span>
+            <div class="fx-item-row" onclick="applyEffectPreset('kodak_5219')"><span>🎞️ Kodak 5219</span><span class="fx-badge">LUT</span></div>
+            <div class="fx-item-row" onclick="applyEffectPreset('fuji_eterna')"><span>🎬 Fuji Eterna</span><span class="fx-badge">LUT</span></div>
+            <div class="fx-item-row" onclick="applyEffectPreset('ai_denoise')"><span>⚡ AI Denoise</span><span class="fx-badge ai">AI</span></div>
+        </div>
+    </div>
+
+    <!-- TAB 4: DRAWING -->
+    <div class="dock-tab-pane" id="dock-pane-motion">
+        <div class="fx-category-box">
+            <span class="fx-cat-title">VECTOR SHAPES</span>
+            <div class="motion-tools-grid">
+                <button type="button" class="motion-btn active" onclick="setDrawTool('neon')">⚡ Pen</button>
+                <button type="button" class="motion-btn" onclick="setDrawTool('circle')">⭕ Circle</button>
+                <button type="button" class="motion-btn" onclick="setDrawTool('rect')">🔲 Box</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 5: SOCIAL SMARTPHONE -->
+    <div class="dock-tab-pane" id="dock-pane-social">
+        <div class="fx-category-box">
+            <span class="fx-cat-title">9:16 VERTICAL SHORT</span>
+            <button type="button" class="social-snap-btn" onclick="toggleSmartphoneDrawer()">
+                📱 OPEN 9:16 FEED
+            </button>
+        </div>
+    </div>
+</aside>
+
+<div class="left-dock-collapsed-tab" id="left-dock-open-tab" onclick="toggleLeftDock()" title="Open Left Panel">
+    <span>📁</span>
+</div>

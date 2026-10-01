@@ -1658,8 +1658,6 @@ public:
     var& operator^=(const var& other) { *this = *this ^ other; return *this; }
 
     var operator==(const var& other) const {
-        if (type == TYPE_NULL && other.type == TYPE_NULL) return var(true);
-        if (type == TYPE_NULL || other.type == TYPE_NULL) return var(false);
         if (type == TYPE_STRING && other.type == TYPE_STRING) return var(string_val == other.string_val);
         if (type == TYPE_BOOL && other.type == TYPE_BOOL) return var(bool_val == other.bool_val);
         if (type == TYPE_DOUBLE || other.type == TYPE_DOUBLE) return var(this->toDouble() == other.toDouble());

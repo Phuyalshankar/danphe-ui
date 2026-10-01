@@ -250,18 +250,21 @@ const TitanIcon = ({ id, name, mode, bit, size = 20, color, className = '' }) =>
     // 1. Telecom Direction Arrows: High-Contrast Bold Native Text Glyph
     if (entry.type === 'arrow') {
         const arrowColor = color && color.startsWith('text-') ? color : entry.color;
-        return (
-            <span className={`${arrowColor} font-black text-xl text-center leading-none ${className}`}>
-                {entry.char}
-            </span>
-        );
+        const spanClass = `${arrowColor} font-black text-xl text-center leading-none ${className}`.trim();
+        if (typeof global !== 'undefined' && global.React && global.React.createElement) {
+            return global.React.createElement('span', { className: spanClass }, entry.char);
+        }
+        return { type: 'span', props: { className: spanClass, children: entry.char } };
     }
 
     // 2. Native FontAwesome Icon Glyph (Opcode 0x23)
     const iconColor = color && color.startsWith('text-') ? color : (color ? '' : entry.color);
     const finalClasses = `${entry.fa} ${iconColor} ${className}`.trim();
 
-    return <i className={finalClasses}></i>;
+    if (typeof global !== 'undefined' && global.React && global.React.createElement) {
+        return global.React.createElement('i', { className: finalClasses });
+    }
+    return { type: 'i', props: { className: finalClasses } };
 };
 
 module.exports = {

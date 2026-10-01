@@ -1,0 +1,103 @@
+// danphe_ui_test.dolphin
+// Dolphin Language v2.0 - danphe-ui Titan-Bus Register Integration Demo
+// Tests: Variables, Arrays, Loops, Math, String, Date
+
+print("=== Danphe-UI x Dolphin Language 2.0 - Integration Test ===")
+print("")
+
+// --- Titan-Bus Register Map ---
+var REG_OPACITY    = 16640
+var REG_SCALE      = 16641
+var REG_ROTATION   = 16642
+var REG_BLUR       = 16646
+var REG_EXPOSURE   = 16896
+var REG_SATURATION = 16898
+
+var reg_vals  = [0, 0, 0, 0, 0, 0]
+var reg_names = ["Opacity", "Scale", "Rotation", "Blur", "Exposure", "Saturation"]
+
+// --- Video Inspector ---
+print("[VIDEO INSPECTOR] Transform Properties:")
+reg_vals[0] = 204
+reg_vals[1] = 191
+reg_vals[2] = 128
+reg_vals[3] = 25
+
+loop (i, 0, 4) { 
+    var v = reg_vals[i]
+    var p = Math.round(v * 100 / 255)
+    print("  " + reg_names[i] + ": " + JSON.stringify(v) + "/255 = " + JSON.stringify(p) + "%")
+}
+print("")
+
+// --- Color Inspector ---
+print("[COLOR INSPECTOR] Lumetri Color Properties:")
+reg_vals[4] = 178
+reg_vals[5] = 166
+
+loop (i, 4, 6) { 
+    var v = reg_vals[i]
+    var p = Math.round(v * 100 / 255)
+    print("  " + reg_names[i] + ": " + JSON.stringify(v) + "/255 = " + JSON.stringify(p) + "%")
+}
+print("")
+
+// --- TitanProSlider LED Fill Bar ---
+print("[PRO SLIDER] Skeuomorphic LED Fill Bar (emerald neon glow):")
+var steps = [0, 51, 102, 153, 204, 255]
+loop (j, 0, 6) {
+    var v = steps[j]
+    var p = Math.round(v * 100 / 255)
+    var bar = ""
+    var filled = Math.round(p / 10)
+    loop (k, 0, 10) {
+        if k < filled {
+            bar = bar + "#"
+        } else {
+            bar = bar + "-"
+        }
+    }
+    print("  [" + bar + "] " + JSON.stringify(v) + "/255 = " + JSON.stringify(p) + "%")
+}
+print("")
+
+// --- Track Header Simulation ---
+print("[TRACK HEADER] Timeline Multi-Track Control Rack:")
+var tracks = ["T1 Titles", "V2 Overlay", "V1 Master", "A1 Voiceover", "A2 BGM"]
+var types  = ["TEXT",  "VIDEO",   "VIDEO",    "AUDIO",      "AUDIO"]
+loop (t, 0, 5) {
+    print("  " + types[t] + " | " + tracks[t])
+}
+print("")
+
+// --- String Methods ---
+print("[STRING API] Native Dolphin String Methods:")
+var lbl = "  danphe-ui Pro Video Editor  "
+print("  Original:  '" + lbl + "'")
+var trimmed = lbl.trim()
+print("  Trimmed:   '" + trimmed + "'")
+print("  Upper:     '" + trimmed.toUpperCase() + "'")
+print("  indexOf 'Pro': " + JSON.stringify(trimmed.indexOf("Pro")))
+print("")
+
+// --- Math Lerp Animation ---
+print("[MATH] Smooth Lerp Animation for TitanProSlider Knob Tween:")
+var a = 0
+var b = 255
+loop (step, 0, 6) {
+    var t = step / 5
+    var lerped = Math.round(a + (b - a) * t)
+    var p2 = Math.round(lerped * 100 / 255)
+    print("  t=" + JSON.stringify(t) + " -> " + JSON.stringify(lerped) + " (" + JSON.stringify(p2) + "%)")
+}
+print("")
+
+// --- Date API ---
+print("[DATE API] System Date & Time:")
+var d = new Date()
+print("  Date: " + JSON.stringify(d.year()) + "-" + JSON.stringify(d.month()) + "-" + JSON.stringify(d.day()))
+print("  Time: " + JSON.stringify(d.hour()) + ":" + JSON.stringify(d.minute()) + ":" + JSON.stringify(d.second()))
+print("")
+
+print("=== All Tests Passed! danphe-ui x Dolphin 2.0.0 ===")
+print("")

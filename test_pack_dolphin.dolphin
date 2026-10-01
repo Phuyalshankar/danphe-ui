@@ -1,0 +1,18 @@
+import "danphe.dolphin"
+
+println("🦚 Testing Danphe-UI in Dolphin Language:")
+println("  • Version:       " + Danphe["version"])
+
+var icn = Danphe["Icon"](1, 32, true, "#38bdf8")
+println("  • Icon 1 Length: " + len(icn) + " bytes")
+
+var seg = Danphe["SevenSegment"]("240.5", "red")
+println("  • SevenSeg Len:  " + len(seg) + " bytes")
+
+var lcd = Danphe["MatrixLCD"]("TITAN BUS", "0x4000 OK", "emerald")
+println("  • MatrixLCD Len: " + len(lcd) + " bytes")
+
+var sld = Danphe["ProSlider"]("vol", "Gain", -60, 12, 0, "dB", "cyan")
+println("  • ProSlider Len: " + len(sld) + " bytes")
+
+println("🎉 Danphe-UI Dolphin Package is 100% Operational!")

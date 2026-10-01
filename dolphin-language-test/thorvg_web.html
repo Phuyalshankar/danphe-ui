@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolphin x ThorVG WebAssembly Native Render</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: #0f172a; overflow: hidden; display: flex;
+            justify-content: center; align-items: center; color: white;
+            font-family: monospace;
+        }
+        canvas { display: block; }
+        #loading { position: absolute; font-size: 24px; color: #60a5fa; }
+        #error { position: absolute; font-size: 16px; color: #ef4444; bottom: 20px; text-align: center; width: 100%; white-space: pre-wrap; z-index: 10; }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading ThorVG WebAssembly Engine...</div>
+    <div id="error"></div>
+    <canvas id="thorvg-canvas"></canvas>
+
+    <script type="module">
+        import TvgModule from "https://cdn.jsdelivr.net/npm/@thorvg/thorvg-wasm@0.14.3/dist/thorvg-wasm.js";
+
+        const uiSvgString = `<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#1e293b"/>
+                    <stop offset="100%" stop-color="#090d16"/>
+                </linearGradient>
+                <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.8"/>
+                    <stop offset="100%" stop-color="#090d16" stop-opacity="0"/>
+                </radialGradient>
+            </defs>
+            <rect width="800" height="600" rx="30" fill="url(#bg)" stroke="#3b82f6" stroke-width="2"/>
+            <circle cx="400" cy="300" r="250" fill="url(#glow)"/>
+            <circle cx="400" cy="300" r="200" fill="none" stroke="#60a5fa" stroke-width="4" stroke-dasharray="10 20"/>
+            <text x="400" y="100" fill="#ffffff" font-size="32" font-family="sans-serif" font-weight="bold" text-anchor="middle">
+                Dolphin Native ThorVG Engine
+            </text>
+            <text x="400" y="140" fill="#94a3b8" font-size="18" font-family="sans-serif" text-anchor="middle">
+                100% Canvas Rendered (Zero DOM)
+            </text>
+            <rect x="150" y="200" width="500" height="100" rx="15" fill="#334155" opacity="0.8"/>
+            <rect x="150" y="200" width="300" height="100" rx="15" fill="#3b82f6"/>
+            <text x="180" y="260" fill="#ffffff" font-size="28" font-family="monospace">SYSTEM LOAD</text>
+            <text x="550" y="260" fill="#ffffff" font-size="28" font-family="monospace">60%</text>
+            <path d="M 150 400 Q 400 300 650 400 T 150 500" fill="none" stroke="#10b981" stroke-width="8"/>
+        </svg>`;
+
+        function logError(msg) {
+            console.error(msg);
+            document.getElementById('error').innerText += "\n" + msg;
+            document.getElementById('loading').innerText = "Failed to load.";
+        }
+
+        try {
+            // Emscripten Modules take an object to override default behavior
+            TvgModule({
+                locateFile: function(path) {
+                    if(path.endsWith('.wasm')) {
+                        return 'https://cdn.jsdelivr.net/npm/@thorvg/thorvg-wasm@0.14.3/dist/thorvg-wasm.wasm';
+                    }
+                    return path;
+                }
+            }).then(function(tvg) {
+                document.getElementById('loading').style.display = 'none';
+                const canvas = document.getElementById('thorvg-canvas');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                const tvgCanvas = new tvg.TvgCanvas();
+                tvgCanvas.target(canvas.id, canvas.width, canvas.height);
+
+                const pic = new tvg.TvgPicture();
+                pic.load(uiSvgString, 'svg');
+                
+                const scale = Math.min(canvas.width / 800, canvas.height / 600) * 0.8;
+                pic.scale(scale);
+                pic.translate((canvas.width - (800 * scale)) / 2, (canvas.height - (600 * scale)) / 2);
+
+                tvgCanvas.push(pic);
+                tvgCanvas.draw();
+                tvgCanvas.sync();
+                
+                window.addEventListener('resize', () => {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    tvgCanvas.target(canvas.id, canvas.width, canvas.height);
+                    const scale = Math.min(canvas.width / 800, canvas.height / 600) * 0.8;
+                    pic.scale(scale);
+                    pic.translate((canvas.width - (800 * scale)) / 2, (canvas.height - (600 * scale)) / 2);
+                    tvgCanvas.clear(false);
+                    tvgCanvas.push(pic);
+                    tvgCanvas.draw();
+                    tvgCanvas.sync();
+                });
+            }).catch(function(err) {
+                logError("TvgModule Promise Rejected: " + err);
+            });
+        } catch (e) {
+            logError("Script Exception: " + e.message);
+        }
+    </script>
+</body>
+</html>

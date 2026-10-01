@@ -1,0 +1,30 @@
+// danphe_ui_server.dolphin
+print("========================================")
+print("  Dolphin C++ Web Server")
+print("  Serving Danphe-UI Components")
+print("========================================")
+
+print("Loading UI into RAM...")
+var ui_html = File.read("showcase.html")
+var thorvg_html = File.read("thorvg_web.html")
+print("-> UI Loaded to Memory.")
+
+var server = HTTP.Server()
+
+server.get("/", fn(req, res) {
+    print("[GET] / -> Serving Showcase DOM Render")
+    res.html(ui_html)
+})
+
+server.get("/thorvg", fn(req, res) {
+    print("[GET] /thorvg -> Serving Pure ThorVG WASM Canvas Render")
+    res.html(thorvg_html)
+})
+
+server.listen(3000)
+print("-> Server running at http://localhost:3000")
+print("-> View ThorVG Native Render at http://localhost:3000/thorvg")
+
+loop {
+    sleep(100)
+}

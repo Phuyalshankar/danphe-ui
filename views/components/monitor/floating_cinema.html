@@ -1,0 +1,45 @@
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- 🗗 IN-PAGE MOVABLE & RESIZABLE FLOATING CINEMA WINDOW (NO POPUP BLOCK) -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="studio-floating-cinema" id="studio-floating-cinema" style="display:none;">
+    <!-- Draggable Header -->
+    <div class="floating-win-header" id="floating-win-header">
+        <div class="floating-win-title">
+            <span class="pulse-dot"></span>
+            <span style="font-weight:900; color:#38bdf8; font-size:11.5px; letter-spacing:0.05em;">🎬 CINEMA DETAIL MONITOR</span>
+            <span class="res-tag" id="floating-res-tag">📱 9:16</span>
+            <span style="font-size:10px; color:#64748b;" id="floating-proj-tag">Danphe_Project</span>
+        </div>
+        <div class="floating-win-timecode" id="floating-win-timecode">00:00:00:00</div>
+        <div class="floating-win-actions">
+            <button type="button" class="float-act-btn" onclick="toggleFloatingFit()" id="floating-fit-btn">Fit</button>
+            <button type="button" class="float-act-btn" onclick="toggleFloatingMaximize()" id="floating-max-btn">⛶ Maximize</button>
+            <button type="button" class="float-act-btn btn-close-float" onclick="closeFloatingCinema()">&times;</button>
+        </div>
+    </div>
+
+    <!-- Main Large Stage -->
+    <div class="floating-win-stage" id="floating-win-stage">
+        <div class="monitor-canvas-container ratio-9-16" id="floating-canvas-box">
+            <div class="monitor-video-card-frame" id="floating-card-frame">
+                <video class="native-master-video" id="floating-video" playsinline controls="false"></video>
+            </div>
+            <div class="monitor-text-layer subtitle-style" id="floating-text-layer" style="display:none;" title="Drag to move">
+                <span id="floating-text-content">Danphe Reels</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transport Bar -->
+    <div class="floating-win-transport">
+        <button type="button" class="trans-btn" onclick="seekRelative(-5)">⏮ -5s (J)</button>
+        <button type="button" class="trans-btn" onclick="stepFrame(-1)">◀ -1f (←)</button>
+        <button type="button" class="trans-play-circle" id="floating-play-btn" onclick="toggleMasterPlayback()">▶</button>
+        <button type="button" class="trans-btn" onclick="stepFrame(1)">+1f ▶ (→)</button>
+        <button type="button" class="trans-btn" onclick="seekRelative(5)">+5s ⏭ (L)</button>
+    </div>
+
+    <!-- Resize Corner Handle -->
+    <div class="floating-win-resize-handle" id="floating-resize-handle" title="Drag to Resize Window"></div>
+</div>

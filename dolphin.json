@@ -1,0 +1,9 @@
+{
+  "name": "danphe-ui",
+  "version": "1.0.0",
+  "description": "Danphe-2 Native UI Framework, ThorVG Renderer, and Universal Icons for Dolphin C++",
+  "author": "Phuyalshankar",
+  "license": "MIT",
+  "main": "native/src/DanpheThorVGEngine.cpp",
+  "includes": ["native", "src", "public"]
+}

@@ -1,0 +1,44 @@
+// 🦚 Danphe-UI Native Package Module for Dolphin Language
+// Import via: import "@danphe/ui" or import "packages/ui/danphe.dolphin"
+
+var Danphe = {
+    version: "19.0.0-PRO",
+    
+    WorkspaceSwitcher: fn(active) {
+        var a = active || "edit"
+        var tabs = [
+            { id: "edit", label: "EDIT", icon: "🎬" },
+            { id: "color", label: "COLOR", icon: "🎨" },
+            { id: "motion", label: "MOTION / FX", icon: "✨" },
+            { id: "audio", label: "FAIRLIGHT", icon: "🎙️" },
+            { id: "deliver", label: "DELIVER", icon: "🚀" }
+        ]
+        var html = '<div class="header-center-workspaces">\n'
+        for (var i = 0; i < tabs.length; i = i + 1) {
+            var t = tabs[i]
+            var cls = t.id == a ? "ws-pill-btn active" : "ws-pill-btn"
+            html = html + '    <button type="button" class="' + cls + '" onclick="switchNLEWorkspace(\'' + t.id + '\')">' + t.icon + ' ' + t.label + '</button>\n'
+        }
+        html = html + '</div>'
+        return html
+    },
+
+    ProSlider: fn(id, label, min, max, val, unit, color) {
+        var c = color || "cyan"
+        var u = unit || "%"
+        var percent = (val - min) / (max - min) * 100
+        var html = '<div class="danphe-pro-slider-group" id="slider-grp-' + id + '">\n'
+        html = html + '    <div class="slider-header-row">\n'
+        html = html + '        <span class="slider-title-txt">' + label + '</span>\n'
+        html = html + '        <span class="slider-val-badge" id="val-badge-' + id + '">' + val + ' ' + u + '</span>\n'
+        html = html + '    </div>\n'
+        html = html + '    <div class="danphe-slider-track" onmousedown="startDanpheSliderDrag(event, \'' + id + '\', ' + min + ', ' + max + ', \'' + u + '\')">\n'
+        html = html + '        <div class="danphe-slider-fill ' + c + '" id="fill-' + id + '" style="width: ' + percent + '%;"></div>\n'
+        html = html + '        <div class="danphe-slider-knob" id="knob-' + id + '" style="left: ' + percent + '%;"></div>\n'
+        html = html + '    </div>\n'
+        html = html + '</div>\n'
+        return html
+    }
+}
+
+export Danphe
