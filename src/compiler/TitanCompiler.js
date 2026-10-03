@@ -31,6 +31,7 @@ class TitanCompiler {
             grid: 0x22, Grid: 0x22, GridView: 0x22,
             icon: 0x23, Icon: 0x23, i: 0x23,
             thorvg: 0x61, ThorVG: 0x61, svg: 0x61,
+            header: 0x12, aside: 0x12, footer: 0x12, nav: 0x12, section: 0x12, main: 0x12, article: 0x12,
             state: 0xD0, State: 0xD0
         };
     }
@@ -129,7 +130,7 @@ class TitanCompiler {
         for (let i = 0; i < tokens.length; i++) {
             const t = tokens[i];
 
-            if (t === 'flex-row') { isRow = true; isCol = false; }
+            if (t === 'flex-row' || t === 'flex') { isRow = true; isCol = false; }
             else if (t === 'flex-col' || t === 'flex-column') { isCol = true; isRow = false; }
             else if (t === 'flex-1') flexWeight = 1;
             else if (t === 'flex-2') flexWeight = 2;
@@ -260,7 +261,7 @@ class TitanCompiler {
             }
         }
 
-        if (tag === 'div' || tag === 'container') {
+        if (tag === 'div' || tag === 'container' || tag === 'header' || tag === 'aside' || tag === 'footer' || tag === 'section' || tag === 'main' || tag === 'nav') {
             if (isRow) opcode = 0x14;
             else if (isCol) opcode = 0x13;
         }

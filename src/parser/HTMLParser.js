@@ -24,10 +24,7 @@ class HTMLParser {
         this._voidTags = new Set([
             'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 
             'IMG', 'INPUT', 'LINK', 'META', 'PARAM', 
-            'SOURCE', 'TRACK', 'WBR', 'SLIDER', 'CHECKBOX',
-            // 🆕 24-byte: More void elements
-            'VIDEO', 'AUDIO', 'IFRAME', 'CANVAS', 'SVG', 'THORVG',
-            'PATH', 'CIRCLE', 'RECT', 'LINE', 'POLYLINE'
+            'SOURCE', 'TRACK', 'WBR', 'SLIDER', 'CHECKBOX'
         ]);
     }
     
@@ -97,9 +94,9 @@ class HTMLParser {
         // Remove HTML comments
         processed = processed.replace(/<!--[\s\S]*?-->/g, '');
         
-        // Remove script and style tags (keep structure but not content)
-        processed = processed.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '<script></script>');
-        processed = processed.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '<style></style>');
+        // Remove script and style tags completely
+        processed = processed.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+        processed = processed.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
         
         // 🆕 24-byte: Remove CDATA sections
         processed = processed.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, '');
