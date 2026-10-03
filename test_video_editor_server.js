@@ -302,7 +302,7 @@ const server = http.createServer((req, res) => {
             };
             window.TitanSiso = sisoBus;
 
-            // ── 1.5 LIVE PRESET STRIP ENGINE (Fonts, Anim, Filters) ──
+            // ── 1.4 AUTONOMOUS SERIAL LANE EVENT LISTENER (Zero Buttons - 100% Serial Port Driven) ──
             const PRESET_DATA = {
                 fonts: [
                     { id: 1, label: 'नेपाली', sub: 'कलिग्राफी', style: 'font-family: serif; font-weight: 900; letter-spacing: 1px;' },
@@ -312,15 +312,6 @@ const server = http.createServer((req, res) => {
                     { id: 5, label: 'Royal', sub: 'शाही गोल्ड', style: 'font-family: serif; font-style: italic; font-weight: 900; fill: #facc15;' },
                     { id: 6, label: 'STREET', sub: 'भित्ते कला', style: 'font-family: sans-serif; font-weight: 900; letter-spacing: -0.5px; fill: #fb7185;' },
                     { id: 7, label: 'Brush', sub: 'ह्यान्डराइटिङ', style: 'font-family: cursive, sans-serif; font-weight: 600; fill: #c084fc;' }
-                ],
-                anim: [
-                    { id: 10, label: '⚡ GLITCH', sub: 'ग्लिच', cssClass: 'anim-glitch' },
-                    { id: 11, label: '💥 BOUNCE', sub: 'बाउन्स', cssClass: 'anim-bounce' },
-                    { id: 12, label: '🔄 SPIN', sub: '३D स्पिन', cssClass: 'anim-spin' },
-                    { id: 13, label: '🔍 ZOOM', sub: 'काइनेटिक', cssClass: 'anim-zoom' },
-                    { id: 14, label: '🌊 DRIFT', sub: 'स्मूथ वेभ', cssClass: 'anim-drift' },
-                    { id: 15, label: '💓 BEAT', sub: 'हार्टबीट', cssClass: 'siso-beat-glow' },
-                    { id: 16, label: '🌟 GLOW', sub: 'नियन पल्स', cssClass: 'siso-pulse-glow' }
                 ],
                 filters: [
                     { id: 20, label: '🎬 TEAL', sub: 'हलिउड', colors: ['#0f172a', '#1e293b', '#ea580c'] },
@@ -333,31 +324,82 @@ const server = http.createServer((req, res) => {
                 ]
             };
 
-            window.switchPresetCategory = function(cat) {
-                const track = document.getElementById('titan-video-editor-frame-preset-track');
-                if (!track) return;
-                
-                ['fonts', 'anim', 'filters'].forEach(c => {
-                    const btn = document.getElementById('titan-video-editor-frame-cat-' + c);
-                    if (btn) {
-                        if (c === cat) {
-                            btn.className = 'px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-sky-950 border border-sky-400 text-sky-300 shadow-sm transition';
-                        } else {
-                            btn.className = 'px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-slate-950 border border-slate-800 text-slate-400 hover:text-white transition';
-                        }
-                    }
-                });
+            window.onSerialLaneSelect = function(laneType, laneTypeId, e) {
+                if (e) e.stopPropagation();
 
-                const list = PRESET_DATA[cat] || [];
-                let html = '';
-                list.forEach((item, idx) => {
-                    const borderCls = idx === 0 ? 'border-sky-400/80 shadow-md shadow-sky-950/50' : 'border-slate-800';
-                    html += '<div onclick="applyLivePreset(\\'' + cat + '\\', ' + item.id + ', \\'' + item.label + '\\')" class="preset-card shrink-0 flex flex-col items-center justify-center w-16 h-12 rounded-xl bg-slate-950 border ' + borderCls + ' p-1 cursor-pointer hover:border-sky-300 transition group">' +
-                        '<span class="text-[11px] font-mono font-black text-slate-200 group-hover:scale-105 transition truncate max-w-[56px]">' + item.label + '</span>' +
-                        '<span class="text-[8px] font-mono text-slate-500 mt-0.5">' + item.sub + '</span>' +
-                        '</div>';
-                });
-                track.innerHTML = html;
+                // 1. Emit 6-Byte SISO Serial Packet from the lane
+                sisoBus.emit(0x4130, laneTypeId, 'LANE_SELECT:' + laneType.toUpperCase());
+
+                // 2. Update Strip Badge with Active Serial Context
+                const badge = document.getElementById('titan-video-editor-frame-lane-context-badge');
+                const sisoInfo = document.getElementById('titan-video-editor-frame-lane-siso-stream');
+                const track = document.getElementById('titan-video-editor-frame-preset-track');
+
+                if (badge) {
+                    if (laneType === 'text') {
+                        badge.className = 'px-2 py-0.5 rounded-full bg-amber-950/90 border border-amber-500 text-[9px] font-mono text-amber-300 font-bold';
+                        badge.textContent = 'LANE: TEXT (T)';
+                    } else if (laneType === 'video') {
+                        badge.className = 'px-2 py-0.5 rounded-full bg-sky-950/90 border border-sky-400 text-[9px] font-mono text-sky-300 font-bold';
+                        badge.textContent = 'LANE: VIDEO (🎬)';
+                    } else if (laneType === 'audio') {
+                        badge.className = 'px-2 py-0.5 rounded-full bg-emerald-950/90 border border-emerald-500 text-[9px] font-mono text-emerald-300 font-bold';
+                        badge.textContent = 'LANE: AUDIO (🎵)';
+                    }
+                }
+                if (sisoInfo) {
+                    sisoInfo.textContent = 'SISO: 0x5349 [0x4130: ' + laneTypeId + ']';
+                }
+
+                // 3. Serial Port Autonomously Injects the Exact Presets into the Live Strip
+                if (track) {
+                    let items = [];
+                    if (laneType === 'text') {
+                        items = PRESET_DATA.fonts;
+                    } else if (laneType === 'video') {
+                        items = PRESET_DATA.filters;
+                    } else if (laneType === 'audio') {
+                        items = [
+                            { id: 31, label: 'BASS BOOST', sub: 'बास बुस्ट' },
+                            { id: 32, label: 'ROBOT FX', sub: 'रोबोटिक' },
+                            { id: 33, label: 'ECHO ROOM', sub: 'रिभर्ब इको' },
+                            { id: 34, label: 'TRAP 140', sub: 'बीट सिंक' },
+                            { id: 35, label: 'LO-FI 85', sub: 'चिल साउन्ड' },
+                            { id: 36, label: 'DENOISE AI', sub: 'नोइज रिमुभ' }
+                        ];
+                    }
+
+                    let html = '';
+                    items.forEach((item, idx) => {
+                        const borderCls = idx === 0 ? 'border-sky-400/80 shadow-md shadow-sky-950/50' : 'border-slate-800';
+                        html += '<div onclick="applyLivePreset(\\'' + laneType + '\\', ' + item.id + ', \\'' + item.label + '\\')" class="preset-card shrink-0 flex flex-col items-center justify-center w-16 h-12 rounded-xl bg-slate-950 border ' + borderCls + ' p-1 cursor-pointer hover:border-sky-300 transition group">' +
+                            '<span class="text-[11px] font-mono font-black text-slate-200 group-hover:scale-105 transition truncate max-w-[56px]">' + item.label + '</span>' +
+                            '<span class="text-[8px] font-mono text-slate-500 mt-0.5">' + (item.sub || '') + '</span>' +
+                            '</div>';
+                    });
+                    track.innerHTML = html;
+                }
+
+                // 4. Highlight Relevant Tools on Left & Right Rails via Serial Context
+                const allToolBtns = document.querySelectorAll('.tool-btn');
+                allToolBtns.forEach(btn => btn.style.opacity = '0.45');
+
+                if (laneType === 'text') {
+                    [1024, 1007, 1001, 1028].forEach(r => {
+                        const b = document.querySelector('[data-reg="' + r + '"]');
+                        if (b) { b.style.opacity = '1'; b.classList.add('siso-pulse-glow'); }
+                    });
+                } else if (laneType === 'video') {
+                    [1001, 1002, 1003, 1016, 1021, 1014].forEach(r => {
+                        const b = document.querySelector('[data-reg="' + r + '"]');
+                        if (b) { b.style.opacity = '1'; b.classList.add('siso-pulse-glow'); }
+                    });
+                } else if (laneType === 'audio') {
+                    [1023, 1035, 1029, 1001].forEach(r => {
+                        const b = document.querySelector('[data-reg="' + r + '"]');
+                        if (b) { b.style.opacity = '1'; b.classList.add('siso-pulse-glow'); }
+                    });
+                }
             };
 
             window.applyLivePreset = function(cat, id, name) {
