@@ -3,11 +3,12 @@
 /**
  * 🎬 Danphe-UI Video Editor Preview Server
  * Port: 3001
- * Visual Inspection & Interactive SISO Serial Bus Test Server
+ * Visual Inspection & Interactive SISO Serial Bus + Universal Media Lane Test Server
  */
 
 const http = require('http');
 const { renderVideoEditorFrame } = require('./lib/TitanVideoEditorFrame');
+const { renderUniversalMediaLane } = require('./lib/TitanUniversalMediaLane');
 const { renderMasterButton } = require('./lib/TitanMasterButton');
 const { renderMasterInput } = require('./lib/TitanMasterInput');
 
@@ -25,6 +26,47 @@ const server = http.createServer((req, res) => {
         isPlaying: false,
         activeTool: 'split',
         resolution: '4K UHD'
+    });
+
+    // Sample Universal Lanes for Demo
+    const demoVideoLane = renderUniversalMediaLane({
+        id: 'demo-lane-video',
+        type: 'video',
+        x: 0,
+        y: 0,
+        width: 380,
+        height: 48,
+        clipTitle: '4K_Drone_Cinematic.mp4',
+        hasEmbeddedAudio: true,
+        durationSec: 14.2,
+        isSelected: true,
+        reg: 1001
+    });
+
+    const demoAudioLane = renderUniversalMediaLane({
+        id: 'demo-lane-audio',
+        type: 'audio',
+        x: 0,
+        y: 0,
+        width: 380,
+        height: 38,
+        clipTitle: 'Cinematic_Bass_Drop.wav',
+        durationSec: 14.2,
+        isSelected: false,
+        reg: 1023
+    });
+
+    const demoTextLane = renderUniversalMediaLane({
+        id: 'demo-lane-text',
+        type: 'text',
+        x: 0,
+        y: 0,
+        width: 380,
+        height: 32,
+        clipTitle: 'NEPAL CINEMATIC VLOG',
+        durationSec: 8.0,
+        isSelected: false,
+        reg: 1024
     });
 
     const sampleButton = renderMasterButton({
@@ -45,7 +87,7 @@ const server = http.createServer((req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 Danphe-UI CapCut Studio Preview • Dual Scrollable Rails & 256 SISO</title>
+    <title>🎬 Danphe-UI CapCut Studio • Universal SVG Media Lane & 256 SISO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * { box-sizing: border-box; }
@@ -64,17 +106,17 @@ const server = http.createServer((req, res) => {
             <div class="flex items-center gap-3">
                 <span class="text-2xl">🐬</span>
                 <h1 class="text-lg sm:text-2xl font-black bg-gradient-to-r from-sky-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
-                    Danphe-UI CapCut Studio • Dual Scrollable Rails
+                    Danphe-UI CapCut Studio • Universal SVG Media Lane
                 </h1>
-                <span class="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700 text-emerald-400 text-xs font-mono font-bold">256 SISO Serial Micro-Stream</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700 text-emerald-400 text-xs font-mono font-bold">Polymorphic SVG + Embedded Audio</span>
             </div>
             <p class="text-xs text-slate-400 mt-1">
-                Visual Inspection Server on port ${PORT} • दुवै रेलहरू स्क्रोल गर्न सकिने • टाइमलाइनबाट सिरियल कमाण्ड आउँदा सबै आइकनहरू तुरुन्त अपडेट हुन्छन्
+                एउटै मास्टर SVG Media Lane ले Video, Audio, Text, Image अनुसार रङ र ग्राफिक्स बदल्छ • भिडियोभित्र अडियो लुकाउने र Detach/Extract गर्ने सुविधा
             </p>
         </div>
         <div class="flex items-center gap-2">
             <span class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
-            <span class="text-xs font-mono font-bold text-slate-300">LIVE MESH</span>
+            <span class="text-xs font-mono font-bold text-slate-300">LIVE</span>
         </div>
     </div>
 
@@ -84,15 +126,66 @@ const server = http.createServer((req, res) => {
         <!-- Left: CapCut Mobile Device Frame (Pure SVG Frame) -->
         <div class="lg:col-span-6 flex flex-col items-center">
             <div class="w-full flex items-center justify-between text-xs font-mono text-slate-400 mb-2 px-2">
-                <span>📱 Mobile Frame (420px): Left & Right Rails Scrollable</span>
+                <span>📱 Mobile Frame (420px): Universal Lanes in Timeline</span>
                 <span class="text-emerald-400 font-bold">Touch / Mouse Scrub Active</span>
             </div>
             ${frameHtml}
         </div>
 
-        <!-- Right: Inspector, SISO Serial Console & Verification Panel -->
+        <!-- Right: Inspector, Universal Media Lane Showcase & SISO Serial Console -->
         <div class="lg:col-span-6 flex flex-col gap-4">
             
+            <!-- 🌟 UNIVERSAL MEDIA LANE SHOWCASE (Your Core Idea Demonstrated) -->
+            <div class="bg-slate-900/95 border border-sky-500/40 rounded-2xl p-4 shadow-2xl relative overflow-hidden">
+                <div class="absolute -right-8 -top-8 w-24 h-24 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-xs font-black uppercase tracking-wider text-sky-300 flex items-center gap-1.5 font-mono">
+                        <span>✨</span>
+                        <span>Universal SVG Media Lane (Polymorphic)</span>
+                    </h2>
+                    <span class="text-[9px] font-mono bg-sky-950 px-2 py-0.5 rounded border border-sky-700 text-sky-300">100% DRY Code</span>
+                </div>
+                
+                <p class="text-[11px] text-slate-300 mb-3 leading-relaxed">
+                    एउटै SVG कम्पोनेन्ट जसले मिडिया अनुसार रूप, रङ, वेभफर्म र ह्यान्डल बदल्छ। भिडियोभित्र अडियो वेभफर्म लुकाइएको छ—आवश्यक पर्दा 
+                    <strong class="text-emerald-300 font-mono">"📻 EXTRACT"</strong> थिचेर छुट्टै अडियो ट्र्याक निकाल्न सकिन्छ!
+                </p>
+
+                <!-- Interactive SVG Lane Preview Container -->
+                <div class="flex flex-col gap-2.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <div>
+                        <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                            <span class="text-sky-400 font-bold">1. Video Track with Embedded Audio Waveform:</span>
+                            <span class="text-amber-400 text-[9px]">Click "📻 EXTRACT" below</span>
+                        </div>
+                        <svg viewBox="0 0 380 50" width="100%" height="50">
+                            ${demoVideoLane}
+                        </svg>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                            <span class="text-emerald-400 font-bold">2. Dedicated / Extracted Audio Track (Waveform + Beat Sync):</span>
+                            <span class="text-emerald-400 text-[9px]">Pure SVG</span>
+                        </div>
+                        <svg viewBox="0 0 380 40" width="100%" height="40">
+                            ${demoAudioLane}
+                        </svg>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                            <span class="text-amber-400 font-bold">3. Subtitle / Text Track (Imperial Gold):</span>
+                            <span class="text-amber-400 text-[9px]">Kinetic Captions</span>
+                        </div>
+                        <svg viewBox="0 0 380 34" width="100%" height="34">
+                            ${demoTextLane}
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
             <!-- Live SISO Micro-Stream Console (High-Frequency 6-Byte Serial Bus Monitor) -->
             <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-xl">
                 <div class="flex items-center justify-between mb-2">
@@ -102,34 +195,13 @@ const server = http.createServer((req, res) => {
                     </h2>
                     <span id="siso-packet-counter" class="text-[10px] font-mono bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-slate-400">0 packets</span>
                 </div>
-                <div class="bg-slate-950 rounded-xl p-2.5 border border-slate-800/80 font-mono text-[11px] h-36 overflow-y-auto custom-scrollbar flex flex-col-reverse gap-1 text-slate-300" id="siso-stream-log">
-                    <div class="text-slate-600 text-[10px] italic">Ready. Scrub the timeline or click any rail tool to stream 6-byte SISO packets...</div>
+                <div class="bg-slate-950 rounded-xl p-2.5 border border-slate-800/80 font-mono text-[11px] h-32 overflow-y-auto custom-scrollbar flex flex-col-reverse gap-1 text-slate-300" id="siso-stream-log">
+                    <div class="text-slate-600 text-[10px] italic">Ready. Scrub timeline or click any tool to stream SISO packets...</div>
                 </div>
                 <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-800 text-[10px] font-mono text-slate-400">
                     <div>Format: <code class="text-sky-300">[0x5349 | REG_HEX | VALUE]</code></div>
                     <div class="text-emerald-400 font-bold">Latency: &lt; 0.05ms (Zero GC)</div>
                 </div>
-            </div>
-
-            <!-- Architecture Verification Card -->
-            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
-                <h2 class="text-xs font-black uppercase tracking-wider text-sky-400 mb-2.5 flex items-center gap-2 font-mono">
-                    <span>📐</span> Architecture & Dual Rails Verification
-                </h2>
-                <ul class="text-xs space-y-2 text-slate-300 font-mono">
-                    <li class="flex items-start gap-2">
-                        <span class="text-emerald-400 font-bold">✓</span>
-                        <span><strong>Dual Scrollable Rails:</strong> Left Rail (16 NLE Tools) & Right Rail (16 Creative FX) स्वतन्त्र रूपमा स्क्रोल हुन्छन्।</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-emerald-400 font-bold">✓</span>
-                        <span><strong>256 Icon Serial Interface:</strong> सबै ३२+ आइकनहरू ६-बाइटको SISO सिरियल बसमा जोडिएका छन् (&#96;data-reg="1001"&#96; - &#96;1038&#96;)।</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-emerald-400 font-bold">✓</span>
-                        <span><strong>Media Timeline Sync:</strong> प्लेहेड हिँड्दा वा बीट-सिंक (Beats, Subtitles, Slices) आउँदा आइकनहरू तुरुन्त ग्लो र अपडेट हुन्छन्।</span>
-                    </li>
-                </ul>
             </div>
 
             <!-- Aspect Ratio Switcher Card (Thado vs Terso Test) -->
@@ -222,7 +294,6 @@ const server = http.createServer((req, res) => {
                             '<span class="text-amber-300 text-[9px]">' + (senderName || 'Timeline') + '</span>';
                         logContainer.insertBefore(entry, logContainer.firstChild);
 
-                        // Keep max 20 entries
                         while (logContainer.children.length > 20) {
                             logContainer.removeChild(logContainer.lastChild);
                         }
@@ -234,6 +305,17 @@ const server = http.createServer((req, res) => {
             // ── 2. TRIGGER TOOL ACTION FROM BUTTON ──
             window.triggerSisoTool = function(reg, name) {
                 sisoBus.emit(reg, 1, name);
+
+                // If DetachAudio is clicked, show visual feedback!
+                if (reg === 1014) {
+                    const embeddedAudio = document.querySelector('[id$="-embedded-audio"]');
+                    if (embeddedAudio) {
+                        embeddedAudio.style.opacity = '0.3';
+                        setTimeout(() => {
+                            alert('🎵 [SISO: 0x03F6] Embedded Audio successfully extracted to standalone Audio Lane!');
+                        }, 50);
+                    }
+                }
             };
 
             // ── 3. TIMELINE SCRUBBING & DRAGGING ──
@@ -281,10 +363,9 @@ const server = http.createServer((req, res) => {
                 if (tcPill) tcPill.textContent = m + ':' + s + ':' + f;
 
                 // ── BROADCAST TIMELINE CONTEXT VIA SISO SERIAL STREAM ──
-                // 1. Playhead Position Register (0x4100)
                 sisoBus.emit(0x4100, Math.round(curSec * 100), 'ScrubSeek');
 
-                // 2. Beat Sync Detection (Near Diamonds: 90, 168, 255)
+                // Beat Sync Detection (Near Diamonds: 90, 168, 255)
                 const isNearBeat = Math.abs(x - 90) < 6 || Math.abs(x - 168) < 6 || Math.abs(x - 255) < 6;
                 if (isNearBeat) {
                     sisoBus.emit(1023, 1, 'BeatSyncPin');
@@ -292,21 +373,21 @@ const server = http.createServer((req, res) => {
                     if (beatsBtn) beatsBtn.classList.add('siso-beat-glow');
                 }
 
-                // 3. Subtitle Region (45 to 210)
+                // Subtitle Region (45 to 210)
                 if (x >= 45 && x <= 210) {
                     sisoBus.emit(1024, 1, 'SubtitleTrack');
                 }
 
-                // 4. Clip Selection (Clip A: 15..165, Clip B: 170..370)
-                const clip1 = document.getElementById('titan-video-editor-frame-clip-1');
-                const clip2 = document.getElementById('titan-video-editor-frame-clip-2');
+                // Clip Selection (Clip A: 15..165, Clip B: 170..370)
+                const clip1Body = document.querySelector('[id*="-clip-1-body"]');
+                const clip2Body = document.querySelector('[id*="-clip-2-body"]');
                 if (x >= 15 && x <= 165) {
-                    if (clip1) clip1.setAttribute('stroke', '#facc15');
-                    if (clip2) clip2.setAttribute('stroke', '#475569');
+                    if (clip1Body) clip1Body.setAttribute('stroke', '#facc15');
+                    if (clip2Body) clip2Body.setAttribute('stroke', '#0284c7');
                     sisoBus.emit(1001, 1, 'Clip_A_Focus');
                 } else if (x >= 170 && x <= 370) {
-                    if (clip1) clip1.setAttribute('stroke', '#475569');
-                    if (clip2) clip2.setAttribute('stroke', '#facc15');
+                    if (clip1Body) clip1Body.setAttribute('stroke', '#0284c7');
+                    if (clip2Body) clip2Body.setAttribute('stroke', '#facc15');
                     sisoBus.emit(1001, 2, 'Clip_B_Focus');
                 }
             };

@@ -152,6 +152,7 @@ const { renderMasterCard, CARD_FLAGS } = require('./lib/TitanMasterCard');
 const { renderMasterButton, TitanMasterButton, BUTTON_FLAGS } = require('./lib/TitanMasterButton');
 const { renderMasterInput, TitanMasterInput, INPUT_FLAGS } = require('./lib/TitanMasterInput');
 const { renderVideoEditorFrame, TitanVideoEditorFrame } = require('./lib/TitanVideoEditorFrame');
+const { renderUniversalMediaLane, TitanUniversalMediaLane, LANE_THEMES } = require('./lib/TitanUniversalMediaLane');
 
 module.exports.renderTitanSvgAnimationCard = renderTitanSvgAnimationCard;
 module.exports.TitanSvgAnimationCard       = renderTitanSvgAnimationCard;
@@ -166,5 +167,9 @@ module.exports.TitanMasterInput            = renderMasterInput;
 module.exports.INPUT_FLAGS                 = INPUT_FLAGS;
 module.exports.renderVideoEditorFrame      = renderVideoEditorFrame;
 module.exports.TitanVideoEditorFrame       = renderVideoEditorFrame;
+module.exports.renderUniversalMediaLane    = renderUniversalMediaLane;
+module.exports.TitanUniversalMediaLane     = renderUniversalMediaLane;
+module.exports.LANE_THEMES                 = LANE_THEMES;
+
 
 
