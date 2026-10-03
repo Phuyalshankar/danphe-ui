@@ -14,14 +14,17 @@ const { renderMasterInput } = require('./lib/TitanMasterInput');
 const PORT = 3001;
 
 const server = http.createServer((req, res) => {
+    const urlObj = new URL(req.url, `http://localhost:${PORT}`);
+    const selectedRatio = urlObj.searchParams.get('ratio') || '9:16';
+
     const frameHtml = renderVideoEditorFrame({
-        title: 'Cinematic_Vlog_01.mp4',
+        title: selectedRatio === '16:9' ? 'YouTube_Landscape_01.mp4' : 'Viral_Shorts_01.mp4',
         currentTime: '00:08:24',
-        totalDuration: '01:30:00',
-        aspectRatio: '9:16',
+        totalDuration: '00:54:00',
+        aspectRatio: selectedRatio,
         isPlaying: false,
         activeTool: 'split',
-        zoomLevel: 1.0
+        resolution: '4K UHD'
     });
 
     const sampleButton = renderMasterButton({
@@ -124,6 +127,33 @@ const server = http.createServer((req, res) => {
                         <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block mb-1">Double Glow Master Input:</span>
                         ${sampleInput}
                     </div>
+                </div>
+            </div>
+
+            <!-- Aspect Ratio Switcher Card (Thado vs Terso Test) -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                <h2 class="text-sm font-black uppercase tracking-wider text-amber-400 mb-2 flex items-center gap-2">
+                    <span>📐</span> ठाडो र तेर्सो भिडियो स्विच गर्नुहोस्:
+                </h2>
+                <p class="text-xs text-slate-400 mb-3 font-sans">
+                    दुवै भिडियो साइजमा टुलबार र मनिटर कस्तो देखिन्छ क्लिक गरेर हेर्नुहोस्:
+                </p>
+                <div class="grid grid-cols-3 gap-2">
+                    <a href="?ratio=9:16" class="flex flex-col items-center justify-center p-2.5 rounded-xl border ${selectedRatio === '9:16' ? 'bg-sky-950 border-sky-400 text-sky-300 font-bold' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'} transition">
+                        <span class="text-lg">📱</span>
+                        <span class="text-[11px] font-mono mt-1">ठाडो (9:16)</span>
+                        <span class="text-[9px] text-slate-500">Shorts / Reels</span>
+                    </a>
+                    <a href="?ratio=16:9" class="flex flex-col items-center justify-center p-2.5 rounded-xl border ${selectedRatio === '16:9' ? 'bg-sky-950 border-sky-400 text-sky-300 font-bold' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'} transition">
+                        <span class="text-lg">🖥️</span>
+                        <span class="text-[11px] font-mono mt-1">तेर्सो (16:9)</span>
+                        <span class="text-[9px] text-slate-500">YouTube Cinema</span>
+                    </a>
+                    <a href="?ratio=1:1" class="flex flex-col items-center justify-center p-2.5 rounded-xl border ${selectedRatio === '1:1' ? 'bg-sky-950 border-sky-400 text-sky-300 font-bold' : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'} transition">
+                        <span class="text-lg">🔲</span>
+                        <span class="text-[11px] font-mono mt-1">स्क्वायर (1:1)</span>
+                        <span class="text-[9px] text-slate-500">Instagram Post</span>
+                    </a>
                 </div>
             </div>
 
