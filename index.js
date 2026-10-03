@@ -149,9 +149,18 @@ module.exports.danpheIcons                 = danpheIcons;
 // ── 🎴 Native SVG Cards ──
 const { renderTitanSvgAnimationCard } = require('./lib/TitanSvgAnimationCard');
 const { renderMasterCard, CARD_FLAGS } = require('./lib/TitanMasterCard');
+const { renderMasterButton, TitanMasterButton, BUTTON_FLAGS } = require('./lib/TitanMasterButton');
+const { renderMasterInput, TitanMasterInput, INPUT_FLAGS } = require('./lib/TitanMasterInput');
 
 module.exports.renderTitanSvgAnimationCard = renderTitanSvgAnimationCard;
 module.exports.TitanSvgAnimationCard       = renderTitanSvgAnimationCard;
 module.exports.renderMasterCard            = renderMasterCard;
 module.exports.TitanMasterCard             = renderMasterCard;
 module.exports.CARD_FLAGS                  = CARD_FLAGS;
+module.exports.renderMasterButton          = renderMasterButton;
+module.exports.TitanMasterButton           = renderMasterButton;
+module.exports.BUTTON_FLAGS                = BUTTON_FLAGS;
+module.exports.renderMasterInput           = renderMasterInput;
+module.exports.TitanMasterInput            = renderMasterInput;
+module.exports.INPUT_FLAGS                 = INPUT_FLAGS;
+

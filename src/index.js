@@ -173,4 +173,15 @@ module.exports.TITAN_SISO_SIGNATURE = _bus.TITAN_SISO_SIGNATURE;
 module.exports.TITAN_SISO_SECURE_SIGNATURE = _bus.TITAN_SISO_SECURE_SIGNATURE;
 module.exports.bus = _bus;
 
+// ── 🎴 Titan Master Button & Input (Pure SVG + Normal Text) ──────────────────
+const { renderMasterButton, TitanMasterButton, BUTTON_FLAGS } = require('../lib/TitanMasterButton');
+const { renderMasterInput, TitanMasterInput, INPUT_FLAGS } = require('../lib/TitanMasterInput');
+module.exports.renderMasterButton = renderMasterButton;
+module.exports.TitanMasterButton = renderMasterButton;
+module.exports.BUTTON_FLAGS = BUTTON_FLAGS;
+module.exports.renderMasterInput = renderMasterInput;
+module.exports.TitanMasterInput = renderMasterInput;
+module.exports.INPUT_FLAGS = INPUT_FLAGS;
+
+
 
