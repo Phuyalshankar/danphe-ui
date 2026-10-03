@@ -168,4 +168,9 @@ module.exports.EverestBus = _bus.EverestBus;
 module.exports.EverestDeclarative = _bus.EverestDeclarative;
 module.exports.TitanMicroBus = _bus.TitanMicroBus;
 module.exports.CMD = _bus.CMD;
+module.exports.REG = _bus.REG;
+module.exports.TITAN_SISO_SIGNATURE = _bus.TITAN_SISO_SIGNATURE;
+module.exports.TITAN_SISO_SECURE_SIGNATURE = _bus.TITAN_SISO_SECURE_SIGNATURE;
+module.exports.bus = _bus;
+
 
