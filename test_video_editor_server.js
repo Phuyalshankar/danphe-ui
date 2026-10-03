@@ -302,6 +302,102 @@ const server = http.createServer((req, res) => {
             };
             window.TitanSiso = sisoBus;
 
+            // ── 1.5 LIVE PRESET STRIP ENGINE (Fonts, Anim, Filters) ──
+            const PRESET_DATA = {
+                fonts: [
+                    { id: 1, label: 'नेपाली', sub: 'कलिग्राफी', style: 'font-family: serif; font-weight: 900; letter-spacing: 1px;' },
+                    { id: 2, label: 'CYBER', sub: 'नियन', style: 'font-family: monospace; font-weight: 900; letter-spacing: 2px; fill: #22d3ee;' },
+                    { id: 3, label: 'BOLD', sub: 'सिनेमा', style: 'font-family: sans-serif; font-weight: 900; letter-spacing: 3px; fill: #ffffff;' },
+                    { id: 4, label: '_MONO', sub: 'टाइपराइटर', style: 'font-family: monospace; font-weight: bold; letter-spacing: 0.5px; fill: #a7f3d0;' },
+                    { id: 5, label: 'Royal', sub: 'शाही गोल्ड', style: 'font-family: serif; font-style: italic; font-weight: 900; fill: #facc15;' },
+                    { id: 6, label: 'STREET', sub: 'भित्ते कला', style: 'font-family: sans-serif; font-weight: 900; letter-spacing: -0.5px; fill: #fb7185;' },
+                    { id: 7, label: 'Brush', sub: 'ह्यान्डराइटिङ', style: 'font-family: cursive, sans-serif; font-weight: 600; fill: #c084fc;' }
+                ],
+                anim: [
+                    { id: 10, label: '⚡ GLITCH', sub: 'ग्लिच', cssClass: 'anim-glitch' },
+                    { id: 11, label: '💥 BOUNCE', sub: 'बाउन्स', cssClass: 'anim-bounce' },
+                    { id: 12, label: '🔄 SPIN', sub: '३D स्पिन', cssClass: 'anim-spin' },
+                    { id: 13, label: '🔍 ZOOM', sub: 'काइनेटिक', cssClass: 'anim-zoom' },
+                    { id: 14, label: '🌊 DRIFT', sub: 'स्मूथ वेभ', cssClass: 'anim-drift' },
+                    { id: 15, label: '💓 BEAT', sub: 'हार्टबीट', cssClass: 'siso-beat-glow' },
+                    { id: 16, label: '🌟 GLOW', sub: 'नियन पल्स', cssClass: 'siso-pulse-glow' }
+                ],
+                filters: [
+                    { id: 20, label: '🎬 TEAL', sub: 'हलिउड', colors: ['#0f172a', '#1e293b', '#ea580c'] },
+                    { id: 21, label: '🌅 SUNSET', sub: 'गोल्डेन आवर', colors: ['#451a03', '#9a3412', '#f59e0b'] },
+                    { id: 22, label: '🌆 CYBER', sub: 'साइबरपंक', colors: ['#2e1065', '#6b21a8', '#06b6d4'] },
+                    { id: 23, label: '🌑 NOIR', sub: 'डार्क सिनेमा', colors: ['#020617', '#0f172a', '#334155'] },
+                    { id: 24, label: '📼 VHS 90s', sub: 'रेट्रो', colors: ['#3b0764', '#831843', '#059669'] },
+                    { id: 25, label: '🌲 FOREST', sub: 'इमराल्ड', colors: ['#064e3b', '#065f46', '#10b981'] },
+                    { id: 26, label: '⚪ B&W', sub: 'मोनोक्रोम', colors: ['#000000', '#1c1917', '#52525b'] }
+                ]
+            };
+
+            window.switchPresetCategory = function(cat) {
+                const track = document.getElementById('titan-video-editor-frame-preset-track');
+                if (!track) return;
+                
+                ['fonts', 'anim', 'filters'].forEach(c => {
+                    const btn = document.getElementById('titan-video-editor-frame-cat-' + c);
+                    if (btn) {
+                        if (c === cat) {
+                            btn.className = 'px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-sky-950 border border-sky-400 text-sky-300 shadow-sm transition';
+                        } else {
+                            btn.className = 'px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-slate-950 border border-slate-800 text-slate-400 hover:text-white transition';
+                        }
+                    }
+                });
+
+                const list = PRESET_DATA[cat] || [];
+                let html = '';
+                list.forEach((item, idx) => {
+                    const borderCls = idx === 0 ? 'border-sky-400/80 shadow-md shadow-sky-950/50' : 'border-slate-800';
+                    html += '<div onclick="applyLivePreset(\\'' + cat + '\\', ' + item.id + ', \\'' + item.label + '\\')" class="preset-card shrink-0 flex flex-col items-center justify-center w-16 h-12 rounded-xl bg-slate-950 border ' + borderCls + ' p-1 cursor-pointer hover:border-sky-300 transition group">' +
+                        '<span class="text-[11px] font-mono font-black text-slate-200 group-hover:scale-105 transition truncate max-w-[56px]">' + item.label + '</span>' +
+                        '<span class="text-[8px] font-mono text-slate-500 mt-0.5">' + item.sub + '</span>' +
+                        '</div>';
+                });
+                track.innerHTML = html;
+            };
+
+            window.applyLivePreset = function(cat, id, name) {
+                const cards = document.querySelectorAll('.preset-card');
+                cards.forEach(c => c.classList.remove('preset-active'));
+                if (event && event.currentTarget) event.currentTarget.classList.add('preset-active');
+
+                sisoBus.emit(0x4150, id, cat.toUpperCase() + ':' + name);
+
+                const caption = document.getElementById('titan-video-editor-frame-caption-text');
+                const subject = document.getElementById('titan-video-editor-frame-subject-graphic');
+
+                if (cat === 'fonts') {
+                    const item = PRESET_DATA.fonts.find(f => f.id === id);
+                    if (item && caption) {
+                        caption.setAttribute('style', item.style);
+                    }
+                } else if (cat === 'anim') {
+                    const item = PRESET_DATA.anim.find(a => a.id === id);
+                    if (item) {
+                        const target = subject || caption;
+                        if (target) {
+                            target.classList.remove('anim-glitch', 'anim-bounce', 'anim-spin', 'anim-zoom', 'anim-drift', 'siso-beat-glow', 'siso-pulse-glow');
+                            void target.offsetWidth;
+                            target.classList.add(item.cssClass);
+                        }
+                    }
+                } else if (cat === 'filters') {
+                    const item = PRESET_DATA.filters.find(f => f.id === id);
+                    if (item && item.colors) {
+                        const s1 = document.getElementById('titan-video-editor-frame-stop-1');
+                        const s2 = document.getElementById('titan-video-editor-frame-stop-2');
+                        const s3 = document.getElementById('titan-video-editor-frame-stop-3');
+                        if (s1) s1.setAttribute('stop-color', item.colors[0]);
+                        if (s2) s2.setAttribute('stop-color', item.colors[1]);
+                        if (s3) s3.setAttribute('stop-color', item.colors[2]);
+                    }
+                }
+            };
+
             // ── 2. TRIGGER TOOL ACTION FROM BUTTON ──
             window.triggerSisoTool = function(reg, name) {
                 sisoBus.emit(reg, 1, name);
